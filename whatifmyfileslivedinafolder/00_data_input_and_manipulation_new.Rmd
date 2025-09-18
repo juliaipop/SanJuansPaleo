@@ -4,7 +4,6 @@ author: "Julia Pop"
 date: "2025-07-26"
 output: html_document
 ---
-
 ```{r setup, include=FALSE}
 # code to troublesheet file path issues. 
 # By default, knitr uses the folder containing the .Rmd file as
