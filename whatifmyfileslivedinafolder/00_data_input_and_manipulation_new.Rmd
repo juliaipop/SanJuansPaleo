@@ -1,9 +1,22 @@
 ---
-title: "00_data_input_and_manipulation"
+title: "00_data_input_and_manipulation_new"
 author: "Julia Pop"
 date: "2025-07-26"
 output: html_document
 ---
+
+```{r setup, include=FALSE}
+# code to troublesheet file path issues. 
+# By default, knitr uses the folder containing the .Rmd file as
+# the working directory. This code allows us to set the folder
+# with our .rProj in it as the root. 
+
+# find_root looks upwards from the .Rmd until it finds a file or
+# folder that matches the criteria "folder with a .Rproj file in
+# it."
+
+knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_project))
+```
 
 # Notes to self:
 
@@ -54,8 +67,6 @@ library(here)
 ```{r, echo = FALSE}
 # echo = FALSE shows output but not code. 
 # read in metadata 
-getwd()
-setwd("/Users/juliapop/Desktop/SanJuansPaleoo")
 TRK_metadata <- read_excel("data/0_TRK2_core_metadata_20250726.xlsx")  %>%
   select(lake_name:depth_bottom)
 
@@ -136,18 +147,14 @@ UFM_SIA %>%
 ```{r}
 
 ## read in the .csv
-dates <- read.csv(file.choose(), header=TRUE)
+# dates <- read.csv(file.choose(), header=TRUE)
 ## I do file.choose but whatever works
 
 ## turn it into an age-depth model (adm) that tidypaleo recognizes
-adm <- age_depth_model(
-  dates,
-  depth=Middepth.cm, age=Year
-)
+#adm <- age_depth_model(
+#  dates,
+#  depth=Middepth.cm, age=Year)
 ### You need to have the depth and ages from Flett output
-
-
-
 
 ```
 

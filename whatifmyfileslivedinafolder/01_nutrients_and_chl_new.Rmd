@@ -1,19 +1,25 @@
 ---
-title: "nutrients_and_chl.Rmd"
+title: "nutrients_and_chl"
 author: "Julia Pop"
 date: "2025-09-18"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+# code to troublesheet file path issues. 
+# By default, knitr uses the folder containing the .Rmd file as
+# the working directory. This code allows us to set the folder
+# with our .rProj in it as the root. 
 
+# find_root looks upwards from the .Rmd until it finds a file or
+# folder that matches the criteria "folder with a .Rproj file in
+# it."
+
+knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_project))
+```
 
 # Chlorophyll calculations
 ```{r}
-
-
 chl_df_combine %>%
 filter(siteId %in% c("loc")) %>%  
 mutate(dateSampled=ymd(dateSampled),       
