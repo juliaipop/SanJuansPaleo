@@ -1,0 +1,365 @@
+---
+title: "00_data_input_and_manipulation"
+author: "Julia Pop"
+date: "2025-07-26"
+output: html_document
+---
+
+# Notes to self:
+
+1) when editing this markdown file later use head() to visualize data in the final html file! show visually how you are editing the dfs.
+
+2) SIA_run_1_TRK_UFM needs to be rounded to an accurate number of decimal points (after calculations?)
+
+## Load packages
+Copied directly from Bella's 00_data_entry_and_manipulation.Rmd in LochValePaleo. 
+```{r message = false}
+
+library(tidyverse)
+library(ggpubr)
+library(ggplot2)
+library(grid) # for function unit() in ggplot2
+library(gtable) # for adding subtitle in ggplot2
+library(ggthemes)
+library(scales) # to add percentages to plots and pretty_breaks()
+library(gridExtra) # for arranging graphs side by side w ftn grid.arrange()
+library(skimr) # for summary statistics
+library(reshape2)
+library(readxl) # to read excel files
+library(writexl) # to ultimately create a .xlsx file for export
+
+#load packages necessary for GAMS
+library("mgcv")
+library("scam")
+library("cowplot")
+library("grid")                         # for unit.pmax(), unit.list()
+library("schoenberg")
+library("tidyr")
+library("nlme")
+
+#from Cale (delete what I don't need) 
+library(tidypaleo) ### for dealing with dates and vertical plotting
+library(tidyr) ## data management
+library(dplyr) ## data transformation
+library(ggplot2) ### plotting
+library(cowplot) ## for combining plots
+library(mgcv) ### for GAMs 
+library(gratia) ## for improving GAMs
+
+#troubleshooting wd issues
+library(here)
+```
+
+## Pull in core metadata
+```{r, echo = FALSE}
+# echo = FALSE shows output but not code. 
+# read in metadata 
+getwd()
+setwd("/Users/juliapop/Desktop/SanJuansPaleoo")
+TRK_metadata <- read_excel("data/0_TRK2_core_metadata_20250726.xlsx")  %>%
+  select(lake_name:depth_bottom)
+
+UFM_metadata <- read_excel("data/0_UFM1_core_metadata_20250726.xlsx") %>% 
+  select(lake_name:depth_bottom)
+
+LFM_metadata <- read_excel("data/0_LFM2_core_metadata_20250726.xlsx") %>% 
+  select(lake_name:depth_bottom)
+```
+
+## Clean SIA Files for Peter & others
+
+**Note: return later to** 
+- round SIA_run1_TRK_UFM to the appropriate number of sig figs
+- pull in run 2 and collapse any triplicates, stitch to new file named LFM_SIA!
+- add TRK2_002 to TRK_SIA
+- consolidate / choose perC.drft or percent.C and the corresponding C:N
+
+```{r, echo = FALSE}
+
+# step one: pull in and clean up run 1 info
+# NOTE: this file (SIA_run1_...) still contains triplicates (!)
+SIA_run1_TRK_UFM <- read_excel("data/TRK_UFM_SIA_data_clean_20250726.xlsx") %>%
+  rename(sample_ID = Identifier1) %>%
+  select(sample_ID,d13C.scale:perC.drift, d15N.scale, percent.N) %>%
+  mutate("C.drift:N" = perC.drift/percent.N) %>% 
+  # For now, chose to inlcude both “perC.drift” AND "percent.C" for %C since a very small drift was detected in the HOS lin.std (but either way within the error of 0.3% - where std.dev. is of multiple HOS standard replicates) For now, calculate C:N using both and see how errors propogate. In thesis use percent.C until have a reason not to. 
+  mutate("C:N" = percent.C/percent.N)
+
+# step two: collapse triplicate values, and create a separate SIA spreadsheet for each core (in format: metadata, SIA)
+
+# two a) join dataframes and keep all the observations in TRK_metadata (left, while throwing out any observations from SIA_run1_TRK_UFM, right, that don't have a sample_ID matching those in TRK_metadata). Right now that throws out UFM SIA, but keeps all the extra observations in the left database (e.g. TRK2_001, TRK2_002, TRK2_003...5, 7, 9)
+
+TRK_SIA <- left_join(TRK_metadata, SIA_run1_TRK_UFM, by = "sample_ID")
+  
+# two b) save row TRK2_002 to add after the NA drop
+
+row_TRK2_002_SIA <- TRK_SIA %>%
+  filter(sample_ID == "TRK2_002")
+
+# two c) do regular cleaning
+TRK_SIA <- TRK_SIA %>%
+    drop_na() %>% #drop all TRK samples for which we did not run SIA
+    group_by(lake_name, core_number, sample_ID, sample_range, depth_top, depth_bottom) %>% # add a step to run the summarize fn on groups of rows (each row could be grouped just by sample_ID, but output would then not include the other metadata; bc metadata should stay the same for duplicate samples, we can use this shortcut). 
+    summarize(across(d13C.scale:"C:N", ~mean(.x, na.rm=TRUE)), .groups = "keep") # summarize collapses rows--this fn will take the average of all the triplicates for every row (grouped by the columns above). ".x" is tidyverse's way of saying insert the line before right here when you choose what to take the mean of.
+
+# two d) add row TRK2_002 back in
+TRK_SIA <- bind_rows(TRK_SIA, row_TRK2_002_SIA)
+
+# create a UFM stable isotope file. 
+UFM_SIA <- left_join(UFM_metadata, SIA_run1_TRK_UFM, by = "sample_ID") %>%
+    drop_na() %>%
+    group_by(lake_name, core_number, sample_ID, sample_range, depth_top, depth_bottom) %>%
+    summarize(across(d13C.scale:"C:N", ~mean(.x, na.rm=TRUE)), .groups = "keep")
+  
+# export data for Peter
+write_xlsx(TRK_SIA, path = "output/TRK_SIA_for_leavitt.xlsx")
+write_xlsx(UFM_SIA, path = "output/UFM_SIA_for_leavitt.xlsx")
+
+```
+
+### Compare C vs C drift
+```{r}
+head(TRK_SIA)
+
+TRK_SIA %>%
+  ggplot(aes(x=percent.C, y=perC.drift))+
+  geom_point()+
+  geom_abline(slope=1, intercept=0)
+
+UFM_SIA %>%
+  ggplot(aes(x=percent.C, y=perC.drift))+
+  geom_point()+
+  geom_abline(slope=1, intercept=0)
+```
+
+# Date Interpolation
+```{r}
+
+## read in the .csv
+dates <- read.csv(file.choose(), header=TRUE)
+## I do file.choose but whatever works
+
+## turn it into an age-depth model (adm) that tidypaleo recognizes
+adm <- age_depth_model(
+  dates,
+  depth=Middepth.cm, age=Year
+)
+### You need to have the depth and ages from Flett output
+
+
+
+
+```
+
+# Pigments
+### Pull in pigment data
+```{r}
+
+# all raw pigment data is in the units nmol pigment / g total dry mass (code below adds the suffix "_nmol_gDM"). 
+
+UFM_pigments_raw <- read_excel("data/UFM_final_HPLC_20250910.xlsx") %>% 
+  select(depth_top, chlide_a:diadino, myxo:car_z) %>%
+  rename(b_car = "b-car") %>% 
+  rename_with(~paste0(.x, "_nmol_gDM"), .cols = c(chlide_a:car_z))
+
+LFM_pigments_raw <- read_excel("data/LFM_final_HPLC_20250910.xlsx") %>% 
+  select(depth_top, chlide_a:diadino, myxo:car_z) %>%
+  rename(b_car = "b-car") %>% 
+  rename_with(~paste0(.x, "_nmol_gDM"), .cols = c(chlide_a:car_z))
+
+TRK_pigments_raw <- read_excel("data/TRK_final_HPLC_20250910.xlsx") %>% 
+  select(depth_top, chlide_a:diadino, myxo:car_z) %>%
+  rename(b_car = "b-car") %>% 
+  rename_with(~paste0(.x, "_nmol_gDM"), .cols = c(chlide_a:car_z))
+
+# glimpse(UFM_pigments_raw) # 31 pigments total!
+
+```
+
+### Join pigment and SIA dfs
+```{r}
+UFM_wide <- left_join(UFM_SIA, UFM_pigments_raw, by = "depth_top") 
+TRK_wide <- left_join(TRK_SIA, TRK_pigments_raw, by = "depth_top")
+# LFM_wide <- left_join(LFM_SIA, LFM_pigments_raw, by = "depth_top")
+# won't work until I pull in the LFM data and create a LFM_SIA sheet.
+glimpse(UFM_wide)
+```
+
+### Recalculate pigment data to compare total DM to TC
+```{r}
+# to get nmoles / g TC, multiply by 100/percent.C, and add label _nmol_gTC)
+
+UFM_wide <- UFM_wide %>%
+  # for all the columns that end in _nmol_gDM
+  mutate(across(ends_with("_nmol_gDM"), 
+  # multiply by (100/percent.C)
+  ~ .x * (100/percent.C), 
+  # name the new column pigment_scaled
+  .names = "{.col}_scaled")) %>%
+  
+  # rename all scaled columns (and not the original columns) with new unit
+  rename_with(~ sub("_nmol_gDM_scaled$", "_nmol_gTC", .x), ends_with("_scaled"))
+
+glimpse(UFM_wide)
+
+TRK_wide <- TRK_wide %>%
+  # for all the columns that end in _nmol_gDM
+  mutate(across(ends_with("_nmol_gDM"), 
+  # multiply by (100/percent.C)
+  ~ .x * (100/percent.C), 
+  # name the new column pigment_scaled
+  .names = "{.col}_scaled")) %>%
+  
+  # rename all scaled columns (and not the original columns) with new unit
+  rename_with(~ sub("_nmol_gDM_scaled$", "_nmol_gTC", .x), ends_with("_scaled"))
+
+glimpse(TRK_wide)
+
+```
+
+### Visualize pigment unit differences
+```{r}
+
+ggplot(UFM_wide, aes(x = depth_top, y = chl_a_nmol_gDM)) +
+  geom_point(size = 2, color = "darkgreen", na.rm = TRUE) +
+  geom_line(color = "darkgreen", na.rm = TRUE) +
+  labs(
+    title = "Upper Fourmile",
+    x = "Depth top (cm)",
+    y = "Chl-a (nmol/gDM)") +
+  theme_minimal()
+
+ggplot(UFM_wide, aes(x = depth_top, y = chl_a_nmol_gTC)) +
+  geom_point(size = 2, color = "forestgreen", na.rm = TRUE) +
+  geom_line(color = "forestgreen", na.rm = TRUE) +
+  labs(
+    title = "Upper Fourmile",
+    x = "Depth top (cm)",
+    y = "Chl-a (nmol/gTC)") +
+  theme_minimal()
+
+ggplot(TRK_wide, aes(x = depth_top, y = chl_a_nmol_gDM)) +
+  geom_point(size = 2, color = "steelblue", na.rm = TRUE) +
+  geom_line(color = "steelblue", na.rm = TRUE) +
+  labs(
+    title = "Turkey Creek",
+    x = "Depth top (cm)",
+    y = "Chl-a (nmol/gDM)") +
+  theme_minimal()
+
+ggplot(TRK_wide, aes(x = depth_top, y = chl_a_nmol_gTC)) +
+  geom_point(size = 2, color = "royalblue", na.rm = TRUE) +
+  geom_line(color = "royalblue", na.rm = TRUE) +
+  labs(
+    title = "Turkey Creek",
+    x = "Depth top (cm)",
+    y = "Chl-a (nmol/gTC)") +
+  theme_minimal()
+
+```
+
+**Pigments missing from every core:** chlide_a, chl_c1, chl_c2, peridinin, sed_a, sed_b, sed_c, oscil, aphan, viola, diadino, myxo, zea, okenone, isoren, a_car, car_x, car_y, car_z
+
+**pigments in every core:** *fuco (drops off in TRK)*, allo, diato, lutein, *cantha (none in TRK)*, chl_b, chl_a, chl_ap, echine, phaeo_b, pheo_a, b_car.
+
+**Pigments focused on in bella's paper:** 
+allo, diato, lutein, *cantha*, *myxo*, *zea*, echine, phaeo_b, pheo_a, b_car
+
+**Missing from my data, in Bellas:** myxo, zea, cantha (none in TRK), diadino 
+
+**Consider later:** 
+- why is there no diadino? what does that say about diatoms given diato...?
+- these cores were old when analyzed (and experienced more freeze-thaw cycles than is ideal): what do the preservation indices tell us about the reliability of the values we obtained, and or the many zeroes. 
+- how can you assess the extent of post-depositional degradation of a given pigment? 
+- interpret AD ratio? perc_chlb, etc.
+- compare pigments in cyanos with those in vascular plants? no. Per Peter most chl degrades by the time it reaches the water column. 
+
+**Remove from short dfs:** chlide_a, chl_c1, chl_c2, peridinin, sed_a, sed_b, sed_c, oscil, aphan, viola, diadino, myxo, zea, okenone, isoren, a_car, car_x, car_y, car_z
+
+### Clean up dfs & add more pigment metrics
+```{r}
+TRK_short <- TRK_wide %>% # make a new subset df with variables of interest
+  select(-ends_with("_gDM"), # remove pigments with g / dry mass unit
+         -chlide_a_nmol_gTC, # remove pigments with 0 values 
+         -chl_c1_nmol_gTC,
+         -chl_c2_nmol_gTC, 
+         -perid_nmol_gTC, 
+         -sed_a_nmol_gTC, 
+         -sed_b_nmol_gTC, 
+         -sed_c_nmol_gTC, 
+         -oscil_nmol_gTC, 
+         -aphan_nmol_gTC, 
+         -viola_nmol_gTC, 
+         -diadino_nmol_gTC, 
+         -myxo_nmol_gTC, 
+         -zea_nmol_gTC,
+         -okenone_nmol_gTC, 
+         -isoren_nmol_gTC, 
+         -a_car_nmol_gTC,
+         -car_x_nmol_gTC,
+         -car_y_nmol_gTC, 
+         -car_z_nmol_gTC) %>%
+  mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, # add new columns
+         chlb_pheob = chl_b_nmol_gTC + phaeo_b_nmol_gTC,
+         all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, # no chlide, chl_c1 or chl_c2 in any core
+         # all_diat = diato_nmol_gTC + diadino_nmol_gTC, NO DIADINO
+         PI = chl_a_nmol_gTC/pheo_a_nmol_gTC, # preservation index
+         # UVR_index = sed_c_nmol_gTC / (allo_nmol_gTC + diato_nmol_gTC+lutein_nmol_gTC)
+         # no sed C in any core
+         AD_ratio = allo_nmol_gTC / diato_nmol_gTC, 
+         master_chl = (chl_a_nmol_gTC + chl_b_nmol_gTC) / (chl_ap_nmol_gTC + pheo_a_nmol_gTC + phaeo_b_nmol_gTC),
+         perc_chlb = (phaeo_b_nmol_gTC / pheo_a_nmol_gTC), 
+         perc_diatox = (diato_nmol_gTC/chla_pheoa))
+    
+UFM_short <- UFM_wide %>% # make a new subset df with variables of interest
+  select(-ends_with("_gDM"), # remove pigments with g / dry mass unit
+         -chlide_a_nmol_gTC, # remove pigments with 0 values 
+         -chl_c1_nmol_gTC,
+         -chl_c2_nmol_gTC, 
+         -perid_nmol_gTC, 
+         -sed_a_nmol_gTC, 
+         -sed_b_nmol_gTC, 
+         -sed_c_nmol_gTC, 
+         -oscil_nmol_gTC, 
+         -aphan_nmol_gTC, 
+         -viola_nmol_gTC, 
+         -diadino_nmol_gTC, 
+         -myxo_nmol_gTC, 
+         -zea_nmol_gTC,
+         -okenone_nmol_gTC, 
+         -isoren_nmol_gTC, 
+         -a_car_nmol_gTC,
+         -car_x_nmol_gTC,
+         -car_y_nmol_gTC, 
+         -car_z_nmol_gTC) %>%
+  mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, # add new columns
+         chlb_pheob = chl_b_nmol_gTC + phaeo_b_nmol_gTC,
+         all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, # no chlide, chl_c1 or chl_c2 in any core
+         # all_diat = diato_nmol_gTC + diadino_nmol_gTC, NO DIADINO
+         PI = chl_a_nmol_gTC/pheo_a_nmol_gTC, # preservation index
+         # UVR_index = sed_c_nmol_gTC / (allo_nmol_gTC + diato_nmol_gTC+lutein_nmol_gTC)
+         # no sed C in any core
+         AD_ratio = allo_nmol_gTC / diato_nmol_gTC, 
+         master_chl = (chl_a_nmol_gTC + chl_b_nmol_gTC) / (chl_ap_nmol_gTC + pheo_a_nmol_gTC + phaeo_b_nmol_gTC),
+         perc_chlb = (phaeo_b_nmol_gTC / pheo_a_nmol_gTC), 
+         perc_diatox = (diato_nmol_gTC/chla_pheoa))
+
+
+# LFM_short
+
+```
+
+# Wide to Long
+```{r}
+
+```
+
+# Combine spreadsheets
+```{r}
+
+```
+
+# Export
+```{r}
+
+```

@@ -1,0 +1,34 @@
+---
+title: "nutrients_and_chl.Rmd"
+author: "Julia Pop"
+date: "2025-09-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Chlorophyll calculations
+```{r}
+
+
+chl_df_combine %>%
+filter(siteId %in% c("loc")) %>%  
+mutate(dateSampled=ymd(dateSampled),       
+	year=year(dateSampled)) %>%   
+		ggplot(aes(x=dateSampled,y=chla_ugl,color=sampleLocation))+  
+		 geom_point() +   facet_wrap(~siteId) +   
+		geom_hline(yintercept=2.6) + #Oligotrophic cut off, Carlson 1977   
+		geom_hline(yintercept=7.3)   #Mesotrophic cut off, Carlson 1977
+
+```
+
+# Nutrient calculations
+```{r}
+
+
+
+
+```
