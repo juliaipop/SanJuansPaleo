@@ -4,6 +4,7 @@ author: "Julia Pop"
 date: "2025-07-26"
 output: html_document
 ---
+
 ```{r setup, include=FALSE}
 # code to troublesheet file path issues. 
 # By default, knitr uses the folder containing the .Rmd file as
@@ -19,7 +20,7 @@ knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_proje
 
 # Notes to self:
 
-1) when editing this markdown file later use head() to visualize data in the final html file! show visually how you are editing the dfs.
+1) when editing this markdown file later use head() to visualize data in the final html file! can use that to show visually how you are editing the dfs.
 
 2) SIA_run_1_TRK_UFM needs to be rounded to an accurate number of decimal points (after calculations?)
 
@@ -144,16 +145,38 @@ UFM_SIA %>%
 
 # Date Interpolation
 ```{r}
+### Interpolate 210Pb dates
 
-## read in the .csv
-# dates <- read.csv(file.choose(), header=TRUE)
-## I do file.choose but whatever works
+## read in data
+# UFM_dates <- read_excel("data/___.xlsx") 
 
 ## turn it into an age-depth model (adm) that tidypaleo recognizes
-#adm <- age_depth_model(
-#  dates,
-#  depth=Middepth.cm, age=Year)
-### You need to have the depth and ages from Flett output
+# UFM_adm <- age_depth_model(
+ # UFM_dates,
+ # depth = , # replace with depth column, e.g. middepth.cm
+ # age = ) # "year" doesn't matter what format as long as we're consistent... so insert calculated year_ce
+
+## plot the age-depth model
+# plot(adm)
+## very basic, but shows the trend
+
+## In order to model or do any other analyses by time we 
+## need to interpolate the missing dates between the estimate points
+## we can do this with a predict function
+# interp <- predict(adm, depth = seq(0.25, 20.0, 1.0))
+
+## we set at 0.25 which is the mid-depth of our first interval 0.0-0.5
+## I've put 20.0 as a hypothetical bottom date - this is the last dated interval of your core
+## 1.0 is the typical resolution for pigment. You can also change the resolution to 0.5 to see the dates for every sediment interval
+
+### Predict will also extrapolate dates if you extend the interval to below our dated section
+### this can be done with care, but it is generally a good idea to avoid extrapolating if you can
+# print(interp, n=40) ## need to print to see the whole output
+## now we can see the whole model with every point interpolated with a date
+
+## save these interpolations in a new .csv
+# write.csv(interp, "adm_interp.csv")
+## just may have to go in and add your top intveral - i.e., 0.0-0.5 if you did not date that one
 
 ```
 
@@ -188,12 +211,12 @@ UFM_wide <- left_join(UFM_SIA, UFM_pigments_raw, by = "depth_top")
 TRK_wide <- left_join(TRK_SIA, TRK_pigments_raw, by = "depth_top")
 # LFM_wide <- left_join(LFM_SIA, LFM_pigments_raw, by = "depth_top")
 # won't work until I pull in the LFM data and create a LFM_SIA sheet.
-glimpse(UFM_wide)
+# glimpse(UFM_wide)
 ```
 
 ### Recalculate pigment data to compare total DM to TC
 ```{r}
-# to get nmoles / g TC, multiply by 100/percent.C, and add label _nmol_gTC)
+# to get nmoles / g TC, multiply by 100/percent.C, and add label _nmol_gTC
 
 UFM_wide <- UFM_wide %>%
   # for all the columns that end in _nmol_gDM
@@ -206,7 +229,7 @@ UFM_wide <- UFM_wide %>%
   # rename all scaled columns (and not the original columns) with new unit
   rename_with(~ sub("_nmol_gDM_scaled$", "_nmol_gTC", .x), ends_with("_scaled"))
 
-glimpse(UFM_wide)
+# glimpse(UFM_wide)
 
 TRK_wide <- TRK_wide %>%
   # for all the columns that end in _nmol_gDM
@@ -219,7 +242,7 @@ TRK_wide <- TRK_wide %>%
   # rename all scaled columns (and not the original columns) with new unit
   rename_with(~ sub("_nmol_gDM_scaled$", "_nmol_gTC", .x), ends_with("_scaled"))
 
-glimpse(TRK_wide)
+# glimpse(TRK_wide)
 
 ```
 
@@ -236,12 +259,48 @@ ggplot(UFM_wide, aes(x = depth_top, y = chl_a_nmol_gDM)) +
   theme_minimal()
 
 ggplot(UFM_wide, aes(x = depth_top, y = chl_a_nmol_gTC)) +
-  geom_point(size = 2, color = "forestgreen", na.rm = TRUE) +
-  geom_line(color = "forestgreen", na.rm = TRUE) +
+  geom_point(size = 2, color = "darkgreen", na.rm = TRUE) +
+  geom_line(color = "darkgreen", na.rm = TRUE) +
   labs(
     title = "Upper Fourmile",
     x = "Depth top (cm)",
     y = "Chl-a (nmol/gTC)") +
+  theme_minimal()
+
+ggplot(UFM_wide, aes(x = depth_top, y = echine_nmol_gDM)) +
+  geom_point(size = 2, color = "green3", na.rm = TRUE) +
+  geom_line(color = "green3", na.rm = TRUE) +
+  labs(
+    title = "Upper Fourmile",
+    x = "Depth top (cm)",
+    y = "Echinenone (nmol/gDM)") +
+  theme_minimal()
+
+ggplot(UFM_wide, aes(x = depth_top, y = echine_nmol_gTC)) +
+  geom_point(size = 2, color = "green3", na.rm = TRUE) +
+  geom_line(color = "green3", na.rm = TRUE) +
+  labs(
+    title = "Upper Fourmile",
+    x = "Depth top (cm)",
+    y = "Echinenone (nmol/gTC)") +
+  theme_minimal()
+
+ggplot(UFM_wide, aes(x = depth_top, y = diato_nmol_gDM)) +
+  geom_point(size = 2, color = "yellowgreen", na.rm = TRUE) +
+  geom_line(color = "yellowgreen", na.rm = TRUE) +
+  labs(
+    title = "Upper Fourmile",
+    x = "Depth top (cm)",
+    y = "Diatoxanthin (nmol/gDM)") +
+  theme_minimal()
+
+ggplot(UFM_wide, aes(x = depth_top, y = diato_nmol_gTC)) +
+  geom_point(size = 2, color = "yellowgreen", na.rm = TRUE) +
+  geom_line(color = "yellowgreen", na.rm = TRUE) +
+  labs(
+    title = "Upper Fourmile",
+    x = "Depth top (cm)",
+    y = "Diatoxanthin (nmol/gTC)") +
   theme_minimal()
 
 ggplot(TRK_wide, aes(x = depth_top, y = chl_a_nmol_gDM)) +
@@ -254,12 +313,49 @@ ggplot(TRK_wide, aes(x = depth_top, y = chl_a_nmol_gDM)) +
   theme_minimal()
 
 ggplot(TRK_wide, aes(x = depth_top, y = chl_a_nmol_gTC)) +
+  geom_point(size = 2, color = "steelblue", na.rm = TRUE) +
+  geom_line(color = "steelblue", na.rm = TRUE) +
+  labs(
+    title = "Turkey Creek",
+    x = "Depth top (cm)",
+    y = "Chl-a (nmol/gTC)") +
+  theme_minimal()
+
+
+ggplot(TRK_wide, aes(x = depth_top, y = echine_nmol_gDM)) +
+  geom_point(size = 2, color = "blue4", na.rm = TRUE) +
+  geom_line(color = "blue4", na.rm = TRUE) +
+  labs(
+    title = "Turkey Creek",
+    x = "Depth top (cm)",
+    y = "Echinenone (nmol/gDM)") +
+  theme_minimal()
+
+ggplot(TRK_wide, aes(x = depth_top, y = echine_nmol_gTC)) +
+  geom_point(size = 2, color = "blue4", na.rm = TRUE) +
+  geom_line(color = "blue4", na.rm = TRUE) +
+  labs(
+    title = "Turkey Creek",
+    x = "Depth top (cm)",
+    y = "Echinenone (nmol/gTC)") +
+  theme_minimal()
+
+ggplot(TRK_wide, aes(x = depth_top, y = diato_nmol_gDM)) +
   geom_point(size = 2, color = "royalblue", na.rm = TRUE) +
   geom_line(color = "royalblue", na.rm = TRUE) +
   labs(
     title = "Turkey Creek",
     x = "Depth top (cm)",
-    y = "Chl-a (nmol/gTC)") +
+    y = "Diatoxanthin (nmol/gDM)") +
+  theme_minimal()
+
+ggplot(TRK_wide, aes(x = depth_top, y = diato_nmol_gTC)) +
+  geom_point(size = 2, color = "royalblue", na.rm = TRUE) +
+  geom_line(color = "royalblue", na.rm = TRUE) +
+  labs(
+    title = "Turkey Creek",
+    x = "Depth top (cm)",
+    y = "Diatoxanthin (nmol/gTC)") +
   theme_minimal()
 
 ```
@@ -352,6 +448,48 @@ UFM_short <- UFM_wide %>% # make a new subset df with variables of interest
 
 
 # LFM_short
+
+```
+
+### Evaluate PI
+```{r}
+# visualize chl_a and PI, (doublecheck?) if PI spikes near surface, increase in Chl_a near depth 0 may be suspect / preservation effects. 
+
+ggplot(UFM_short, aes(x = depth_top, y = chl_a_nmol_gTC)) +
+  geom_point(size = 2, color = "darkgreen", na.rm = TRUE) +
+  geom_line(color = "darkgreen", na.rm = TRUE) +
+  labs(
+    title = "Upper Fourmile",
+    x = "Depth top (cm)",
+    y = "Chl-a (nmol/gTC)") +
+  theme_minimal()
+
+ggplot(UFM_short, aes(x = depth_top, y = PI)) +
+  geom_point(size = 2, color = "darkgreen", na.rm = TRUE) +
+  geom_line(color = "darkgreen", na.rm = TRUE) +
+  labs(
+    title = "Upper Fourmile",
+    x = "Depth top (cm)",
+    y = "Preservation Index") +
+  theme_minimal()
+
+ggplot(TRK_short, aes(x = depth_top, y = chl_a_nmol_gTC)) +
+  geom_point(size = 2, color = "steelblue", na.rm = TRUE) +
+  geom_line(color = "steelblue", na.rm = TRUE) +
+  labs(
+    title = "Turkey Creek",
+    x = "Depth top (cm)",
+    y = "Chl-a (nmol/gTC)") +
+  theme_minimal()
+
+ggplot(TRK_short, aes(x = depth_top, y = PI)) +
+  geom_point(size = 2, color = "steelblue", na.rm = TRUE) +
+  geom_line(color = "steelblue", na.rm = TRUE) +
+  labs(
+    title = "Turkey Creek",
+    x = "Depth top (cm)",
+    y = "Preservation Index") +
+  theme_minimal()
 
 ```
 
