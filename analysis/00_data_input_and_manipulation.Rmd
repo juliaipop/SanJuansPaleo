@@ -22,9 +22,10 @@ knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_proje
 
 1) when editing this markdown file later use head() to visualize data in the final html file! can use that to show visually how you are editing the dfs.
 
-2) SIA_run_1_TRK_UFM needs to be rounded to an accurate number of decimal points (after calculations?)
+2) SIA_run_1_TRK_UFM needs to be rounded to an accurate number of decimal points (after calculations?); same for SIA_run_2_TRK_LFM
 
 ## Load packages
+
 Copied directly from Bella's 00_data_entry_and_manipulation.Rmd in LochValePaleo. 
 ```{r message = false}
 
@@ -86,61 +87,86 @@ LFM_metadata <- read_excel("data/0_LFM2_core_metadata_20250726.xlsx") %>%
 - consolidate / choose perC.drft or percent.C and the corresponding C:N
 
 ```{r, echo = FALSE}
-
-# step one: pull in and clean up run 1 info
-# NOTE: this file (SIA_run1_...) still contains triplicates (!)
+    
+# Step One: pull in and clean up IRMS run info
+# NOTE: these files (SIA_run1_...SIA_run2_) still contains triplicates!
 SIA_run1_TRK_UFM <- read_excel("data/TRK_UFM_SIA_data_clean_20250726.xlsx") %>%
   rename(sample_ID = Identifier1) %>%
-  select(sample_ID,d13C.scale:perC.drift, d15N.scale, percent.N) %>%
-  mutate("C.drift:N" = perC.drift/percent.N) %>% 
-  # For now, chose to inlcude both “perC.drift” AND "percent.C" for %C since a very small drift was detected in the HOS lin.std (but either way within the error of 0.3% - where std.dev. is of multiple HOS standard replicates) For now, calculate C:N using both and see how errors propogate. In thesis use percent.C until have a reason not to. 
-  mutate("C:N" = percent.C/percent.N)
+  select(sample_ID, d13C.scale, percent.C, perC.drift, d15N.scale, percent.N) %>% # pull in percent.C and perC.drift.
+  mutate("C.drift:N" = perC.drift/percent.N,
+         "C:N" = percent.C/percent.N) %>%
+  rename(d13C = d13C.scale,
+         d15N = d15N.scale)
 
-# step two: collapse triplicate values, and create a separate SIA spreadsheet for each core (in format: metadata, SIA)
+# For now, chose to inlcude both “perC.drift” AND "percent.C" for %C since a very small drift was detected in the HOS lin.std (but either way within the error of 0.3% - where std.dev. is of multiple HOS standard replicates) For now, calculate C:N using both and see how errors propogate. In thesis use percent.C until have a reason not to.
+
+SIA_run2_TRK_LFM <- 
+  read_excel("data/TRK_LFM_SIA_data_clean_20250921.xlsx") %>%
+    rename(sample_ID = Identifier1) %>%
+    select(sample_ID, d13C.scale, linKpercent.C, d15N.scale, perN.drift) %>%
+# standardize SIA column names across runs, 
+# regardless of corrections used...
+    rename(d13C = d13C.scale,
+           percent.C = linKpercent.C, 
+           d15N = d15N.scale,
+           percent.N = perN.drift) %>%
+    mutate("C:N" = percent.C/percent.N)
+
+# Step Two: collapse triplicate values, and create a separate SIA spreadsheet for each core (in format: metadata, SIA)
 
 # two a) join dataframes and keep all the observations in TRK_metadata (left, while throwing out any observations from SIA_run1_TRK_UFM, right, that don't have a sample_ID matching those in TRK_metadata). Right now that throws out UFM SIA, but keeps all the extra observations in the left database (e.g. TRK2_001, TRK2_002, TRK2_003...5, 7, 9)
 
-TRK_SIA <- left_join(TRK_metadata, SIA_run1_TRK_UFM, by = "sample_ID")
-  
-# two b) save row TRK2_002 to add after the NA drop
+TRK_SIA <- left_join(TRK_metadata, SIA_run1_TRK_UFM, by = "sample_ID") %>%
+  select(-perC.drift, -"C.drift:N")
 
-row_TRK2_002_SIA <- TRK_SIA %>%
-  filter(sample_ID == "TRK2_002")
+# two b) pull row TRK2_002 to add to the data from run 1 later
+row_TRK2_002_SIA <- SIA_run2_TRK_LFM %>%
+  filter(sample_ID == "TRK2_002") %>%
+  left_join(TRK_metadata, by = "sample_ID") %>%
+  relocate(all_of(c(
+    "lake_name",
+    "core_number",
+    "sample_ID",
+    "sample_range",
+    "depth_top",
+    "depth_bottom",
+    "d13C",
+    "percent.C",
+    "d15N",
+    "percent.N",
+    "C:N"
+  ))) # keep columns in the same order.
 
 # two c) do regular cleaning
 TRK_SIA <- TRK_SIA %>%
-    drop_na() %>% #drop all TRK samples for which we did not run SIA
+    drop_na() %>% # drop all TRK samples for which we did not run SIA
     group_by(lake_name, core_number, sample_ID, sample_range, depth_top, depth_bottom) %>% # add a step to run the summarize fn on groups of rows (each row could be grouped just by sample_ID, but output would then not include the other metadata; bc metadata should stay the same for duplicate samples, we can use this shortcut). 
-    summarize(across(d13C.scale:"C:N", ~mean(.x, na.rm=TRUE)), .groups = "keep") # summarize collapses rows--this fn will take the average of all the triplicates for every row (grouped by the columns above). ".x" is tidyverse's way of saying insert the line before right here when you choose what to take the mean of.
+    summarize(across(d13C:"C:N", ~mean(.x, na.rm=TRUE)), .groups = "keep") # summarize collapses rows--this fn will take the average of all the triplicates for every row (grouped by the columns above). ".x" is tidyverse's way of saying insert the line before right here when you choose what to take the mean of.
 
 # two d) add row TRK2_002 back in
 TRK_SIA <- bind_rows(TRK_SIA, row_TRK2_002_SIA)
 
 # create a UFM stable isotope file. 
 UFM_SIA <- left_join(UFM_metadata, SIA_run1_TRK_UFM, by = "sample_ID") %>%
+    select(-perC.drift, -"C.drift:N")
+
+UFM_SIA <- UFM_SIA %>%
     drop_na() %>%
     group_by(lake_name, core_number, sample_ID, sample_range, depth_top, depth_bottom) %>%
-    summarize(across(d13C.scale:"C:N", ~mean(.x, na.rm=TRUE)), .groups = "keep")
+    summarize(across(d13C:"C:N", ~mean(.x, na.rm=TRUE)), .groups = "keep")
   
+# create an LFM stable isotope file.
+LFM_SIA <- left_join(LFM_metadata, SIA_run2_TRK_LFM, by = "sample_ID") %>%
+  drop_na() %>%
+  group_by(lake_name, core_number, sample_ID, sample_range, depth_top, depth_bottom) %>%
+  summarize(across(d13C:"C:N", ~mean(.x, na.rm=TRUE)), .groups = "keep")
+
 # export data for Peter
-write_xlsx(TRK_SIA, path = "output/TRK_SIA_for_leavitt.xlsx")
-write_xlsx(UFM_SIA, path = "output/UFM_SIA_for_leavitt.xlsx")
+# write_xlsx(TRK_SIA, path = "output/TRK_SIA_for_leavitt.xlsx")
+# write_xlsx(UFM_SIA, path = "output/UFM_SIA_for_leavitt.xlsx")
 
-```
-
-### Compare C vs C drift
-```{r}
-head(TRK_SIA)
-
-TRK_SIA %>%
-  ggplot(aes(x=percent.C, y=perC.drift))+
-  geom_point()+
-  geom_abline(slope=1, intercept=0)
-
-UFM_SIA %>%
-  ggplot(aes(x=percent.C, y=perC.drift))+
-  geom_point()+
-  geom_abline(slope=1, intercept=0)
+# clean up Environment: 
+rm(row_TRK2_002_SIA)
 ```
 
 # Date Interpolation
@@ -209,8 +235,7 @@ TRK_pigments_raw <- read_excel("data/TRK_final_HPLC_20250910.xlsx") %>%
 ```{r}
 UFM_wide <- left_join(UFM_SIA, UFM_pigments_raw, by = "depth_top") 
 TRK_wide <- left_join(TRK_SIA, TRK_pigments_raw, by = "depth_top")
-# LFM_wide <- left_join(LFM_SIA, LFM_pigments_raw, by = "depth_top")
-# won't work until I pull in the LFM data and create a LFM_SIA sheet.
+LFM_wide <- left_join(LFM_SIA, LFM_pigments_raw, by = "depth_top")
 # glimpse(UFM_wide)
 ```
 
@@ -229,20 +254,17 @@ UFM_wide <- UFM_wide %>%
   # rename all scaled columns (and not the original columns) with new unit
   rename_with(~ sub("_nmol_gDM_scaled$", "_nmol_gTC", .x), ends_with("_scaled"))
 
-# glimpse(UFM_wide)
-
 TRK_wide <- TRK_wide %>%
-  # for all the columns that end in _nmol_gDM
   mutate(across(ends_with("_nmol_gDM"), 
-  # multiply by (100/percent.C)
   ~ .x * (100/percent.C), 
-  # name the new column pigment_scaled
   .names = "{.col}_scaled")) %>%
-  
-  # rename all scaled columns (and not the original columns) with new unit
   rename_with(~ sub("_nmol_gDM_scaled$", "_nmol_gTC", .x), ends_with("_scaled"))
 
-# glimpse(TRK_wide)
+LFM_wide <- LFM_wide %>%
+  mutate(across(ends_with("_nmol_gDM"), 
+  ~ .x * (100/percent.C), 
+  .names = "{.col}_scaled")) %>%
+  rename_with(~ sub("_nmol_gDM_scaled$", "_nmol_gTC", .x), ends_with("_scaled"))
 
 ```
 
@@ -448,6 +470,38 @@ UFM_short <- UFM_wide %>% # make a new subset df with variables of interest
 
 
 # LFM_short
+LFM_short <- LFM_wide %>% # make a new subset df with variables of interest
+  select(-ends_with("_gDM"), # remove pigments with g / dry mass unit
+         -chlide_a_nmol_gTC, # remove pigments with 0 values 
+         -chl_c1_nmol_gTC,
+         -chl_c2_nmol_gTC, 
+         -perid_nmol_gTC, 
+         -sed_a_nmol_gTC, 
+         -sed_b_nmol_gTC, 
+         -sed_c_nmol_gTC, 
+         -oscil_nmol_gTC, 
+         -aphan_nmol_gTC, 
+         -viola_nmol_gTC, 
+         -diadino_nmol_gTC, 
+         -myxo_nmol_gTC, 
+         -zea_nmol_gTC,
+         -okenone_nmol_gTC, 
+         -isoren_nmol_gTC, 
+         -a_car_nmol_gTC,
+         -car_x_nmol_gTC,
+         -car_y_nmol_gTC, 
+         -car_z_nmol_gTC) %>%
+  mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, # add new columns
+         chlb_pheob = chl_b_nmol_gTC + phaeo_b_nmol_gTC,
+         all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, # no chlide, chl_c1 or chl_c2 in any core
+         # all_diat = diato_nmol_gTC + diadino_nmol_gTC, NO DIADINO
+         PI = chl_a_nmol_gTC/pheo_a_nmol_gTC, # preservation index
+         # UVR_index = sed_c_nmol_gTC / (allo_nmol_gTC + diato_nmol_gTC+lutein_nmol_gTC)
+         # no sed C in any core
+         AD_ratio = allo_nmol_gTC / diato_nmol_gTC, 
+         master_chl = (chl_a_nmol_gTC + chl_b_nmol_gTC) / (chl_ap_nmol_gTC + pheo_a_nmol_gTC + phaeo_b_nmol_gTC),
+         perc_chlb = (phaeo_b_nmol_gTC / pheo_a_nmol_gTC), 
+         perc_diatox = (diato_nmol_gTC/chla_pheoa))
 
 ```
 
@@ -519,7 +573,7 @@ ggplot(TRK_short, aes(x = depth_top, y = PI)) +
 # Start with TRK
 
 TRK_short %>%
-  pivot_longer(d13C.scale:perc_diatox) %>%
+  pivot_longer(d13C:perc_diatox) %>%
   ggplot(aes(x=depth_top, y=value, color=name))+
   geom_point()+
   geom_line()+
@@ -527,7 +581,15 @@ TRK_short %>%
   theme(legend.position="none")
 
 UFM_short %>%
-  pivot_longer(d13C.scale:perc_diatox) %>%
+  pivot_longer(d13C:perc_diatox) %>%
+  ggplot(aes(x=depth_top, y=value, color=name))+
+  geom_point()+
+  geom_line()+
+  facet_wrap(.~name, scales="free_y")+
+  theme(legend.position="none")
+
+LFM_short %>%
+  pivot_longer(d13C:perc_diatox) %>%
   ggplot(aes(x=depth_top, y=value, color=name))+
   geom_point()+
   geom_line()+
