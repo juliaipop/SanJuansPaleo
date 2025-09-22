@@ -18,7 +18,7 @@ output: html_document
 knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_project))
 ```
 
-**NOTE! use the short files for the gams! wide are missing added PI indeces**
+**NOTE! use the short files for the gams unless interested in comparing pigment units (g TC vs g dry mass)**
 
 ### Adding a weight term
 ```{r}

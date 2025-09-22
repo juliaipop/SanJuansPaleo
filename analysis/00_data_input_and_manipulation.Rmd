@@ -374,7 +374,7 @@ allo, diato, lutein, *cantha*, *myxo*, *zea*, echine, phaeo_b, pheo_a, b_car
 
 **Remove from short dfs:** chlide_a, chl_c1, chl_c2, peridinin, sed_a, sed_b, sed_c, oscil, aphan, viola, diadino, myxo, zea, okenone, isoren, a_car, car_x, car_y, car_z
 
-### Clean up dfs & add more pigment metrics
+### Clean up dfs, add pigment metrics
 ```{r}
 TRK_short <- TRK_wide %>% # make a new subset df with variables of interest
   select(-ends_with("_gDM"), # remove pigments with g / dry mass unit
@@ -478,6 +478,46 @@ LFM_short <- LFM_wide %>% # make a new subset df with variables of interest
          perc_diatox = (diato_nmol_gTC/chla_pheoa))
 
 ```
+
+## Add pigment metrics to wide dfs
+```{r}
+# Adding summary pigment metrics to wide df. NOTE, only calculating for gTC, & all units are in gTC
+
+TRK_wide <- TRK_wide %>%
+   mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, 
+         chlb_pheob = chl_b_nmol_gTC + phaeo_b_nmol_gTC,
+         all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, 
+         PI = chl_a_nmol_gTC/pheo_a_nmol_gTC,
+         AD_ratio = allo_nmol_gTC / diato_nmol_gTC, 
+         master_chl = (chl_a_nmol_gTC + chl_b_nmol_gTC) / (chl_ap_nmol_gTC + pheo_a_nmol_gTC + phaeo_b_nmol_gTC),
+         perc_chlb = (phaeo_b_nmol_gTC / pheo_a_nmol_gTC), 
+         perc_diatox = (diato_nmol_gTC/chla_pheoa)) %>%
+  relocate(chla_pheoa:last_col(), .after = car_z_nmol_gTC)
+  
+UFM_wide <- UFM_wide %>%
+    mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, 
+         chlb_pheob = chl_b_nmol_gTC + phaeo_b_nmol_gTC,
+         all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, 
+         PI = chl_a_nmol_gTC/pheo_a_nmol_gTC,
+         AD_ratio = allo_nmol_gTC / diato_nmol_gTC, 
+         master_chl = (chl_a_nmol_gTC + chl_b_nmol_gTC) / (chl_ap_nmol_gTC + pheo_a_nmol_gTC + phaeo_b_nmol_gTC),
+         perc_chlb = (phaeo_b_nmol_gTC / pheo_a_nmol_gTC), 
+         perc_diatox = (diato_nmol_gTC/chla_pheoa)) %>%
+  relocate(chla_pheoa:last_col(), .after = car_z_nmol_gTC)
+
+LFM_wide <- LFM_wide %>%
+    mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, 
+         chlb_pheob = chl_b_nmol_gTC + phaeo_b_nmol_gTC,
+         all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, 
+         PI = chl_a_nmol_gTC/pheo_a_nmol_gTC,
+         AD_ratio = allo_nmol_gTC / diato_nmol_gTC, 
+         master_chl = (chl_a_nmol_gTC + chl_b_nmol_gTC) / (chl_ap_nmol_gTC + pheo_a_nmol_gTC + phaeo_b_nmol_gTC),
+         perc_chlb = (phaeo_b_nmol_gTC / pheo_a_nmol_gTC), 
+         perc_diatox = (diato_nmol_gTC/chla_pheoa)) %>%
+  relocate(chla_pheoa:last_col(), .after = car_z_nmol_gTC)
+
+```
+
 
 ### Evaluate PI
 ```{r}
@@ -669,7 +709,6 @@ TRK_short <- left_join(TRK_short, TRK_interp, by = "depth_plot")
   LFM_short <- left_join(LFM_short, LFM_interp, by = "depth_plot") 
 
 ```
-
 # Wide to Long
 ```{r}
 
