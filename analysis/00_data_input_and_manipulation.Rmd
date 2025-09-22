@@ -682,6 +682,7 @@ TRK_short %>%
   ggplot(aes(x=depth_top, y=value, color=name))+
   geom_point()+
   geom_line()+
+  geom_smooth(method="gam")+ # "really easy to plot a gam"
   facet_wrap(.~name, scales="free_y")+
   theme(legend.position="none")
 
@@ -705,10 +706,15 @@ LFM_short %>%
 
 # Combine spreadsheets
 ```{r}
-
+# make wide long then export? don't need to combine sheets or make them long... 
 ```
 
 # Export
 ```{r}
-
+write.csv(LFM_wide, file="output/LFM_wide.csv")
+write.csv(UFM_wide, file="output/UFM_wide.csv")
+write.csv(TRK_wide, file="output/TRK_wide.csv")
+write.csv(LFM_short, file="output/LFM_short.csv")
+write.csv(UFM_short, file="output/UFM_short.csv")
+write.csv(TRK_short, file="output/TRK_short.csv")
 ```

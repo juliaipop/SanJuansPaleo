@@ -51,7 +51,7 @@ print(interp, n=40) ## need to print to see the whole output
 
 ## save these interpolations in a new .csv
 write.csv(interp, "adm_interp.csv")
-## just may have to go in and add your top intveral - i.e., 0.0-0.5 if you did not date that one
+## just may have to go in and add your top interval - i.e., 0.0-0.5 if you did not date that one
 
 ##################################################################################################
 
