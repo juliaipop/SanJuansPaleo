@@ -482,6 +482,24 @@ ggplot(TRK_short, aes(x = depth_top, y = chl_a_nmol_gTC)) +
     y = "Chl-a (nmol/gTC)") +
   theme_minimal()
 
+ggplot(TRK_short, aes(x = depth_top, y = chla_pheoa)) +
+  geom_point(size = 2, color = "steelblue", na.rm = TRUE) +
+  geom_line(color = "steelblue", na.rm = TRUE) +
+  labs(
+    title = "Turkey Creek",
+    x = "Depth top (cm)",
+    y = "Total Chl-a's (nmol/gTC)") +
+  theme_minimal()
+
+ggplot(TRK_short, aes(x = depth_top, y = pheo_a_nmol_gTC)) +
+  geom_point(size = 2, color = "steelblue", na.rm = TRUE) +
+  geom_line(color = "steelblue", na.rm = TRUE) +
+  labs(
+    title = "Turkey Creek",
+    x = "Depth top (cm)",
+    y = "Pheo-a (nmol/gTC)") +
+  theme_minimal()
+
 ggplot(TRK_short, aes(x = depth_top, y = PI)) +
   geom_point(size = 2, color = "steelblue", na.rm = TRUE) +
   geom_line(color = "steelblue", na.rm = TRUE) +
@@ -495,6 +513,26 @@ ggplot(TRK_short, aes(x = depth_top, y = PI)) +
 
 # Wide to Long
 ```{r}
+
+# At a glance look at all parameters in an individual core
+
+# Start with TRK
+
+TRK_short %>%
+  pivot_longer(d13C.scale:perc_diatox) %>%
+  ggplot(aes(x=depth_top, y=value, color=name))+
+  geom_point()+
+  geom_line()+
+  facet_wrap(.~name, scales="free_y")+
+  theme(legend.position="none")
+
+UFM_short %>%
+  pivot_longer(d13C.scale:perc_diatox) %>%
+  ggplot(aes(x=depth_top, y=value, color=name))+
+  geom_point()+
+  geom_line()+
+  facet_wrap(.~name, scales="free_y")+
+  theme(legend.position="none")
 
 ```
 
