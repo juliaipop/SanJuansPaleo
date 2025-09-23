@@ -31,18 +31,18 @@ source("scripts/libraries.R")
 source("scripts/helper_functions.R")
 
 theme_SJ <- function () {
-  theme_base(base_size=8, base_family="PT Sans") %+replace% # base size scales everything
+  theme_base(base_size=12, base_family="PT Sans") %+replace% # base size scales everything
     theme(
       panel.background  = element_blank(), # back panel blank
       plot.background = element_rect(fill="white", colour=NA), # plot bgd white, with no border
       plot.title=element_text(face="plain",hjust=0), #
-      plot.subtitle = element_text(color="dimgrey", hjust=0, size=8), # hjust = left aligned
+      plot.subtitle = element_text(color="dimgrey", hjust=0, size=12), # hjust = left aligned
       axis.title=element_text(face="plain"), # face = plain means not bold
       panel.grid.minor=element_blank(), # removes minor grid lines
       strip.text.x = element_text(face="italic"),
       panel.grid.major=element_line(color="lightgrey"))}
 
- theme_set(theme_paleo())  # pre-set the bw theme
+theme_set(theme_SJ())  # pre-set the bw theme
 ```
 
 **NOTE! use the short files for the gams unless interested in comparing pigment units (g TC vs g dry mass)**
@@ -68,6 +68,7 @@ LFM_short <- LFM_short %>%
 
 ### GAMs- Bella's way
 ```{r}
+
 ### family=Gamma(link="log") for gamma distributed errors
 ### family = gaussian(link = "identity") for normal data with negative values
 mod_d15N_LFM <- gamm(d15N ~ s(year_CE, k = 10),
@@ -195,8 +196,16 @@ ggplot(LFM_short) +
   scale_color_manual(values = c("sig. inc." = "#CC9933",
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
+  scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression(paste(delta^{15}, "N (", "\u2030", ")"))) +
-  xlab(expression(paste("Year (", italic("CE"), ")"))) 
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("Lower Fourmile Lake")
+
+ggsave("figures/LFM_d15N.png",
+       dpi=600,
+       height=5,
+       width=5,
+       units="in")
 
 
 # FOR WHAT IT'S WORTH... 
@@ -286,7 +295,7 @@ p.beta <-
   geom_line(data=pred, aes(year_CE, fit), linewidth=1, color="black")+
   geom_line(data=pred, aes(year_CE, dt.dsig$decr), color="#CC9933", lwd=2)+ ## this highlights what areas have significant changes
   geom_line(data=pred, aes(year_CE, dt.dsig$incr), color="#CC9933", lwd=2)+
-  # scale_x_continuous(breaks=seq(1980,2025,by=5))+
+  scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab('d15N')+
   xlab('Year')+
   theme_bw()
@@ -294,4 +303,145 @@ p.beta
 
 
 
+```
+
+# Compare model fits
+```{r}
+
+hist(LFM_short$phaeo_b_nmol_gTC)
+hist(log(LFM_short$phaeo_b_nmol_gTC))
+
+
+m.pheob.normal <- gam(phaeo_b_nmol_gTC ~s(year_CE, k = 10), # this is simply the trend by date
+              data = LFM_short, ## the data used
+              family = gaussian(link = "identity"),  # use Gaussian for roughly normal data
+                  ## Use Gamma for concentration data
+              bs='tp',## spline - thin plate is ok for simple models like this 
+              method="REML", ## method - always use REML for gam
+              weights = weight) ## here we add the weight term
+
+m.pheob.gamma <- gam(phaeo_b_nmol_gTC ~s(year_CE, k = 10), # this is simply the trend by date
+              data = LFM_short, ## the data used
+              family=Gamma(link="log"),  # use Gaussian for roughly normal data
+                  ## Use Gamma for concentration data
+              bs='tp',## spline - thin plate is ok for simple models like this 
+              method="REML", ## method - always use REML for gam
+              weights = weight) ## here we add the weight term
+
+par(mfrow = c(2, 2))
+gam.check(m.pheob.normal)
+par(mfrow = c(2, 2))
+gam.check(m.pheob.gamma)
+
+summary(m.pheob.normal)
+summary(m.pheob.gamma)
+
+AIC(m.pheob.normal, m.pheob.gamma)
+
+par(mfrow = c(1, 2))
+plot(fitted(m.pheob.normal), resid(m.pheob.normal), main = "Gaussian")
+abline(h = 0, col = "red")
+plot(fitted(m.pheob.gamma), resid(m.pheob.gamma), main = "Gamma(log)")
+abline(h = 0, col = "red")
+
+# The deviance explained in the gamma model is higher but the AIC is very similar.
+# Let's look at the model fits and decide? 
+```
+
+## Pheo b normal/gaussian family
+```{r}
+
+### now that you have a good model, you need to predict new data over your original data
+### before we predict, we need to transform the data to deal
+## with the Gamma family
+fam<-family(m.pheob.normal)
+fam
+str(fam) 
+ilink <- fam$linkinv
+ilink 
+Gamma()$linkinv 
+ilink <- family(m.pheob.normal)$linkinv 
+
+### now we predict 
+pred <- with(LFM_short, data.frame(year_CE = seq(min(year_CE,na.rm=TRUE), max(year_CE,na.rm=TRUE), ## this is making fake dates to model through
+                                        length.out = 200))) ### 200-300 are usually good numbers of data points
+pred <- cbind(pred,
+              data.frame(predict(m.pheob.normal, pred, se.fit = TRUE))) # add the prediction to your data
+## now we use the ilink to account for the transformation
+pred <- transform(pred, fit = ilink(fit), 
+                  upper = ilink(fit + (2 * se.fit)),
+                  lower = ilink(fit - (2 * se.fit))) ## and this creates confidence intervals for your model
+
+
+
+## Derive from your model!
+dt.Der<-Deriv(m.pheob.normal) ## derive
+plot(dt.Der, sizer = TRUE)
+Term<-"year_CE" 
+dt.dci<-confint(dt.Der, term = Term) ## make confidence intervals
+dt.dsig<-signifD(pred$fit, d = dt.Der[[Term]]$deriv,
+                 dt.dci[[Term]]$upper, dt.dci[[Term]]$lower) ### show significance
+
+### now we make a simple plot
+  ggplot(LFM_short)+
+  geom_point(aes(year_CE, phaeo_b_nmol_gTC))+
+  geom_ribbon(data=pred, aes(ymin=lower, ymax=upper, x=year_CE), alpha=0.2)+
+  geom_line(data=pred, aes(year_CE, fit), linewidth=1, color="black")+
+  geom_line(data=pred, aes(year_CE, dt.dsig$decr), color="#CC9933", lwd=2)+ ## this highlights what areas have significant changes
+  geom_line(data=pred, aes(year_CE, dt.dsig$incr), color="#CC9933", lwd=2)+
+  scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  ylab('pheo b - gaussian family')+
+  xlab('Year')+
+  theme_bw()
+```
+
+
+## Pheo b gamma family
+```{r}
+
+### now that you have a good model, you need to predict new data over your original data
+### before we predict, we need to transform the data to deal
+## with the Gamma family
+fam<-family(m.pheob.gamma)
+fam
+str(fam) 
+ilink <- fam$linkinv
+ilink 
+Gamma()$linkinv 
+ilink <- family(m.pheob.gamma)$linkinv 
+
+### now we predict 
+pred <- with(LFM_short, data.frame(year_CE = seq(min(year_CE,na.rm=TRUE), max(year_CE,na.rm=TRUE), ## this is making fake dates to model through
+                                        length.out = 200))) ### 200-300 are usually good numbers of data points
+pred <- cbind(pred,
+              data.frame(predict(m.pheob.gamma, pred, se.fit = TRUE))) # add the prediction to your data
+## now we use the ilink to account for the transformation
+pred <- transform(pred, fit = ilink(fit), 
+                  upper = ilink(fit + (2 * se.fit)),
+                  lower = ilink(fit - (2 * se.fit))) ## and this creates confidence intervals for your model
+
+
+
+## Derive from your model!
+dt.Der<-Deriv(m.pheob.gamma) ## derive
+plot(dt.Der, sizer = TRUE)
+Term<-"year_CE" 
+dt.dci<-confint(dt.Der, term = Term) ## make confidence intervals
+dt.dsig<-signifD(pred$fit, d = dt.Der[[Term]]$deriv,
+                 dt.dci[[Term]]$upper, dt.dci[[Term]]$lower) ### show significance
+
+### now we make a simple plot
+  ggplot(LFM_short)+
+  geom_point(aes(year_CE, phaeo_b_nmol_gTC))+
+  geom_ribbon(data=pred, aes(ymin=lower, ymax=upper, x=year_CE), alpha=0.2)+
+  geom_line(data=pred, aes(year_CE, fit), linewidth=1, color="black")+
+  geom_line(data=pred, aes(year_CE, dt.dsig$decr), color="#CC9933", lwd=2)+ ## this highlights what areas have significant changes
+  geom_line(data=pred, aes(year_CE, dt.dsig$incr), color="#CC9933", lwd=2)+
+  scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  ylab('pheo b - gaussian family')+
+  xlab('Year')+
+  theme_bw()
+
+# Gaussian family seems to fit the data a bit better to me.
+# First derivatives don't show evidence for an acceleration in the trend
 ```
