@@ -709,7 +709,7 @@ TRK_short <- left_join(TRK_short, TRK_interp, by = "depth_plot")
   LFM_short <- left_join(LFM_short, LFM_interp, by = "depth_plot") 
 
 ```
-# Wide to Long
+# All parameter vis
 ```{r}
 
 # At a glance look at all parameters in an individual core

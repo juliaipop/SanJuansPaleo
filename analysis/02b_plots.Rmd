@@ -1,0 +1,197 @@
+---
+title: "02b_plots"
+author: "Julia Pop"
+date: "2025-09-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# code to troublesheet file path issues. 
+# By default, knitr uses the folder containing the .Rmd file as
+# the working directory. This code allows us to set the folder
+# with our .rProj in it as the root. 
+
+# find_root looks upwards from the .Rmd until it finds a file or
+# folder that matches the criteria "folder with a .Rproj file in
+# it."
+
+knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_project))
+```
+
+# Plotting Preservation Indeces for Peter
+
+## Pull in data
+```{r}
+UFM_short <- read.csv("output/UFM_short.csv")
+LFM_short <- read.csv("output/LFM_short.csv")
+TRK_short <- read.csv("output/TRK_short.csv")
+```
+
+## Plot themes
+```{r}
+
+# Mess with later
+# from Bella's gams and plots .Rmd
+library(ggthemes)
+library(ggplot2)
+library(ggpmisc)
+library(ggpubr)
+
+#Customize theme 
+#http://joeystanley.com/blog/custom-themes-in-ggplot2 
+# theme_SJ <- function () { 
+#  theme_base(base_size=8, base_family="PT Sans") %+replace% # base size scales everything
+ #   theme(
+ #     panel.background  = element_blank(), # back panel blank
+ #     plot.background = element_rect(fill="white", colour=NA), # plot bgd white, with no border
+ #     plot.title=element_text(face="plain",hjust=0), # 
+ #     plot.subtitle = element_text(color="dimgrey", hjust=0, size=8), # hjust = left aligned
+ #     axis.title=element_text(face="plain"), # face = plain means not bold
+ #     panel.grid.minor=element_blank(), # removes minor grid lines
+ #     strip.text.x = element_text(face="italic"),
+ #     panel.grid.major=element_line(color="lightgrey"))}
+
+# theme_set(theme_paleo())  # pre-set the bw theme
+```
+
+## Pigment plots
+```{r}
+
+# pigment metric explanations
+#         chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, 
+#         chlb_pheob = chl_b_nmol_gTC + phaeo_b_nmol_gTC,
+#         all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, 
+#         PI = chl_a_nmol_gTC/pheo_a_nmol_gTC,
+#         AD_ratio = allo_nmol_gTC / diato_nmol_gTC, 
+#         master_chl = (chl_a_nmol_gTC + chl_b_nmol_gTC) / (chl_ap_nmol_gTC + pheo_a_nmol_gTC + phaeo_b_nmol_gTC),
+#         perc_chlb = (phaeo_b_nmol_gTC / pheo_a_nmol_gTC), 
+#         perc_diatox = (diato_nmol_gTC/chla_pheoa)) %>%
+
+# things to plot: 
+
+# include: lake name, depth (plot?), year_CE
+# plot: chl_a, pheo_a, all_chl, PI,  diatoxanthin, echineone (total cyanos)
+
+UFM_short %>%
+  pivot_longer(d13C:perc_diatox) %>%
+  filter(name %in% c("chl_a_nmol_gTC", "pheo_a_nmol_gTC", 
+                     "all_chl", "PI", 
+                     "diato_nmol_gTC", "echine_nmol_gTC")) %>%
+   mutate(name = recode(name, PI = "Preservation Index"), # change name of PI
+         name = factor(name, levels = c(
+           "chl_a_nmol_gTC",
+           "pheo_a_nmol_gTC",
+           "all_chl",
+           "Preservation Index",
+           "diato_nmol_gTC",
+           "echine_nmol_gTC"
+         ))) %>%
+  filter(!is.na(value) & !is.na(depth_top)) %>% # remove missing points to make line continuous
+  ggplot(aes(x=depth_top, y=value, color=name))+
+  geom_point()+
+  geom_line()+
+  facet_wrap(.~name, scales="free_y")+
+  theme(
+    legend.position = "none",
+    panel.background = element_rect(fill = "gray96", color = NA),  # gray panels
+    panel.grid.major = element_line(color = "white", size = 0.5),  # visible major grid lines
+    panel.grid.minor = element_blank(),  # remove minor grid lines
+    plot.title = element_text(face = "bold", size = 10, hjust = 0, margin = margin(b=5)),  # bold, larger, centered, margin below
+    strip.text.x = element_text(face = "italic", hjust = 0, size = 8)  # left-align facet titles
+  ) + 
+  scale_x_reverse() + 
+  labs(
+    title = "UFM Pigments",
+    x = "Depth (cm)",
+    y = expression(paste("Concentration (nmol ", g^{-1}, " TC)"))) + 
+    scale_color_manual(values = c(
+    "chl_a_nmol_gTC" = "#E69F00",      # orange
+    "pheo_a_nmol_gTC" = "#56B4E9",     # sky blue
+    "all_chl" = "#009E73",             # green
+    "Preservation Index" = "gold2",  # yellow
+    "diato_nmol_gTC" = "#0072B2",      # blue
+    "echine_nmol_gTC" = "#D55E00"      # reddish-orange
+  ))
+
+LFM_short %>%
+  pivot_longer(d13C:perc_diatox) %>%
+  filter(name %in% c("chl_a_nmol_gTC", "pheo_a_nmol_gTC", 
+                     "all_chl", "PI", 
+                     "diato_nmol_gTC", "echine_nmol_gTC")) %>%
+   mutate(name = recode(name, PI = "Preservation Index"), # change name of PI
+         name = factor(name, levels = c(
+           "chl_a_nmol_gTC",
+           "pheo_a_nmol_gTC",
+           "all_chl",
+           "Preservation Index",
+           "diato_nmol_gTC",
+           "echine_nmol_gTC"
+         ))) %>%
+  filter(!is.na(value) & !is.na(depth_top)) %>% # remove missing points to make line continuous
+  ggplot(aes(x=depth_top, y=value, color=name))+
+  geom_point()+
+  geom_line()+
+  facet_wrap(.~name, scales="free_y")+
+  theme(
+    legend.position = "none",
+    panel.background = element_rect(fill = "gray96", color = NA),  # gray panels
+    panel.grid.major = element_line(color = "white", size = 0.5),  # visible major grid lines
+    panel.grid.minor = element_blank(),  # remove minor grid lines
+    plot.title = element_text(face = "bold", size = 10, hjust = 0, margin = margin(b=5)),  # bold, larger, centered, margin below
+    strip.text.x = element_text(face = "italic", hjust = 0, size = 8)  # left-align facet titles
+  ) + 
+  scale_x_reverse() + 
+  labs(
+    title = "LFM Pigments",
+    x = "Depth (cm)",
+    y = expression(paste("Concentration (nmol ", g^{-1}, " TC)"))) + 
+    scale_color_manual(values = c(
+    "chl_a_nmol_gTC" = "#E69F00",      # orange
+    "pheo_a_nmol_gTC" = "#56B4E9",     # sky blue
+    "all_chl" = "#009E73",             # green
+    "Preservation Index" = "gold2",  # yellow
+    "diato_nmol_gTC" = "#0072B2",      # blue
+    "echine_nmol_gTC" = "#D55E00"      # reddish-orange
+  ))
+
+TRK_short %>%
+  pivot_longer(d13C:perc_diatox) %>%
+  filter(name %in% c("chl_a_nmol_gTC", "pheo_a_nmol_gTC", 
+                     "all_chl", "PI", 
+                     "diato_nmol_gTC", "echine_nmol_gTC")) %>%
+   mutate(name = recode(name, PI = "Preservation Index"), # change name of PI
+         name = factor(name, levels = c(
+           "chl_a_nmol_gTC",
+           "pheo_a_nmol_gTC",
+           "all_chl",
+           "Preservation Index",
+           "diato_nmol_gTC",
+           "echine_nmol_gTC"
+         ))) %>%
+  filter(!is.na(value) & !is.na(depth_top)) %>% # remove missing points to make line continuous
+  ggplot(aes(x=depth_top, y=value, color=name))+
+  geom_point()+
+  geom_line()+
+  facet_wrap(.~name, scales="free_y")+
+  theme(
+    legend.position = "none",
+    panel.background = element_rect(fill = "gray96", color = NA),  # gray panels
+    panel.grid.major = element_line(color = "white", size = 0.5),  # visible major grid lines
+    panel.grid.minor = element_blank(),  # remove minor grid lines
+    plot.title = element_text(face = "bold", size = 10, hjust = 0, margin = margin(b=5)),  # bold, larger, centered, margin below
+    strip.text.x = element_text(face = "italic", hjust = 0, size = 8)  # left-align facet titles
+  ) + 
+  scale_x_reverse() + 
+  labs(
+    title = "TRK Pigments",
+    x = "Depth (cm)",
+    y = expression(paste("Concentration (nmol ", g^{-1}, " TC)"))) + 
+    scale_color_manual(values = c(
+    "chl_a_nmol_gTC" = "#E69F00",      # orange
+    "pheo_a_nmol_gTC" = "#56B4E9",     # sky blue
+    "all_chl" = "#009E73",             # green
+    "Preservation Index" = "gold2",  # yellow
+    "diato_nmol_gTC" = "#0072B2",      # blue
+    "echine_nmol_gTC" = "#D55E00"      # reddish-orange
+  ))
+```
