@@ -18,6 +18,15 @@ output: html_document
 knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_project))
 ```
 
+#Libraries -- add these here
+```{r}
+# Bella's note-- usually I like to "source" a script that loads in all the R
+#packages that I use in a particular project, that way each R markdown will
+#run even if you didn't run all the previous R markdown files with the library()
+#calls. 
+source("scripts/libraries.R")
+```
+
 **NOTE! use the short files for the gams unless interested in comparing pigment units (g TC vs g dry mass)**
 
 ### Adding a weight term
@@ -27,9 +36,9 @@ knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_proje
 ### This is not very elegant but it does work
 ## You need to have a top row of blank cells to make this work - i.e, 0 depth and year of sampling
 #### read in your data (now with dates!)
-paleo <- read.csv(file.choose(), header=TRUE)
+LFM_short <- read.csv("output/LFM_short.csv") 
 ### mutate your data
-paleo <- paleo %>%
+LFM_short <- LFM_short %>%
   mutate(interval = lag(year_CE) - year_CE) %>% ### use the interpolated dates to calculate temporal averaging
   slice(-1) %>% ## cut the top row of blank data
   mutate(weight = interval / mean(interval, na.rm=TRUE)) ### make the weight term 
