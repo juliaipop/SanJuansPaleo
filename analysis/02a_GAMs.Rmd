@@ -25,6 +25,24 @@ knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_proje
 #run even if you didn't run all the previous R markdown files with the library()
 #calls. 
 source("scripts/libraries.R")
+
+#I also copied the first derivatives functions into a separate R script that we can source here
+#for Cale's code to run
+source("scripts/helper_functions.R")
+
+theme_SJ <- function () {
+  theme_base(base_size=8, base_family="PT Sans") %+replace% # base size scales everything
+    theme(
+      panel.background  = element_blank(), # back panel blank
+      plot.background = element_rect(fill="white", colour=NA), # plot bgd white, with no border
+      plot.title=element_text(face="plain",hjust=0), #
+      plot.subtitle = element_text(color="dimgrey", hjust=0, size=8), # hjust = left aligned
+      axis.title=element_text(face="plain"), # face = plain means not bold
+      panel.grid.minor=element_blank(), # removes minor grid lines
+      strip.text.x = element_text(face="italic"),
+      panel.grid.major=element_line(color="lightgrey"))}
+
+ theme_set(theme_paleo())  # pre-set the bw theme
 ```
 
 **NOTE! use the short files for the gams unless interested in comparing pigment units (g TC vs g dry mass)**
@@ -47,12 +65,178 @@ LFM_short <- LFM_short %>%
 
 ```
 
+
+### GAMs- Bella's way
+```{r}
+### family=Gamma(link="log") for gamma distributed errors
+### family = gaussian(link = "identity") for normal data with negative values
+mod_d15N_LFM <- gamm(d15N ~ s(year_CE, k = 10),
+                     family = gaussian(link = "identity"), 
+                     data = LFM_short,
+                     correlation = corCAR1(form = ~ year_CE), method = "REML")
+
+## summary object for use in document
+d15NSumm_LFM <- summary(mod_d15N_LFM$gam)
+d15NSumm_LFM #Gives you the P values, degrees of freedom...
+print.summary.gam(d15NSumm_LFM)
+
+### Check diagnostics. You might need to adjust model
+gam.check(mod_d15N_LFM$gam)
+
+N <- 300    # number of points at which to evaluate the splines
+
+### Second, if you're only concerned about the response, include "response" in type of predict()
+d15NYear_LFM <- with(LFM_short,
+                     data.frame(year_CE = seq(min(year_CE, na.rm=TRUE), max(year_CE, na.rm=TRUE), length.out = 200)))
+d15NYear_LFM <- cbind(d15NYear_LFM,
+                      data.frame(predict(mod_d15N_LFM$gam, d15NYear_LFM,
+                                         type="response", se.fit = TRUE)))
+
+### this calculates on the link scale (i.e., log)
+d15NYear_LFM <- transform(d15NYear_LFM, upper = fit + (2 * se.fit), lower = fit - (2 * se.fit))
+d15NYear_LFM$lake_ID <- 'LFM'
+
+## Plot fitted trends
+del15N_fitted_S <- ggplot(d15NYear_LFM, aes(x = year_CE, y = fit)) +
+  geom_ribbon(aes(ymin = (lower),
+                  ymax = (upper), x = year_CE),
+              alpha = 0.2, inherit.aes = FALSE, fill = "black") +
+  geom_point(data = LFM_short, mapping = aes(x = year_CE, y = d15N), inherit.aes = FALSE) +
+  geom_line() 
+del15N_fitted_S
+
+#Note that this quick & dirty way basically achieves something similar but the 
+#band around the trend looks different. This way is fine if you are just trying 
+#to make some quick plots for GREEBS
+LFM_short %>%
+  ggplot(aes(x=year_CE,y=d15N))+
+  geom_point()+
+  geom_smooth(method="gam")
+
+
+############
+############
+#First derivatives using gratia packageinstead of the 
+#functions "helper_functions.R" (that Cale sent)
+############
+############
+fd_inc = confint(fderiv(mod_d15N_LFM))
+fd_inc
+
+#Add years for plotting
+years <- with(LFM_short,
+                     data.frame(year_CE = seq(min(year_CE, na.rm=TRUE), max(year_CE, na.rm=TRUE), length.out = 200)))
+
+fd_inc <- cbind(fd_inc,years)
+
+#Plot the first derivatives
+fd_inc %>%
+  select(-term) %>%
+  pivot_longer(lower:upper) %>%
+  ggplot(aes(x=year_CE,y=value,linetype=name))+
+  geom_line()+
+    scale_linetype_manual(values = c(
+    "lower" = "dashed", #lower 95% confidence interval
+    "upper" = "dashed", #upper 95% confidence interval
+    "est"   = "solid"
+  ))+
+  theme(legend.position="none")+
+  geom_hline(yintercept=0, color="red")
+# Anywhere the confidence intervals DONT overlap zero is a statistically
+# significant acceleration or deceleration in the trend
+
+
+# When do they occur? You can check with an if/else type statement
+fd_inc_timing <- fd_inc %>%
+  mutate(change_type = case_when(lower < 0 & upper < 0 ~ "sig. dec.",
+                                 lower > 0 & upper > 0 ~ "sig. inc.",
+                                 TRUE ~ NA))
+View(fd_inc_timing)
+#What you can see if a brief period of decline ~1900-1934, and again from 
+#1960-present. This model, relative to Cale's seems more sensitive to that
+#slight increase pre-1900. I think Cale's weighting is probably better
+
+
+# For graphing, we want to join the predicted/fitted data with the 
+# information with significant periods of change. Let's call it 'pred'
+
+pred <- left_join(d15NYear_LFM,
+                  fd_inc_timing %>% 
+                    select(year_CE, change_type), #select only 2 columns since
+                  #lower and upper have two different meanings in these 2 dataframes
+                  by="year_CE") 
+  # mutate(fit = ifelse(change_type == "sig. dec.", fit, NA))
+
+# Add a segment ID for plotting, so there there are multiple
+# periods of change, ggplot doesn't connect the lines together
+pred2 <- pred %>%
+  mutate(seg_id = with(rle(ifelse(is.na(change_type), "none", change_type)),
+                       rep(seq_along(values), lengths)))
+
+# Keep only rows that are sig. inc or sig. dec
+pred2 <- pred2 %>% filter(!is.na(change_type))
+
+# Now make a pretty graph that shows the raw data, fitted trend,
+# trend as well as periods of statistically significant increase/decrease!
+ggplot(LFM_short) +
+  geom_point(aes(year_CE, d15N)) +
+  geom_ribbon(data = pred,
+              aes(x = year_CE, ymin = lower, ymax = upper),
+              alpha = 0.2) +
+  geom_line(data = pred,
+            aes(x = year_CE, y = fit),
+            linewidth = 1,
+            color = "black") +
+  geom_line(data = pred2,
+            aes(x = year_CE, y = fit,
+                color = change_type,
+                group = seg_id),
+            linewidth = 1) +
+  scale_color_manual(values = c("sig. inc." = "#CC9933",
+                                "sig. dec." = "#2f6cad"),
+                     name ="Statistic") +
+  ylab(expression(paste(delta^{15}, "N (", "\u2030", ")"))) +
+  xlab(expression(paste("Year (", italic("CE"), ")"))) 
+
+
+# FOR WHAT IT'S WORTH... 
+# Here is old code I have modified from Gavin Simpson, basically identical to what Cale provided.
+# https://www.fromthebottomoftheheap.net/2014/05/15/identifying-periods-of-change-with-gams/
+# Make the same plot as above but in base R. You may prefer ggplot2 (I do, these)
+Term <- "year_CE"
+m2.d <- Deriv(mod_d15N_LFM)
+m2.dci <- confint(m2.d, term = "year_CE")
+m2.dsig <- signifD(d15NYear_LFM$fit,
+                   d = m2.d[[Term]]$deriv,
+                   m2.dci[[Term]]$upper,
+                   m2.dci[[Term]]$lower)
+
+
+
+ylim <- with(d15NYear_LFM, range(upper, lower, fit))
+ylab <- expression(paste(delta^{15}, "N (‰)"))
+
+plot(fit ~ year_CE, data = d15NYear_LFM, type = "n", ylab = ylab, ylim = ylim)
+lines(fit ~ year_CE, data = d15NYear_LFM)
+lines(upper ~ year_CE, data = d15NYear_LFM, lty = "dashed")
+lines(lower ~ year_CE, data = d15NYear_LFM, lty = "dashed")
+lines(unlist(m2.dsig$incr) ~ year_CE, data = d15NYear_LFM, col = "blue", lwd = 3)
+lines(unlist(m2.dsig$decr) ~ year_CE, data = d15NYear_LFM, col = "red", lwd = 3)
+
+
+decr<-data.frame(unlist(m2.dsig$decr), d15NYear_LFM$age_sky) %>%
+  rename(value=unlist.m2.dsig.decr.,
+         age_sky=del15NYear_S.age_sky)
+
+
+```
+
 ### Gams - Cale's way
 ```{r}
 
 m.beta <- gam(d15N ~s(year_CE, k = 10), # this is simply the trend by date
-              data = paleo, ## the data used
-              family=Gamma(link="log"), ## the family depends on the type of data. 
+              data = LFM_short, ## the data used
+              family = gaussian(link = "identity"),  # use Gaussian for roughly normal data
                   ## Use Gamma for concentration data
               bs='tp',## spline - thin plate is ok for simple models like this 
               method="REML", ## method - always use REML for gam
@@ -62,10 +246,52 @@ m.beta <- gam(d15N ~s(year_CE, k = 10), # this is simply the trend by date
 summary(m.beta)
 plot(m.beta)
 gam.check(m.beta)
-```
 
-### GAMs- Bella's way
-```{r}
+### now that you have a good model, you need to predict new data over your original data
+### before we predict, we need to transform the data to deal
+## with the Gamma family
+fam<-family(m.beta)
+fam
+str(fam) 
+ilink <- fam$linkinv
+ilink 
+Gamma()$linkinv 
+ilink <- family(m.beta)$linkinv 
+
+### now we predict 
+pred <- with(LFM_short, data.frame(year_CE = seq(min(year_CE,na.rm=TRUE), max(year_CE,na.rm=TRUE), ## this is making fake dates to model through
+                                        length.out = 200))) ### 200-300 are usually good numbers of data points
+pred <- cbind(pred,
+              data.frame(predict(m.beta, pred, se.fit = TRUE))) # add the prediction to your data
+## now we use the ilink to account for the transformation
+pred <- transform(pred, fit = ilink(fit), 
+                  upper = ilink(fit + (2 * se.fit)),
+                  lower = ilink(fit - (2 * se.fit))) ## and this creates confidence intervals for your model
+
+
+
+## Derive from your model!
+dt.Der<-Deriv(m.beta) ## derive
+plot(dt.Der, sizer = TRUE)
+Term<-"year_CE" 
+dt.dci<-confint(dt.Der, term = Term) ## make confidence intervals
+dt.dsig<-signifD(pred$fit, d = dt.Der[[Term]]$deriv,
+                 dt.dci[[Term]]$upper, dt.dci[[Term]]$lower) ### show significance
+
+### now we make a simple plot
+p.beta <- 
+  ggplot(LFM_short)+
+  geom_point(aes(year_CE, d15N))+
+  geom_ribbon(data=pred, aes(ymin=lower, ymax=upper, x=year_CE), alpha=0.2)+
+  geom_line(data=pred, aes(year_CE, fit), linewidth=1, color="black")+
+  geom_line(data=pred, aes(year_CE, dt.dsig$decr), color="#CC9933", lwd=2)+ ## this highlights what areas have significant changes
+  geom_line(data=pred, aes(year_CE, dt.dsig$incr), color="#CC9933", lwd=2)+
+  # scale_x_continuous(breaks=seq(1980,2025,by=5))+
+  ylab('d15N')+
+  xlab('Year')+
+  theme_bw()
+p.beta
+
 
 
 ```
