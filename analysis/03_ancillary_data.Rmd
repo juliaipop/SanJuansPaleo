@@ -1,0 +1,20 @@
+---
+title: "03_ancillary_data"
+author: "Julia Pop"
+date: "2025-09-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# code to troublesheet file path issues. 
+# By default, knitr uses the folder containing the .Rmd file as
+# the working directory. This code allows us to set the folder
+# with our .rProj in it as the root. 
+
+# find_root looks upwards from the .Rmd until it finds a file or
+# folder that matches the criteria "folder with a .Rproj file in
+# it."
+
+knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_project))
+```
+

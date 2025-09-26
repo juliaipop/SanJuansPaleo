@@ -1,5 +1,5 @@
 ## First the function to derive from the trend
-# JP - taking the first derivative of the trend (raw code that goes into Gavin's r package)
+#  Taking the first derivative of the trend (raw code that goes into Gavin's r package)
 Deriv <- function(mod, n = 200, eps = 1e-7, newdata, term) {
   if(inherits(mod, "gamm"))
     mod <- mod$gam
@@ -77,7 +77,7 @@ confint.Deriv <- function(object, term, alpha = 0.05, ...) {
 ### this allows the previous functions to determine both positive
 ## and negative deviations in trend
 
-# JP - signifD (statistically significant increase or decrease from the trent)
+# JP - signifD (statistically significant increase or decrease from the trend)
 signifD <- function(x, d, upper, lower, eval = 0) {
   miss <- upper > eval & lower < eval
   incr <- decr <- x
@@ -120,8 +120,10 @@ plot.Deriv <- function(x, alpha = 0.05, polygon = TRUE,
     main <- term
     names(main) <- term
   }
+  
   ## compute confidence interval
   CI <- confint(x, term = term)
+  
   ## plots
   layout(matrix(seq_len(l), nrow = nplt[1], ncol = nplt[2]))
   for(i in term) {
