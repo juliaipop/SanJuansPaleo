@@ -207,13 +207,18 @@ all_lakes <- bind_rows(UFM_short, LFM_short, TRK_short)
 # Create nutrient plot
 nutrient_plot <- all_lakes %>%
   pivot_longer(d13C:perc_diatox) %>%
-  filter(name %in% c("chl_a")) %>%
+  filter(name %in% c("d13C",
+           "d15N",
+           "percent.C",
+           "percent.N",
+           "C.N"
+  )) %>%
   mutate(name = recode(name, percent.C = "Total C (% dry mass)",   # change column names to change facet labels
                         percent.N = "N (% dry mass)",
                         C.N = "C:N ratio", 
                         d13C = "d13C (‰)",
                         d15N = "d15N (‰)"),
-         name = factor(name, levels = c(
+         name = factor(name, levels = c( # order plots
            "d13C (‰)",
            "d15N (‰)",
            "Total C (% dry mass)",
@@ -233,9 +238,9 @@ nutrient_plot <- all_lakes %>%
     panel.grid.minor = element_blank(),  # remove grid lines
     plot.title = element_text(face = "bold", size = 10, hjust = 0, margin = margin(b=5)),  # bold, larger, centered, margin below
     strip.text = element_blank(),  # remove default facet labels
-    panel.border = element_rect(color = "black", fill = NA, size = 0.8),  # black border
-    axis.text.x = element_text(size = 14),   # x-axis ticks
-    axis.text.y = element_text(size = 14),    # y-axis ticks
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 1.2),  # black border
+    axis.text.x = element_text(size = 16),   # x-axis ticks
+    axis.text.y = element_text(size = 16),    # y-axis ticks
     legend.text  = element_text(size = 14),  # legend labels
   ) + 
   guides(color = guide_legend(override.aes = list(size = 2))) +
@@ -247,7 +252,7 @@ nutrient_plot <- all_lakes %>%
     "Turkey Creek Lake" = "#D55E00"))
 
 # save plots (with set dimensions)
-ggsave("figures/nutrient_profiles.png", nutrient_plot, width = 8, height = 15, units = "in", dpi = 300) 
+ggsave("figures/nutrient_profiles.png", nutrient_plot, width = 8, height = 15, units = "in", dpi = 400) 
 
 ```
 
@@ -291,7 +296,7 @@ pigment_plot_GREEBS <- all_lakes %>%
     axis.text.x = element_text(size = 14),   # x-axis ticks
     axis.text.y = element_text(size = 14),    # y-axis ticks
     panel.spacing.x = unit(0.2, "in"),   # increase space between columns
-    panel.spacing.y = unit(0.6, "in"),
+    panel.spacing.y = unit(0.7, "in"),
   ) + 
   scale_x_reverse() +  # top ticks, no labels
   scale_color_manual( 
