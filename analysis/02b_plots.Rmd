@@ -27,8 +27,10 @@ LFM_short <- read.csv("output/LFM_short.csv")
 TRK_short <- read.csv("output/TRK_short.csv")
 ```
 
-## Plot themes
+## Plot themes and packages
 ```{r}
+
+source("scripts/libraries.R")
 
 # Mess with later
 # from Bella's gams and plots .Rmd
@@ -54,7 +56,7 @@ library(ggpubr)
 # theme_set(theme_paleo())  # pre-set the bw theme
 ```
 
-## Pigment plots
+## Pigment plots for Peter
 ```{r}
 
 # pigment metric explanations
@@ -194,4 +196,119 @@ TRK_short %>%
     "diato_nmol_gTC" = "#0072B2",      # blue
     "echine_nmol_gTC" = "#D55E00"      # reddish-orange
   ))
+```
+
+## GREEBS Nutrient Plots (NOTE: No axis lables!)
+```{r}
+
+# Combine into one data frame
+all_lakes <- bind_rows(UFM_short, LFM_short, TRK_short)
+
+# Create nutrient plot
+nutrient_plot <- all_lakes %>%
+  pivot_longer(d13C:perc_diatox) %>%
+  filter(name %in% c("chl_a")) %>%
+  mutate(name = recode(name, percent.C = "Total C (% dry mass)",   # change column names to change facet labels
+                        percent.N = "N (% dry mass)",
+                        C.N = "C:N ratio", 
+                        d13C = "d13C (‰)",
+                        d15N = "d15N (‰)"),
+         name = factor(name, levels = c(
+           "d13C (‰)",
+           "d15N (‰)",
+           "Total C (% dry mass)",
+           "N (% dry mass)",
+           "C:N ratio" 
+         ))) %>%
+  filter(!is.na(value) & !is.na(depth_top)) %>% # remove missing points to make line continuous
+  ggplot(aes(x=depth_top, y=value, color=lake_name))+
+  labs(x = NULL, y = NULL)+
+  geom_point()+
+  geom_line(size = 1.2) + 
+  facet_grid(name ~ ., scales = "free_y") + 
+  theme(
+    legend.position = "right",
+    panel.background = element_rect(fill = "gray99", color = NA),  # gray panels
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),  # remove grid lines
+    plot.title = element_text(face = "bold", size = 10, hjust = 0, margin = margin(b=5)),  # bold, larger, centered, margin below
+    strip.text = element_blank(),  # remove default facet labels
+    panel.border = element_rect(color = "black", fill = NA, size = 0.8),  # black border
+    axis.text.x = element_text(size = 14),   # x-axis ticks
+    axis.text.y = element_text(size = 14),    # y-axis ticks
+    legend.text  = element_text(size = 14),  # legend labels
+  ) + 
+  guides(color = guide_legend(override.aes = list(size = 2))) +
+  scale_x_reverse() + 
+  scale_color_manual( breaks = c("Upper Fourmile Lake", "Lower Fourmile Lake", "Turkey Creek Lake"), 
+    values = c( 
+    "Upper Fourmile Lake" = "yellowgreen",  # 
+    "Lower Fourmile Lake" = "#0072B2",  # 
+    "Turkey Creek Lake" = "#D55E00"))
+
+# save plots (with set dimensions)
+ggsave("figures/nutrient_profiles.png", nutrient_plot, width = 8, height = 15, units = "in", dpi = 300) 
+
+```
+
+## GREEBS Pigment Plots
+```{R}
+
+# create a 4 x 2 plot!
+
+pigment_order <- c(
+  "chl_a_nmol_gTC", 
+  "pheo_a_nmol_gTC", 
+  "PI", 
+  "lutein_nmol_gTC", 
+  "diato_nmol_gTC", 
+  "allo_nmol_gTC", 
+  "echine_nmol_gTC", 
+  "cantha_nmol_gTC"
+)
+
+# Create nutrient plot
+pigment_plot_GREEBS <- all_lakes %>%
+  pivot_longer(d13C:perc_diatox) %>%
+  filter(name %in% c("chl_a_nmol_gTC", "pheo_a_nmol_gTC", "PI", "lutein_nmol_gTC", 
+                     "diato_nmol_gTC", "allo_nmol_gTC", "echine_nmol_gTC", "cantha_nmol_gTC"
+  )) %>%
+  filter(!is.na(value) & !is.na(depth_top)) %>% # remove missing points to make line continuous
+  mutate(name = factor(name, levels = pigment_order)) %>%   # set facet order
+  ggplot(aes(x=depth_top, y=value, color=lake_name))+
+  labs(x = NULL, y = NULL)+
+  geom_point()+
+  geom_line(size = 1.2) + 
+  facet_wrap(~ name, scales = "free_y", nrow = 2, ncol = 4) +   # 2 rows, 4 columns
+  theme(
+    legend.position = "none", # remove legend (saved in figures folder)
+    panel.background = element_rect(fill = "gray99", color = NA),  # gray panels
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),  # remove grid lines
+    plot.title = element_text(face = "bold", size = 10, hjust = 0, margin = margin(b=5)),  # bold, larger, centered, margin below
+    strip.text = element_blank(),  # remove default facet labels
+    panel.border = element_rect(color = "black", fill = NA, size = 0.8),  # black border
+    axis.text.x = element_text(size = 14),   # x-axis ticks
+    axis.text.y = element_text(size = 14),    # y-axis ticks
+    panel.spacing.x = unit(0.2, "in"),   # increase space between columns
+    panel.spacing.y = unit(0.6, "in"),
+  ) + 
+  scale_x_reverse() +  # top ticks, no labels
+  scale_color_manual( 
+    values = c( 
+    "Upper Fourmile Lake" = "yellowgreen",  # 
+    "Lower Fourmile Lake" = "#0072B2",  # 
+    "Turkey Creek Lake" = "#D55E00"))
+
+# save plots (with set dimensions)
+ggsave("figures/GREEBS_pigments.png", pigment_plot_GREEBS, width = 14, height = 5, units = "in", dpi = 300) 
+
+# has no units, will go back and add those manually (can check quickly by deleting "strip.text = ..." line)
+
+```
+
+
+```{r}
+
+
 ```
