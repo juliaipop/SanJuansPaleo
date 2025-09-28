@@ -18,3 +18,76 @@ output: html_document
 knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_project))
 ```
 
+```{r}
+
+landcover <- read.csv("data/spatial data/annualNlcdStats_20250928.csv") %>%
+  filter(Lake %in% c("FOURMILE_LAKE", # I assume this is Lower? Rename this
+                       "UPPER_FOURMILE_LAKE",
+                       "TURKEY_CREEK_LAKE")) %>%
+  mutate(Lake = recode(Lake, "FOURMILE_LAKE" = "Lower Fourmile Lake"),
+         Lake = recode(Lake, "UPPER_FOURMILE_LAKE" = "Upper Fourmile Lake"),
+         Lake = recode(Lake, "TURKEY_CREEK_LAKE" = "Turkey Creek Lake"))
+
+rg <- read.csv("data/spatial data/rockGlacierStatsDF_20250928.csv") %>%
+  filter(Lake %in% c("FOURMILE_LAKE", # I assume this is Lower? Rename this
+                       "UPPER_FOURMILE_LAKE",
+                       "TURKEY_CREEK_LAKE")) %>%
+  mutate(Lake = recode(Lake, "FOURMILE_LAKE" = "Lower Fourmile Lake"),
+         Lake = recode(Lake, "UPPER_FOURMILE_LAKE" = "Upper Fourmile Lake"),
+         Lake = recode(Lake, "TURKEY_CREEK_LAKE" = "Turkey Creek Lake"))
+head(rg)
+
+wsa <- read.csv("data/spatial data/watershedAreaDF_20250928.csv") %>%
+  filter(lake %in% c("FOURMILE_LAKE", # I assume this is Lower? Rename this
+                       "UPPER_FOURMILE_LAKE",
+                       "TURKEY_CREEK_LAKE")) %>%
+  mutate(lake = recode(lake, "FOURMILE_LAKE" = "Lower Fourmile Lake"),
+         lake = recode(lake, "UPPER_FOURMILE_LAKE" = "Upper Fourmile Lake"),
+         lake = recode(lake, "TURKEY_CREEK_LAKE" = "Turkey Creek Lake"))
+
+
+head(wsa)
+``` 
+
+# Landcover
+
+## Time series   
+```{r}
+landcover %>%
+  filter(class_name %in% c("Evergreen Forest",
+                           "Grassland/Herbaceous")) %>%
+  ggplot(aes(x=year, y=percent_of_ws, color=Lake)) +
+  geom_point(alpha=0.5)+
+  facet_wrap(class_name~Lake, scales="free_y") +
+  theme(legend.position="bottom")+
+  labs(y="Landcover as\n% of watershed")+
+  geom_smooth(method="gam", se=F, linetype="dashed")+
+    scale_color_manual( breaks = c("Upper Fourmile Lake", "Lower Fourmile Lake", "Turkey Creek Lake"), 
+    values = c( 
+    "Upper Fourmile Lake" = "yellowgreen",  # 
+    "Lower Fourmile Lake" = "#0072B2",  # 
+    "Turkey Creek Lake" = "#D55E00"))
+ggsave("figures/landcover/forest_shrubs_all_lakes.png",
+       width = 8, height = 6, units = "in", dpi = 300)
+```
+
+###  Table of contemporary 
+```{r}
+
+landcover %>%
+  filter(class_name %in% c("Evergreen Forest",
+                           "Grassland/Herbaceous",
+                           "Barren Land (Rock/Sand/Clay)",
+                           "Emergent Herbaceous Wetlands",
+                           "Woody Wetlands")) %>%
+  filter(year=="2024") %>%
+  select(Lake, class_name,percent_of_ws) %>%
+  pivot_wider(names_from="class_name",
+              values_from="percent_of_ws") %>%
+  left_join(., wsa, by=c("Lake"="lake")) %>%
+  arrange(desc(ws_area_km2)) %>%
+  mutate(Wetlands = `Woody Wetlands` + `Emergent Herbaceous Wetlands`) %>% #combine categories
+  select(-`Woody Wetlands`,
+         -`Emergent Herbaceous Wetlands`)
+
+```
