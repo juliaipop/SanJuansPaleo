@@ -18,22 +18,322 @@ output: html_document
 knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_project))
 ```
 
+# Read in data
+```{r}
+#Updated chlorophyll volumes in database, newest file copied into this repo
+chl <- read.csv("data/chemistry/chlorophylla_20250923.csv") %>%
+  mutate(lake = case_when(siteId == "ufm" ~ "Upper Fourmile Lake",
+                          siteId == "lfm" ~ "Lower Fourmile Lake",
+                          siteId == "tuc" ~ "Turkey Creek Lake")) %>%
+  mutate(sampleLocation = case_when(siteId == "tuc" & dateSampled == "2024-07-17" ~ "lm",
+                                    TRUE ~ sampleLocation)) 
+#Note this sample was collected in the metalimnion -- add exact depths at some point
+head(chl)
+
+nuts <- read.csv("data/chemistry/SEAL_preliminary_SanJuans_20250928.csv") %>%
+    separate(
+    col = Sample.Details,
+    into = c("dateSampled", "siteId", "sampleLocation", "bottleType", "repNum"),
+    sep = "_"
+  ) %>%
+  rename("dateTimeSEAL"=`Date.and.Time`) %>%
+  filter(!Flag=="Y") %>% # Get rid of any flagged samples
+  mutate(Test = recode(Test, "nitrate+nitrite" = "NO3_N_mgL"), #Check with Abby - NO3-N not NO3?
+         Test = recode(Test, "ammonia-N" = "NH3_N_mgL"),
+         Test = recode(Test, "Orthophosphate low - modified" = "PO4_ugL")) %>%
+  # Add column for method detection limits
+  mutate(MDL = case_when(Test == "PO4_ugL" ~ 7,
+                         Test == "NO3_N_mgL" ~ 0.003,
+                         Test == "NH3_N_mgL" ~ 0.003)) %>%
+  # See what samples fall below detection limit (BDL)
+  mutate(Flag_BDL = case_when(Results < MDL ~ "Flag",
+                                TRUE ~ NA)) %>%
+  # If the sample is BDL, replace with half the method detection limit
+  mutate(Result_new = case_when(Flag_BDL == "Flag" ~ MDL/2,
+                                TRUE ~ Results)) %>%
+  # Keep just a few columns
+  select(dateSampled, siteId, sampleLocation, Test, Result_new, MDL) %>%
+  group_by(dateSampled, siteId, sampleLocation, Test, MDL) %>%
+  summarize(value_mean = mean(Result_new, na.rm=TRUE)) %>% #Take the mean of the 2 duplicates
+    # re-do column names for joining / plotting
+  mutate(siteId = tolower(siteId),
+         sampleLocation = tolower(sampleLocation)) %>% #everything lowercase
+  mutate(lake = case_when(siteId == "ufm" ~ "Upper Fourmile Lake",
+                          siteId == "lfm" ~ "Lower Fourmile Lake",
+                          siteId == "tuc" ~ "Turkey Creek Lake")) %>%
+  #Found a typo in one of the dates
+  mutate(dateSampled = case_when(dateSampled=="20540716" ~ "20250716",
+                                 TRUE ~ dateSampled)) %>%
+  mutate(dateSampled = ymd(dateSampled),
+         month = month(dateSampled),
+         year = year(dateSampled),
+         timing = case_when(month == "7" & year =="2024" ~ "July `24",
+                            month == "9" & year =="2024" ~ "Sept `24",
+                            month == "7" & year =="2025" ~ "July `25"),
+         timing = factor(timing, levels=c("July `24",
+                                  "Sept `24",
+                                  "July `25"))) %>%
+  # More relabeling for plots
+  mutate(sampleLocation = factor(sampleLocation,
+                                 levels = c("ls","lh","in","in1","in2",
+                                            "in3","in4","in5","in6","out"),
+                                 labels = c("surface", "hypolimnion",
+                                            "inlet","in1","in2",
+                                            "in3","in4","in5","in6","outlet")))
+
+head(nuts)
+
+#If you prefer wide
+nuts_wide <-  nuts %>%
+  pivot_wider(names_from="Test",
+              values_from=c("value_mean","MDL")) 
+head(nuts_wide)
+
+# Compile all the YSI Profiles
+library(readr)
+library(dplyr)
+library(purrr)
+
+# set the folder where your CSVs live
+csv_folder <- "data/YSI profiles"
+
+# list all .csv files
+files <- list.files(csv_folder, pattern = "\\.csv$", full.names = TRUE)
+
+# read them all and row-bind into one dataframe
+all_profiles <- files %>%
+  map_dfr(read_csv) %>%
+    mutate(date = ymd(date),
+         month = month(date),
+         year = year(date),
+         timing = case_when(month == "7" & year =="2024" ~ "July `24",
+                            month == "9" & year =="2024" ~ "Sept `24",
+                            month == "7" & year =="2025" ~ "July `25"),
+         timing = factor(timing, levels=c("July `24",
+                                  "Sept `24",
+                                  "July `25"))) %>%
+  mutate(lake = recode(lake, "LowerFourmile" = "Lower Fourmile Lake"),
+         lake = recode(lake, "UpperFourmile" = "Upper Fourmile Lake"),
+         lake = recode(lake, "TurkeyCreek" = "Turkey Creek Lake"))
+```
+
 # Chlorophyll calculations
 ```{r}
-chl_df_combine %>%
-filter(siteId %in% c("loc")) %>%  
-mutate(dateSampled=ymd(dateSampled),       
-	year=year(dateSampled)) %>%   
-		ggplot(aes(x=dateSampled,y=chla_ugl,color=sampleLocation))+  
-		 geom_point() +   facet_wrap(~siteId) +   
-		geom_hline(yintercept=2.6) + #Oligotrophic cut off, Carlson 1977   
-		geom_hline(yintercept=7.3)   #Mesotrophic cut off, Carlson 1977
+
+
+chl %>%
+  filter(siteId %in% c("ufm","lfm","tuc")) %>%
+  mutate(dateSampled=ymd(dateSampled),
+         year=year(dateSampled),
+         month=month(dateSampled),
+         timing = case_when(month == "7" & year =="2024" ~ "July `24",
+                            month == "9" & year =="2024" ~ "Sept `24",
+                            month == "7" & year =="2025" ~ "July `25"),
+         timing = factor(timing, levels=c("July `24",
+                                  "Sept `24",
+                                  "July `25")),
+         sampleLocation = factor(sampleLocation,
+                                 levels = c("ls","lm","lh"),
+                                 labels = c("Surface", "Metalimnion", "Hypolimnion"))) %>%
+  group_by(lake, sampleLocation, siteId, timing) %>%
+  summarize(chla_ugl = mean(chla_ugl, na.rm=TRUE)) %>% #avg. of replicates
+  ggplot(aes(x=timing,y=chla_ugl,fill=sampleLocation))+
+  geom_jitter(shape=21, color="black",size=3, width=0.1)+
+  facet_wrap(.~lake)+
+  geom_hline(yintercept=2.6) + #Oligotrophic cut off, Carlson 1977
+  geom_hline(yintercept=7.3) + #Mesotrophic cut off, Carlson 1977
+  labs(y = expression("Chlorophyll " * italic(a) * " (" * mu * "g/L)"))+
+  theme(legend.position = "bottom") +
+  scale_fill_manual(name ="Water column location:",
+    values = c( 
+    "Hypolimnion" = "#0072B2",  # 
+    "Metalimnion" = "darkgreen",  # 
+    "Surface" = "yellowgreen"))
+
+ggsave("figures/chlorophylla_all_lakes.png",
+       width = 8, height = 4, units = "in", dpi = 300)
 
 ```
 
-# Nutrient calculations
+# Nutrients
+
+## Nitrate
+
 ```{r}
 
+# Plot just NO3 for now, then maybe add NO3 and NH3 together for total inorganic N
 
+nuts %>%
+  filter(Test=="NO3_N_mgL") %>%
+  ggplot(aes(x=timing, y=value_mean, fill=sampleLocation))+
+  geom_jitter(shape=21, color="black",size=3, width=0.1)+
+  facet_wrap(~lake)+
+  geom_hline(yintercept=nuts$MDL[nuts$Test=="NO3_N_mgL"],
+             linetype="dashed")+
+  ylab("Nitrate-N (mg/L)")+
+  theme(legend.position="bottom")
+ggsave("figures/nitrate_all_lakes.png",
+       width = 6, height = 4, units = "in", dpi = 300)
 
+#Without in6, the rock glacier site outlier
+nuts %>%
+  filter(Test=="NO3_N_mgL") %>%
+  filter(!sampleLocation=="in6") %>%
+  ggplot(aes(x=timing, y=value_mean, fill=sampleLocation))+
+  geom_jitter(shape=21, color="black",size=3, width=0.1)+
+  facet_wrap(~lake)+
+  geom_hline(yintercept=nuts$MDL[nuts$Test=="NO3_N_mgL"],
+             linetype="dashed")+
+  ylab("Nitrate-N (mg/L)")+
+  theme(legend.position="bottom")
+ggsave("figures/nitrate_without_TUCin6_all_lakes.png",
+       width = 6, height = 4, units = "in", dpi = 300)
+```
+
+## Ammonia
+
+```{r}
+
+# Plot just NO3 for now, then maybe add NO3 and NH3 together for total inorganic N
+
+nuts %>%
+  filter(Test=="NH3_N_mgL") %>%
+  ggplot(aes(x=timing, y=value_mean, fill=sampleLocation))+
+  geom_jitter(shape=21, color="black",size=3, width=0.1)+
+  facet_wrap(~lake)+
+  geom_hline(yintercept=nuts$MDL[nuts$Test=="NO3_N_mgL"],
+             linetype="dashed")+
+  ylab("Ammonia-N (mg/L)")+
+  theme(legend.position="bottom")
+ggsave("figures/ammonia_all_lakes.png",
+       width = 6, height = 4, units = "in", dpi = 300)
+
+#Without TUC LH
+nuts %>%
+  filter(Test == "NH3_N_mgL") %>%
+  filter(!(siteId == "tuc" & sampleLocation == "hypolimnion")) %>%
+  ggplot(aes(x = timing, y = value_mean, fill = sampleLocation)) +
+  geom_jitter(
+    shape = 21,
+    color = "black",
+    size = 3,
+    width = 0.1
+  ) +
+  facet_wrap( ~ lake) +
+  geom_hline(yintercept = nuts$MDL[nuts$Test == "NO3_N_mgL"],
+             linetype = "dashed") +
+  ylab("Nitrate-N (mg/L)") +
+  theme(legend.position = "bottom")
+ggsave("figures/ammonia_without_TUChypo_all_lakes.png",
+       width = 6, height = 4, units = "in", dpi = 300)
+```
+
+## Phosphate
+
+```{r}
+
+nuts %>%
+  filter(Test=="PO4_ugL") %>%
+  ggplot(aes(x=timing, y=value_mean, fill=sampleLocation))+
+  geom_jitter(shape=21, color="black",size=3, width=0.1)+
+  facet_wrap(~lake)+
+  geom_hline(yintercept=nuts$MDL[nuts$Test=="PO4_ugL"],
+             linetype="dashed")+
+  ylab("PO4 (ug/L)")+
+  theme(legend.position="bottom")
+ggsave("figures/phosphate_all_lakes.png",
+       width = 6, height = 4, units = "in", dpi = 300)
+
+#Without TUC inlet 6
+nuts %>%
+  filter(Test=="PO4_ugL") %>%
+  filter(!sampleLocation=="in6") %>%
+  ggplot(aes(x=timing, y=value_mean, fill=sampleLocation))+
+  geom_jitter(shape=21, color="black",size=3, width=0.1)+
+  facet_wrap(~lake)+
+  geom_hline(yintercept=nuts$MDL[nuts$Test=="PO4_ugL"],
+             linetype="dashed")+
+  ylab("PO4 (ug/L)")+
+  theme(legend.position="bottom")
+ggsave("figures/phosphate_without_TUCin6_all_lakes.png",
+       width = 6, height = 4, units = "in", dpi = 300)
+```
+
+# Plot YSI profiles
+```{r}
+
+#DO%
+DO_plot <- all_profiles %>%
+  filter(parameter %in% c("do_percent")) %>%
+  # filter(lake == "Upper Fourmile Lake") %>%
+  ggplot(aes(x=value, y=depth_m, color=lake))+
+    geom_point()+
+    scale_y_reverse()+
+    facet_wrap(.~timing, ncol = 1)+
+  theme(legend.position="bottom")+
+  xlab("DO%")+
+    ylab("Depth (m)")+
+      scale_color_manual( breaks = c("Upper Fourmile Lake", "Lower Fourmile Lake", "Turkey Creek Lake"), 
+    values = c( 
+    "Upper Fourmile Lake" = "yellowgreen",  # 
+    "Lower Fourmile Lake" = "#0072B2",  # 
+    "Turkey Creek Lake" = "#D55E00")) 
+
+#temperature
+temp_plot <- all_profiles %>%
+  filter(parameter %in% c("temp_C")) %>%
+  # filter(lake == "Upper Fourmile Lake") %>%
+  ggplot(aes(x=value, y=depth_m, color=lake))+
+    geom_point()+
+    scale_y_reverse()+
+    facet_wrap(.~timing, ncol = 1)+
+  theme(legend.position="bottom")+
+  xlab("Temp (C)")+
+  ylab("Depth (m)")+
+      scale_color_manual( breaks = c("Upper Fourmile Lake", "Lower Fourmile Lake", "Turkey Creek Lake"), 
+    values = c( 
+    "Upper Fourmile Lake" = "yellowgreen",  # 
+    "Lower Fourmile Lake" = "#0072B2",  # 
+    "Turkey Creek Lake" = "#D55E00")) 
+
+#cond
+cond_plot <- all_profiles %>%
+  filter(parameter %in% c("cond_spec_uScm")) %>%
+  # filter(lake == "Upper Fourmile Lake") %>%
+  ggplot(aes(x=value, y=depth_m, color=lake))+
+    geom_point()+
+    scale_y_reverse()+
+    facet_wrap(.~timing, ncol = 1)+
+  theme(legend.position="bottom")+
+  xlab("Cond (uS/cm)")+
+  ylab("Depth (m)")+
+      scale_color_manual( breaks = c("Upper Fourmile Lake", "Lower Fourmile Lake", "Turkey Creek Lake"), 
+    values = c( 
+    "Upper Fourmile Lake" = "yellowgreen",  # 
+    "Lower Fourmile Lake" = "#0072B2",  # 
+    "Turkey Creek Lake" = "#D55E00")) 
+
+#phycoC
+pH_plot <- all_profiles %>%
+  filter(parameter %in% c("pH")) %>%
+  ggplot(aes(x=value, y=depth_m, color=lake))+
+    geom_point()+
+    scale_y_reverse()+
+    facet_wrap(.~timing, ncol = 1)+
+  theme(legend.position="bottom")+
+  xlab("pH")+
+  ylab("Depth (m)")+
+      scale_color_manual( breaks = c("Upper Fourmile Lake", "Lower Fourmile Lake", "Turkey Creek Lake"), 
+    values = c( 
+    "Upper Fourmile Lake" = "yellowgreen",  # 
+    "Lower Fourmile Lake" = "#0072B2",  # 
+    "Turkey Creek Lake" = "#D55E00")) 
+
+library(patchwork)
+DO_plot + temp_plot + cond_plot + pH_plot + 
+  plot_layout(ncol = 4) +
+  plot_layout(guides = "collect") & 
+  theme(legend.position="bottom")
+ggsave("figures/YSI_profiles_all_lakes.png",
+       width = 8, height = 8, units = "in", dpi = 300)
 ```
