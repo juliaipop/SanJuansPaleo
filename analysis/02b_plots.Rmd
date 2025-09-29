@@ -204,6 +204,10 @@ TRK_short %>%
 # Combine into one data frame
 all_lakes <- bind_rows(UFM_short, LFM_short, TRK_short)
 
+# Export as csv: 
+write.csv(all_lakes, file="output/all_lakes.csv")
+
+
 # Create nutrient plot
 nutrient_plot <- all_lakes %>%
   pivot_longer(d13C:perc_diatox) %>%
