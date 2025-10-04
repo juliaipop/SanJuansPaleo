@@ -20,54 +20,17 @@ knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_proje
 
 # Notes to self:
 
-1) when editing this markdown file later use head() to visualize data in the final html file! can use that to show visually how you are editing the dfs.
+1) SIA_run_1_TRK_UFM needs to be rounded to an accurate number of decimal points (after calculations?); same for SIA_run_2_TRK_LFM
 
-2) SIA_run_1_TRK_UFM needs to be rounded to an accurate number of decimal points (after calculations?); same for SIA_run_2_TRK_LFM
-
-## Load packages
-
-Copied directly from Bella's 00_data_entry_and_manipulation.Rmd in LochValePaleo. 
+## Load packages 
 ```{r message = false}
-
-library(tidyverse)
-library(ggpubr)
-library(ggplot2)
-library(grid) # for function unit() in ggplot2
-library(gtable) # for adding subtitle in ggplot2
-library(ggthemes)
-library(scales) # to add percentages to plots and pretty_breaks()
-library(gridExtra) # for arranging graphs side by side w ftn grid.arrange()
-library(skimr) # for summary statistics
-library(reshape2)
-library(readxl) # to read excel files
-library(writexl) # to ultimately create a .xlsx file for export
-library(stringr)
-
-#load packages necessary for GAMS
-library("mgcv")
-library("scam")
-library("cowplot")
-library("grid")                         # for unit.pmax(), unit.list()
-library("schoenberg")
-library("tidyr")
-library("nlme")
-
-#from Cale (delete what I don't need) 
-library(tidypaleo) ### for dealing with dates and vertical plotting
-library(tidyr) ## data management
-library(dplyr) ## data transformation
-library(ggplot2) ### plotting
-library(cowplot) ## for combining plots
-library(mgcv) ### for GAMs 
-library(gratia) ## for improving GAMs
-
-#troubleshooting wd issues
-library(here)
+source("scripts/libraries.R") # manipulate this file in the scripts folder to add more packages.
 ```
 
 ## Pull in core metadata
 ```{r, echo = FALSE}
 # echo = FALSE shows output but not code. 
+
 # read in metadata 
 TRK_metadata <- read_excel("data/0_TRK2_core_metadata_20250726.xlsx")  %>%
   select(lake_name:depth_bottom)
@@ -79,7 +42,7 @@ LFM_metadata <- read_excel("data/0_LFM2_core_metadata_20250726.xlsx") %>%
   select(lake_name:depth_bottom)
 ```
 
-## Clean SIA Files for Peter & others
+#Stable isotopes
 
 **Note: return later to** 
 - round SIA_run1_TRK_UFM to the appropriate number of sig figs
@@ -151,6 +114,7 @@ TRK_SIA <- bind_rows(TRK_SIA, row_TRK2_002_SIA)
 UFM_SIA <- left_join(UFM_metadata, SIA_run1_TRK_UFM, by = "sample_ID") %>%
     select(-perC.drift, -"C.drift:N")
 
+# take avg of triplicates
 UFM_SIA <- UFM_SIA %>%
     drop_na() %>%
     group_by(lake_name, core_number, sample_ID, sample_range, depth_top, depth_bottom) %>%
@@ -197,7 +161,7 @@ TRK_pigments_raw <- read_excel("data/TRK_final_HPLC_20250910.xlsx") %>%
 
 ### Join pigment and SIA dfs
 ```{r}
-# join and add a depth_plot column
+# join pigment and sia dfs for each core and add a depth_plot column
 UFM_wide <- left_join(UFM_SIA, UFM_pigments_raw, by = "depth_top") %>%
   mutate(depth_plot = depth_top + 0.25) %>%
   relocate(depth_plot, .after = depth_bottom)
@@ -366,8 +330,8 @@ allo, diato, lutein, *cantha*, *myxo*, *zea*, echine, phaeo_b, pheo_a, b_car
 **Missing from my data, in Bellas:** myxo, zea, cantha (none in TRK), diadino 
 
 **Consider later:** 
-- why is there no diadino? what does that say about diatoms given diato...?
-- these cores were old when analyzed (and experienced more freeze-thaw cycles than is ideal): what do the preservation indices tell us about the reliability of the values we obtained, and or the many zeroes. 
+- why is there no diadino? what does that say about diatoms given [diato]...?
+- these cores were ~9 months old when analyzed (and experienced more freeze-thaw cycles than is ideal): what do the preservation indices tell us about the reliability of the values we obtained, and or the many zeroes. 
 - how can you assess the extent of post-depositional degradation of a given pigment? 
 - interpret AD ratio? perc_chlb, etc.
 - compare pigments in cyanos with those in vascular plants? no. Per Peter most chl degrades by the time it reaches the water column. 
@@ -479,7 +443,7 @@ LFM_short <- LFM_wide %>% # make a new subset df with variables of interest
 
 ```
 
-## Add pigment metrics to wide dfs
+## Add pigment metrics to wide dfs too
 ```{r}
 # Adding summary pigment metrics to wide df. NOTE, only calculating for gTC, & all units are in gTC
 
@@ -521,7 +485,7 @@ LFM_wide <- LFM_wide %>%
 
 ### Evaluate PI
 ```{r}
-# visualize chl_a and PI, (doublecheck?) if PI spikes near surface, increase in Chl_a near depth 0 may be suspect / preservation effects. 
+# visualize chl_a and PI, (doublecheck?) if PI spikes (past 1) near the surface, increase in Chl_a near depth 0 may be suspect / preservation effects may be significant. 
 
 ggplot(UFM_short, aes(x = depth_top, y = chl_a_nmol_gTC)) +
   geom_point(size = 2, color = "darkgreen", na.rm = TRUE) +
@@ -529,7 +493,7 @@ ggplot(UFM_short, aes(x = depth_top, y = chl_a_nmol_gTC)) +
   labs(
     title = "Upper Fourmile",
     x = "Depth top (cm)",
-    y = "Chl-a (nmol/gTC)") +
+    y = "Chl-a (nmol/gTC)") + 
   theme_minimal()
 
 ggplot(UFM_short, aes(x = depth_top, y = PI)) +
@@ -580,11 +544,14 @@ ggplot(TRK_short, aes(x = depth_top, y = PI)) +
 ```
 
 # Date Interpolation
-```{r}
-##### Interpolate 210Pb dates
 
-### read in data from Flett
+## Pull in dates
+```{r}
+
+### read in chronology data from Flett to pull into the adms
 all_dates <- read_excel("data/Flett_dates_simplified_20250917.xlsx")
+
+# Next, organize the date data in R. This will only be used for the adms, to assign an age (year_CE) to a depth in each core (corresponding to extrap_bottom of each sample that got lead dated). The other metadata is just for checking that the code works and keeping track of things.
 
 UFM_dates <- all_dates %>%
     filter(str_starts(sample_ID, "UFM")) %>% # select only UFM rows
@@ -595,7 +562,7 @@ UFM_dates <- all_dates %>%
     # keep columns in the same order as in the metadata doc.
     mutate(year_CE = 2025 - extrap_bottom_age_lin)
        # NOTE !!!
-       # AGES CORRESPOND TO EXTRAP BOTTOM!
+       # AGES CORRESPOND TO EXTRAP BOTTOM!!
        # UFM ages derived from linear model!
 
   # repeat for TRK (make year_CE column)
@@ -605,18 +572,20 @@ UFM_dates <- all_dates %>%
                   by = "sample_ID") %>%
         relocate(all_of(c(names(TRK_metadata)))) %>%
         mutate(year_CE = 2025 - extrap_bottom_age_CRS) %>% 
-        filter(!sample_ID %in% c("TRK2_058", "TRK2_082"))  # remove specific samples
+        filter(!sample_ID %in% c("TRK2_058", "TRK2_082"))  # remove specific samples (reassigned in the core reconstruction)
     
          # NOTE !!!
          # AGES CORRESPOND TO EXTRAP BOTTOM!
          # TRK ages come from lin-derived CRS!!!
   
-    # the issue here is that TRK_metadata has different depth_top and _bottoms from TRK_dates
-    # because Flett reassigned dates for TRK2_058 and TRK2_082
-    # those are the ones we dropped, but in the adm we want the metadata depths. 
+    # the issue here is that TRK_metadata has different depth_top 
+    # and _bottoms from TRK_dates because Flett reassigned dates for
+    # TRK2_058 and TRK2_082 those are the ones we dropped, but in the 
+    # adm we want the metadata depths. 
     
-    # discuss with Bella how to handle splitting of the core. for now proceed with bottom portion of reconstructed core
-    # (portion with no reassigned depths)
+    # discuss with Bella/Flett how to handle splitting of the core. 
+    # for now proceed with bottom portion of reconstructed core
+    # (portion with no reassigned depths).
 
   # repeat for LFM
   LFM_dates <- all_dates %>%
@@ -629,8 +598,13 @@ UFM_dates <- all_dates %>%
          # AGES CORRESPOND TO EXTRAP BOTTOM!
          # LFM ages derived from CRS (simple)
 
-### turn it into an age-depth model (adm) that tidypaleo recognizes
+```
 
+## Create age-depth models
+```{r}
+
+### turn each date df into an age-depth model (adm) that tidypaleo recognizes
+  
 UFM_dates_clean <- UFM_dates %>% # filter to remove nas
   filter(!is.na(extrap_bottom) & !is.na(year_CE)) 
 
@@ -639,17 +613,17 @@ UFM_adm <- age_depth_model(UFM_dates_clean,
                            depth = extrap_bottom,
                            age = year_CE)
 
-  # Repeat for LFM
-  LFM_dates_clean <- LFM_dates %>% # filter to remove nas
-    filter(!is.na(extrap_bottom) & !is.na(year_CE)) 
-  LFM_adm <- age_depth_model(LFM_dates_clean,
+# Repeat for LFM
+LFM_dates_clean <- LFM_dates %>% # filter to remove nas
+  filter(!is.na(extrap_bottom) & !is.na(year_CE)) 
+LFM_adm <- age_depth_model(LFM_dates_clean,
                              depth = extrap_bottom,
                              age = year_CE)
   
-  # Repeat for TRK
-  TRK_dates_clean <- TRK_dates %>% # filter to remove nas
-    filter(!is.na(extrap_bottom) & !is.na(year_CE)) 
-  TRK_adm <- age_depth_model(TRK_dates_clean,
+# Repeat for TRK
+TRK_dates_clean <- TRK_dates %>% # filter to remove nas
+   filter(!is.na(extrap_bottom) & !is.na(year_CE)) 
+TRK_adm <- age_depth_model(TRK_dates_clean,
                              depth = extrap_bottom,
                              age = year_CE)
 
@@ -658,58 +632,201 @@ UFM_adm <- age_depth_model(UFM_dates_clean,
 plot(UFM_adm)
 plot(LFM_adm)
 plot(TRK_adm)
+```
 
-
-
-
-
-### Interpolate dates
-# Cale: in order to model or do any other analyses by time we 
-# need to interpolate the missing dates between the estimate points
-# we can do this with a predict function
+## Interpolate dates & join to dfs - TRK
+```{r}
+### Interpolate dates (assign dates to nondated sections of each core)
+  # first assign year_CE (for each slice)
+  # calculate for every section in a .25 cm interval 
+  
+  # if the number ends in .0, rename the column depth "depth
 
 # JP: Pb-210 samples are on odd samples 1-20 and even after that. 
 # For pigments we want dates from even 1 - end. i.e. 0.75, 1.75, 2.75 etc.
 
-# dates_clean length (lowest extrap_bottom)
-  # UFM: 4.75 cm
-  # LFM: 17.75 cm
-  # TRK: 10.75 cm
+# dates_clean length (lowest depth_bottom)
+  # UFM: 5 cm
+  # LFM: 18 cm
+  # TRK: 11 cm
 
 # NOTE: SWITCHING HERE FROM EXTRAP BOTTOM TO REGULAR depth_bottom
 
 # interpolate adm to all TRK segments in the dated range with SIA or pigment measurements
-TRK_interp <- predict(TRK_adm, depth = seq(0.75, 10.75, 1.0)) %>%
-  mutate(depth_plot = depth, # calling this depth_plot so it merges more easily in the next step
-         # really it's just the age at that depth
-         year_CE = age) %>%
-  select(depth_plot, year_CE)
+TRK_interp <- predict(TRK_adm, depth = seq(0.25, 11, 0.25)) %>%
+  mutate(year_CE = age) %>%
+  select(depth, year_CE)
 
-TRK_wide <- left_join(TRK_wide, TRK_interp, by = "depth_plot")
-TRK_short <- left_join(TRK_short, TRK_interp, by = "depth_plot") 
-  
-    # repeat for UFM, lowest depth 4.75 cm
-  UFM_interp <- predict(UFM_adm, depth = seq(0.75, 4.75, 1.0)) %>%
-    mutate(depth_plot = depth, # calling this depth_plot so it merges more easily in the next step
-           # really it's just the age at that depth
-           year_CE = age) %>%
-    select(depth_plot, year_CE)
-  
-  UFM_wide <- left_join(UFM_wide, UFM_interp, by = "depth_plot")
-  UFM_short <- left_join(UFM_short, UFM_interp, by = "depth_plot") 
+## create new columns in the interp df based on the ending digits of depth
+## to easily join the interpolated ages later
 
-    # repeat for LFM, lowest depth 17.75
-  LFM_interp <- predict(LFM_adm, depth = seq(0.75, 17.75, 1.0)) %>%
-    mutate(depth_plot = depth, # calling this depth_plot so it merges more easily in the next step
-           # really it's just the age at that depth
-           year_CE = age) %>%
-    select(depth_plot, year_CE)
+  # functions to categorize depths by ending digits
+  is_whole  <- function(x, tol = 1e-8) abs(x %% 1) < tol
+  is_half   <- function(x, tol = 1e-8) abs(x %% 1 - 0.5) < tol
+  is_three_quarters <- function(x, tol = 1e-8) abs(x %% 1 - 0.75) < tol
   
-  LFM_wide <- left_join(LFM_wide, LFM_interp, by = "depth_plot")
-  LFM_short <- left_join(LFM_short, LFM_interp, by = "depth_plot") 
+  # making new columns
+  TRK_interp <- TRK_interp %>%
+    mutate(
+      depth_top    = ifelse(is_half(depth), depth, NA_real_),
+      depth_plot   = ifelse(is_three_quarters(depth), depth, NA_real_),
+      depth_bottom = ifelse(is_whole(depth), depth, NA_real_)
+    ) %>%
+    select(depth, year_CE, depth_top, depth_plot, depth_bottom)
+
+# Join new columns to TRK_wide: top, plot, then bottom
+TRK_wide <- TRK_wide %>%
+  left_join(
+    TRK_interp %>% 
+      select(depth_top, year_CE) %>%
+      rename(year_CE_top = year_CE),
+    by = "depth_top")
+
+TRK_wide <- TRK_wide %>%
+  left_join(
+    TRK_interp %>% 
+      select(depth_plot, year_CE) %>%
+      rename(year_CE_plot = year_CE),
+    by = "depth_plot")
+
+TRK_wide <- TRK_wide %>%
+  left_join(
+    TRK_interp %>% 
+      select(depth_bottom, year_CE) %>%
+      rename(year_CE_bottom = year_CE),
+    by = "depth_bottom") %>%
+  mutate(duration = year_CE_top - year_CE_bottom) # calculate duration 
+
+# Repeat for TRK_short
+TRK_short <- TRK_short %>%
+  left_join(
+    TRK_wide %>%
+      ungroup() %>% # keep r from adding these variables twice
+      select(sample_ID, year_CE_top:duration), 
+    by = "sample_ID"
+  )
 
 ```
-# All parameter vis
+
+## Interpolate dates & join to dfs - UFM
+```{r}
+# dates_clean length (lowest depth_bottom)
+  # UFM: 5 cm
+  # LFM: 18 cm
+  # TRK: 11 cm
+
+# NOTE: SWITCHING HERE FROM EXTRAP BOTTOM TO REGULAR depth_bottom
+
+# interpolate adm to all UFM segments in the dated range with SIA or pigment measurements
+UFM_interp <- predict(UFM_adm, depth = seq(0.25, 5, 0.25)) %>%
+  mutate(year_CE = age) %>%
+  select(depth, year_CE)
+
+## create new columns in the interp df based on the ending digits of depth
+## to easily join the interpolated ages later
+
+  # making new columns
+  UFM_interp <- UFM_interp %>%
+    mutate(
+      depth_top    = ifelse(is_half(depth), depth, NA_real_),
+      depth_plot   = ifelse(is_three_quarters(depth), depth, NA_real_),
+      depth_bottom = ifelse(is_whole(depth), depth, NA_real_)
+    ) %>%
+    select(depth, year_CE, depth_top, depth_plot, depth_bottom)
+
+# Join new columns to UFM_wide: top, plot, then bottom
+UFM_wide <- UFM_wide %>%
+  left_join(
+    UFM_interp %>% 
+      select(depth_top, year_CE) %>%
+      rename(year_CE_top = year_CE),
+    by = "depth_top")
+
+UFM_wide <- UFM_wide %>%
+  left_join(
+    UFM_interp %>% 
+      select(depth_plot, year_CE) %>%
+      rename(year_CE_plot = year_CE),
+    by = "depth_plot")
+
+UFM_wide <- UFM_wide %>%
+  left_join(
+    UFM_interp %>% 
+      select(depth_bottom, year_CE) %>%
+      rename(year_CE_bottom = year_CE),
+    by = "depth_bottom") %>%
+  mutate(duration = year_CE_top - year_CE_bottom) # calculate duration 
+
+# Repeat for UFM_short
+UFM_short <- UFM_short %>%
+  left_join(
+    UFM_wide %>%
+      ungroup() %>% # keep r from adding these variables twice
+      select(sample_ID, year_CE_top:duration), 
+    by = "sample_ID"
+  )
+```
+
+## Interpolate dates & join to dfs - LFM
+```{r}
+# dates_clean length (lowest depth_bottom)
+  # UFM: 5 cm
+  # LFM: 18 cm
+  # TRK: 11 cm
+
+# NOTE: SWITCHING HERE FROM EXTRAP BOTTOM TO REGULAR depth_bottom
+
+# interpolate adm to all UFM segments in the dated range with SIA or pigment measurements
+LFM_interp <- predict(LFM_adm, depth = seq(0.25, 18, 0.25)) %>%
+  mutate(year_CE = age) %>%
+  select(depth, year_CE)
+
+## create new columns in the interp df based on the ending digits of depth
+## to easily join the interpolated ages later
+
+  # making new columns
+  LFM_interp <- LFM_interp %>%
+    mutate(
+      depth_top    = ifelse(is_half(depth), depth, NA_real_),
+      depth_plot   = ifelse(is_three_quarters(depth), depth, NA_real_),
+      depth_bottom = ifelse(is_whole(depth), depth, NA_real_)
+    ) %>%
+    select(depth, year_CE, depth_top, depth_plot, depth_bottom)
+
+# Join new columns to LFM_wide: top, plot, then bottom
+LFM_wide <- LFM_wide %>%
+  left_join(
+    LFM_interp %>% 
+      select(depth_top, year_CE) %>%
+      rename(year_CE_top = year_CE),
+    by = "depth_top")
+
+LFM_wide <- LFM_wide %>%
+  left_join(
+    LFM_interp %>% 
+      select(depth_plot, year_CE) %>%
+      rename(year_CE_plot = year_CE),
+    by = "depth_plot")
+
+LFM_wide <- LFM_wide %>%
+  left_join(
+    LFM_interp %>% 
+      select(depth_bottom, year_CE) %>%
+      rename(year_CE_bottom = year_CE),
+    by = "depth_bottom") %>%
+  mutate(duration = year_CE_top - year_CE_bottom) # calculate duration 
+
+# Repeat for LFM_short
+LFM_short <- LFM_short %>%
+  left_join(
+    LFM_wide %>%
+      ungroup() %>% # keep r from adding these variables twice
+      select(sample_ID, year_CE_top:duration), 
+    by = "sample_ID"
+  )
+```
+
+#All parameter vis
 ```{r}
 
 # At a glance look at all parameters in an individual core
@@ -743,13 +860,13 @@ LFM_short %>%
 
 ```
 
-# Combine spreadsheets
-```{r}
-# make wide long then export? don't need to combine sheets or make them long... 
-```
-
 # Export
 ```{r}
+# Combine all lakes into one data frame
+all_lakes <- bind_rows(UFM_short, LFM_short, TRK_short)
+
+# export important dfs as csvs 
+write.csv(all_lakes, file="output/all_lakes.csv")
 write.csv(LFM_wide, file="output/LFM_wide.csv")
 write.csv(UFM_wide, file="output/UFM_wide.csv")
 write.csv(TRK_wide, file="output/TRK_wide.csv")

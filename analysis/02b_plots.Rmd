@@ -18,26 +18,9 @@ output: html_document
 knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_project))
 ```
 
-# Plotting Preservation Indeces for Peter
-
-## Pull in data
-```{r}
-UFM_short <- read.csv("output/UFM_short.csv")
-LFM_short <- read.csv("output/LFM_short.csv")
-TRK_short <- read.csv("output/TRK_short.csv")
-```
-
 ## Plot themes and packages
-```{r}
-
+```{r, Echo = FALSE}
 source("scripts/libraries.R")
-
-# Mess with later
-# from Bella's gams and plots .Rmd
-library(ggthemes)
-library(ggplot2)
-library(ggpmisc)
-library(ggpubr)
 
 #Customize theme 
 #http://joeystanley.com/blog/custom-themes-in-ggplot2 
@@ -54,6 +37,17 @@ library(ggpubr)
  #     panel.grid.major=element_line(color="lightgrey"))}
 
 # theme_set(theme_paleo())  # pre-set the bw theme
+```
+
+# Plotting Preservation Indeces for Peter
+
+## Pull in data
+```{r}
+all_lakes <- read.csv("output/all_lakes.csv")
+
+UFM_short <- read.csv("output/UFM_short.csv")
+LFM_short <- read.csv("output/LFM_short.csv")
+TRK_short <- read.csv("output/TRK_short.csv")
 ```
 
 ## Pigment plots for Peter
@@ -200,14 +194,6 @@ TRK_short %>%
 
 ## GREEBS Nutrient Plots (NOTE: No axis lables!)
 ```{r}
-
-# Combine into one data frame
-all_lakes <- bind_rows(UFM_short, LFM_short, TRK_short)
-
-# Export as csv: 
-write.csv(all_lakes, file="output/all_lakes.csv")
-
-
 # Create nutrient plot
 nutrient_plot <- all_lakes %>%
   pivot_longer(d13C:perc_diatox) %>%
@@ -318,6 +304,11 @@ ggsave("figures/GREEBS_pigments.png", pigment_plot_GREEBS, width = 14, height = 
 
 
 ```{r}
+library(dplyr)
+subset_lakes <- all_lakes %>%
+  filter(sample_ID %in% c("LFM2_010", "LFM2_020", "LFM2_044", "UFM1_014", "UFM1_030", "UFM1_044", "TRK2_010", "TRK2_030", "TRK2_070")) %>%
+  select(sample_ID, percent.C)
 
+subset_lakes
 
 ```

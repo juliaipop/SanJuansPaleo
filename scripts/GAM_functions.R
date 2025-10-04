@@ -153,4 +153,3 @@ plot.Deriv <- function(x, alpha = 0.05, polygon = TRUE,
   layout(1)
   invisible(x)
 }
-

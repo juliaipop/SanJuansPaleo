@@ -92,3 +92,7 @@ landcover %>%
 
 ```
 
+###  Gridmet Data (from MJ, clean up later)
+```{r}
+
+```
