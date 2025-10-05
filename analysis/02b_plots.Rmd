@@ -302,6 +302,62 @@ ggsave("figures/GREEBS_pigments.png", pigment_plot_GREEBS, width = 14, height = 
 
 ```
 
+## GREEBS Pigment Plots (but with fluxes instead now!)
+```{R}
+
+# create a 4 x 2 plot!
+
+pigment_flux_order <- c(
+  "chl_a_flux", 
+  "pheo_a_flux", 
+  "PI", 
+  "lutein_flux", 
+  "diato_flux", 
+  "allo_flux", 
+  "echine_flux", 
+  "cantha_flux"
+)
+
+# Create nutrient plot
+pigment_flux_plot <- 
+  all_lakes %>%
+  pivot_longer(cols = c(bd:year_CE_top, year_CE_bottom:s), names_to = "name", values_to = "value") %>%
+  filter(name %in% c(
+    "year_CE_plot", "chl_a_flux", "pheo_a_flux", "PI", "lutein_flux",
+    "diato_flux", "allo_flux", "echine_flux", "cantha_flux"
+  )) %>% # filter instead of select bc these are rows after using pivot...
+  # filter(!is.na(value) & !is.na(depth_top)) %>% # remove missing points to make line continuous
+  mutate(name = factor(name, levels = pigment_flux_order)) %>%   # set facet order
+  ggplot(aes(x=year_CE_plot, y=value, color=lake_name))+
+  labs(x = NULL, y = NULL)+
+  geom_point()+
+  geom_line(size = 1.2) + 
+  facet_wrap(~ name, scales = "free_y", nrow = 2, ncol = 4) +   # 2 rows, 4 columns
+  theme(
+    legend.position = "none", # remove legend (saved in figures folder)
+    panel.background = element_rect(fill = "gray99", color = NA),  # gray panels
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),  # remove grid lines
+    plot.title = element_text(face = "bold", size = 10, hjust = 0, margin = margin(b=5)),  # bold, larger, centered, margin below
+    strip.text = element_blank(),  # remove default facet labels
+    panel.border = element_rect(color = "black", fill = NA, size = 0.8),  # black border
+    axis.text.x = element_text(size = 14),   # x-axis ticks
+    axis.text.y = element_text(size = 14),    # y-axis ticks
+    panel.spacing.x = unit(0.2, "in"),   # increase space between columns
+    panel.spacing.y = unit(0.7, "in"),
+  ) + 
+  scale_color_manual( 
+    values = c( 
+    "Upper Fourmile Lake" = "yellowgreen",  # 
+    "Lower Fourmile Lake" = "#0072B2",  # 
+    "Turkey Creek Lake" = "#D55E00"))
+
+# save plots (with set dimensions)
+ggsave("figures/pigment_flux_plot.png", pigment_flux_plot, width = 14, height = 5, units = "in", dpi = 300) 
+
+# has no units, will go back and add those manually (can check quickly by deleting "strip.text = ..." line)
+
+```
 
 ```{r}
 library(dplyr)

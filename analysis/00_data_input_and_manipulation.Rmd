@@ -948,10 +948,175 @@ ggsave("figures/LFM_sedimentation.png", LFM_sedimentation, width = 10, height = 
 
 ```
 
-#Mass flux calculations (%C, %N, pigments?)
+#Mass flux calculations (%C, %N)
+```{r}
+# add a column to TRK_short and TRK_wide with nutrient flux. C.mar after percent.C and N.mar after percent.N. 
+
+TRK_short <- TRK_short %>%
+  mutate(
+    C.mar = (percent.C / 100) * s,
+    N.mar = (percent.N / 100) * s) %>%
+  relocate(C.mar, .after = percent.C) %>%
+  relocate(N.mar, .after = percent.N)
+
+TRK_wide <- TRK_wide %>%
+  mutate(
+    C.mar = (percent.C / 100) * s,
+    N.mar = (percent.N / 100) * s) %>%
+  relocate(C.mar, .after = percent.C) %>%
+  relocate(N.mar, .after = percent.N)
+
+# Repeat for UFM
+UFM_short <- UFM_short %>%
+  mutate(
+    C.mar = (percent.C / 100) * s,
+    N.mar = (percent.N / 100) * s) %>%
+  relocate(C.mar, .after = percent.C) %>%
+  relocate(N.mar, .after = percent.N)
+
+UFM_wide <- UFM_wide %>%
+  mutate(
+    C.mar = (percent.C / 100) * s,
+    N.mar = (percent.N / 100) * s) %>%
+  relocate(C.mar, .after = percent.C) %>%
+  relocate(N.mar, .after = percent.N)
+
+# Repeat for LFM
+LFM_short <- LFM_short %>%
+  mutate(
+    C.mar = (percent.C / 100) * s,
+    N.mar = (percent.N / 100) * s) %>%
+  relocate(C.mar, .after = percent.C) %>%
+  relocate(N.mar, .after = percent.N)
+
+LFM_wide <- LFM_wide %>%
+  mutate(
+    C.mar = (percent.C / 100) * s,
+    N.mar = (percent.N / 100) * s) %>%
+  relocate(C.mar, .after = percent.C) %>%
+  relocate(N.mar, .after = percent.N)
+```
+
+## Visualize ways of showing ∆C / t
 ```{r}
 
+# visualize Cmar, s, and %C in TRK. 
+ggplot(TRK_short %>% filter(!is.na(year_CE_plot), !is.na(s)), # remove na values 
+  aes(x = year_CE_plot, y = s)) +
+  geom_line(color = "green4", size = 1) +    # connects the dots
+  geom_point(color = "green4", size = 2) +   # adds the dots
+  labs(
+    title = "TRK inst. sedimentation rate vs. time",
+    x = "Year",
+    y = expression(s~(g/cm^2/yr))            # renders s (g/cm²/yr) nicely
+  ) +
+  ylim(0, 0.06) + 
+  theme_bw(base_size = 14)
 
+ggplot(TRK_short %>% filter(!is.na(year_CE_plot), !is.na(s)), # remove na values 
+  aes(x = year_CE_plot, y = C.mar)) +
+  geom_line(color = "green4", size = 1) +    # connects the dots
+  geom_point(color = "green4", size = 2) +   # adds the dots
+  labs(
+    title = "TRK C MAR vs. time",
+    x = "Year",
+    y = expression("carbon MAR"~(g/cm^2/yr))    
+  ) +
+  ylim(0, 0.01) + 
+  theme_bw(base_size = 14)
+
+ggplot(TRK_short %>% filter(!is.na(year_CE_plot), !is.na(s)), # remove na values 
+  aes(x = year_CE_plot, y = percent.C)) +
+  geom_line(color = "green4", size = 1) +    # connects the dots
+  geom_point(color = "green4", size = 2) +   # adds the dots
+  labs(
+    title = "TRK percent C vs. time",
+    x = "Year",
+    y = "% Carbon") +
+  ylim(0, 20) + 
+  theme_bw(base_size = 14)
+
+```
+
+#Mass flux calculations (pigments)
+```{r}
+# start with TRK
+TRK_wide <- TRK_wide %>%
+  mutate(
+    fuco_flux = fuco_nmol_gDM * s, 
+    allo_flux = allo_nmol_gDM * s, 
+    diato_flux = diato_nmol_gDM * s, 
+    lutein_flux = lutein_nmol_gDM * s, 
+    cantha_flux = cantha_nmol_gDM * s, 
+    chl_b_flux = chl_b_nmol_gDM * s, 
+    chl_a_flux = chl_a_nmol_gDM * s, 
+    chl_ap_flux = chl_ap_nmol_gDM * s, 
+    echine_flux = echine_nmol_gDM * s, 
+    phaeo_b_flux = phaeo_b_nmol_gDM * s, 
+    pheo_a_flux = pheo_a_nmol_gDM * s, 
+    b_car_flux = b_car_nmol_gDM * s, 
+    .after = perc_diatox)
+
+flux_columns <- c(
+  "fuco_flux", "allo_flux", "diato_flux", "lutein_flux", "cantha_flux",
+  "chl_b_flux", "chl_a_flux", "chl_ap_flux", "echine_flux", "phaeo_b_flux",
+  "pheo_a_flux", "b_car_flux")
+
+# join just those columns from TRK_wide into TRK_short
+TRK_short <- TRK_short %>%
+  left_join(TRK_wide %>% 
+              ungroup() %>% 
+              select(sample_ID, all_of(flux_columns)),
+            by = "sample_ID") %>%
+    relocate(all_of(flux_columns), .after = perc_diatox)
+
+# Repeat for UFM
+UFM_wide <- UFM_wide %>%
+  mutate(
+    fuco_flux = fuco_nmol_gDM * s, 
+    allo_flux = allo_nmol_gDM * s, 
+    diato_flux = diato_nmol_gDM * s, 
+    lutein_flux = lutein_nmol_gDM * s, 
+    cantha_flux = cantha_nmol_gDM * s, 
+    chl_b_flux = chl_b_nmol_gDM * s, 
+    chl_a_flux = chl_a_nmol_gDM * s, 
+    chl_ap_flux = chl_ap_nmol_gDM * s, 
+    echine_flux = echine_nmol_gDM * s, 
+    phaeo_b_flux = phaeo_b_nmol_gDM * s, 
+    pheo_a_flux = pheo_a_nmol_gDM * s, 
+    b_car_flux = b_car_nmol_gDM * s, 
+    .after = perc_diatox)
+
+UFM_short <- UFM_short %>%
+  left_join(UFM_wide %>% 
+              ungroup() %>% 
+              select(sample_ID, all_of(flux_columns)),
+            by = "sample_ID") %>%
+    relocate(all_of(flux_columns), .after = perc_diatox)
+
+# Repeat for LFM
+LFM_wide <- LFM_wide %>%
+  mutate(
+    fuco_flux = fuco_nmol_gDM * s, 
+    allo_flux = allo_nmol_gDM * s, 
+    diato_flux = diato_nmol_gDM * s, 
+    lutein_flux = lutein_nmol_gDM * s, 
+    cantha_flux = cantha_nmol_gDM * s, 
+    chl_b_flux = chl_b_nmol_gDM * s, 
+    chl_a_flux = chl_a_nmol_gDM * s, 
+    chl_ap_flux = chl_ap_nmol_gDM * s, 
+    echine_flux = echine_nmol_gDM * s, 
+    phaeo_b_flux = phaeo_b_nmol_gDM * s, 
+    pheo_a_flux = pheo_a_nmol_gDM * s, 
+    b_car_flux = b_car_nmol_gDM * s, 
+    .after = perc_diatox)
+
+LFM_short <- LFM_short %>%
+  left_join(LFM_wide %>% 
+              ungroup() %>% 
+              select(sample_ID, all_of(flux_columns)),
+            by = "sample_ID") %>%
+    relocate(all_of(flux_columns), .after = perc_diatox)
 
 ```
 
