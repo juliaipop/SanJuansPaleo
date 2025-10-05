@@ -192,7 +192,7 @@ TRK_short %>%
   ))
 ```
 
-## GREEBS Nutrient Plots (NOTE: No axis lables!)
+## GREEBS Nutrient Plots (NOTE: No axis labels!)
 ```{r}
 # Create nutrient plot
 nutrient_plot <- all_lakes %>%
@@ -201,20 +201,21 @@ nutrient_plot <- all_lakes %>%
            "d15N",
            "percent.C",
            "percent.N",
-           "C.N"
-  )) %>%
+           "C.N")) %>%
   mutate(name = recode(name, percent.C = "Total C (% dry mass)",   # change column names to change facet labels
                         percent.N = "N (% dry mass)",
                         C.N = "C:N ratio", 
                         d13C = "d13C (‰)",
                         d15N = "d15N (‰)"),
-         name = factor(name, levels = c( # order plots
+         name = factor(name, levels = c( # get plots in order
            "d13C (‰)",
            "d15N (‰)",
            "Total C (% dry mass)",
            "N (% dry mass)",
-           "C:N ratio" 
-         ))) %>%
+           "C:N ratio")),
+         lake_name = factor(lake_name, levels = c("Upper Fourmile Lake", 
+                                                  "Turkey Creek Lake", 
+                                                  "Lower Fourmile Lake"))) %>% # draw lines in order
   filter(!is.na(value) & !is.na(depth_top)) %>% # remove missing points to make line continuous
   ggplot(aes(x=depth_top, y=value, color=lake_name))+
   labs(x = NULL, y = NULL)+
@@ -237,9 +238,10 @@ nutrient_plot <- all_lakes %>%
   scale_x_reverse() + 
   scale_color_manual( breaks = c("Upper Fourmile Lake", "Lower Fourmile Lake", "Turkey Creek Lake"), 
     values = c( 
-    "Upper Fourmile Lake" = "yellowgreen",  # 
-    "Lower Fourmile Lake" = "#0072B2",  # 
-    "Turkey Creek Lake" = "#D55E00"))
+    "Upper Fourmile Lake" = "#0072B2",
+    "Lower Fourmile Lake" = "yellowgreen",
+    "Turkey Creek Lake" = "#D55E00"
+    ))
 
 # save plots (with set dimensions)
 ggsave("figures/nutrient_profiles.png", nutrient_plot, width = 8, height = 15, units = "in", dpi = 400) 
@@ -262,14 +264,17 @@ pigment_order <- c(
   "cantha_nmol_gTC"
 )
 
-# Create nutrient plot
+# Create pigment plot
 pigment_plot_GREEBS <- all_lakes %>%
   pivot_longer(d13C:perc_diatox) %>%
   filter(name %in% c("chl_a_nmol_gTC", "pheo_a_nmol_gTC", "PI", "lutein_nmol_gTC", 
                      "diato_nmol_gTC", "allo_nmol_gTC", "echine_nmol_gTC", "cantha_nmol_gTC"
   )) %>%
   filter(!is.na(value) & !is.na(depth_top)) %>% # remove missing points to make line continuous
-  mutate(name = factor(name, levels = pigment_order)) %>%   # set facet order
+  mutate(name = factor(name, levels = pigment_order), # set facet order
+         lake_name = factor(lake_name, levels = c("Upper Fourmile Lake", 
+                                                  "Turkey Creek Lake", 
+                                                  "Lower Fourmile Lake"))) %>% # draw lines in order 
   ggplot(aes(x=depth_top, y=value, color=lake_name))+
   labs(x = NULL, y = NULL)+
   geom_point()+
@@ -291,8 +296,8 @@ pigment_plot_GREEBS <- all_lakes %>%
   scale_x_reverse() +  # top ticks, no labels
   scale_color_manual( 
     values = c( 
-    "Upper Fourmile Lake" = "yellowgreen",  # 
-    "Lower Fourmile Lake" = "#0072B2",  # 
+    "Upper Fourmile Lake" = "#0072B2",  # 
+    "Lower Fourmile Lake" = "yellowgreen",  # 
     "Turkey Creek Lake" = "#D55E00"))
 
 # save plots (with set dimensions)
@@ -302,7 +307,7 @@ ggsave("figures/GREEBS_pigments.png", pigment_plot_GREEBS, width = 14, height = 
 
 ```
 
-##Pigment flux plots
+##Pigment flux plots vs. time
 ```{R}
 
 # create a 4 x 2 plot!
@@ -318,16 +323,19 @@ pigment_flux_order <- c(
   "cantha_flux"
 )
 
-# Create nutrient plot
+# Create pigment plot
 pigment_flux_plot <- 
   all_lakes %>%
   pivot_longer(cols = c(bd:year_CE_top, year_CE_bottom:s), names_to = "name", values_to = "value") %>%
   filter(name %in% c(
-    "year_CE_plot", "chl_a_flux", "pheo_a_flux", "PI", "lutein_flux",
+    "chl_a_flux", "pheo_a_flux", "PI", "lutein_flux",
     "diato_flux", "allo_flux", "echine_flux", "cantha_flux"
   )) %>% # filter instead of select bc these are rows after using pivot...
   # filter(!is.na(value) & !is.na(depth_top)) %>% # remove missing points to make line continuous
-  mutate(name = factor(name, levels = pigment_flux_order)) %>%   # set facet order
+  mutate(name = factor(name, levels = pigment_flux_order),   # set facet order
+         lake_name = factor(lake_name, levels = c("Upper Fourmile Lake", 
+                                                  "Turkey Creek Lake", 
+                                                  "Lower Fourmile Lake"))) %>% # draw lines in order
   ggplot(aes(x=year_CE_plot, y=value, color=lake_name))+
   labs(x = NULL, y = NULL)+
   geom_point()+
@@ -348,12 +356,56 @@ pigment_flux_plot <-
   ) + 
   scale_color_manual( 
     values = c( 
-    "Upper Fourmile Lake" = "yellowgreen",  # 
-    "Lower Fourmile Lake" = "#0072B2",  # 
+    "Upper Fourmile Lake" = "#0072B2",  
+    "Lower Fourmile Lake" = "yellowgreen",  
     "Turkey Creek Lake" = "#D55E00"))
 
 # save plots (with set dimensions)
 ggsave("figures/pigment_flux_plot.png", pigment_flux_plot, width = 14, height = 5, units = "in", dpi = 300) 
+
+# has no units, will go back and add those manually (can check quickly by deleting "strip.text = ..." line)
+```
+
+##Pigment conc. plots vs. time
+```{R}
+# Create pigment plot
+pigment_conc_plot <- 
+  all_lakes %>%
+  pivot_longer(cols = c(bd:year_CE_top, year_CE_bottom:s), names_to = "name", values_to = "value") %>%
+  filter(name %in% c("chl_a_nmol_gTC", "pheo_a_nmol_gTC", "PI", "lutein_nmol_gTC", 
+                     "diato_nmol_gTC", "allo_nmol_gTC", "echine_nmol_gTC", "cantha_nmol_gTC"
+  )) %>% # filter instead of select bc these are rows after using pivot...
+  # filter(!is.na(value) & !is.na(depth_top)) %>% # remove missing points to make line continuous
+  mutate(name = factor(name, levels = pigment_order), # set facet order 
+         lake_name = factor(lake_name, levels = c("Upper Fourmile Lake", 
+                                                  "Turkey Creek Lake", 
+                                                  "Lower Fourmile Lake"))) %>% # draw lines in order
+  ggplot(aes(x=year_CE_plot, y=value, color=lake_name))+
+  labs(x = NULL, y = NULL)+
+  geom_point()+
+  geom_line(size = 1.2) + 
+  facet_wrap(~ name, scales = "free_y", nrow = 2, ncol = 4) +   # 2 rows, 4 columns
+  theme(
+    legend.position = "none", # remove legend (saved in figures folder)
+    panel.background = element_rect(fill = "gray99", color = NA),  # gray panels
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),  # remove grid lines
+    plot.title = element_text(face = "bold", size = 10, hjust = 0, margin = margin(b=5)),  # bold, larger, centered, margin below
+    strip.text = element_blank(),  # remove default facet labels
+    panel.border = element_rect(color = "black", fill = NA, size = 0.8),  # black border
+    axis.text.x = element_text(size = 14),   # x-axis ticks
+    axis.text.y = element_text(size = 14),    # y-axis ticks
+    panel.spacing.x = unit(0.2, "in"),   # increase space between columns
+    panel.spacing.y = unit(0.7, "in"),
+  ) + 
+  scale_color_manual( 
+    values = c( 
+    "Upper Fourmile Lake" = "#0072B2",  # 
+    "Lower Fourmile Lake" = "yellowgreen",  # 
+    "Turkey Creek Lake" = "#D55E00"))
+
+# save plots (with set dimensions)
+ggsave("figures/pigment_conc_plot.png", pigment_conc_plot, width = 14, height = 5, units = "in", dpi = 300) 
 
 # has no units, will go back and add those manually (can check quickly by deleting "strip.text = ..." line)
 ```
