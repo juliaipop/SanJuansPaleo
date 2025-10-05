@@ -20,15 +20,9 @@ knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_proje
 
 #Libraries -- add these here
 ```{r}
-# Bella's note-- usually I like to "source" a script that loads in all the R
-#packages that I use in a particular project, that way each R markdown will
-#run even if you didn't run all the previous R markdown files with the library()
-#calls. 
-source("scripts/libraries.R")
 
-#I also copied the first derivatives functions into a separate R script that we can source here
-#for Cale's code to run
-source("scripts/helper_functions.R")
+source("scripts/libraries.R")
+source("scripts/GAM_functions.R")
 
 theme_SJ <- function () {
   theme_base(base_size=12, base_family="PT Sans") %+replace% # base size scales everything

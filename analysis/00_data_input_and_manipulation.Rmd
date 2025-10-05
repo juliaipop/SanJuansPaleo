@@ -696,13 +696,19 @@ TRK_wide <- TRK_wide %>%
       rename(year_CE_bottom = year_CE),
     by = "depth_bottom") %>%
   mutate(duration = year_CE_top - year_CE_bottom) # calculate duration 
+      
+# add weight term to TRK_wide (need to do this separately because of how mutate groups)
+# see gavin simpson 2018 - normalize weight against the mean(weight) to avoid changing 
+# the model likelihood.
+duration_mean_TRK <- mean(TRK_wide$duration, na.rm = TRUE)
+TRK_wide <- mutate(TRK_wide, weight = duration / duration_mean_TRK)
 
 # Repeat for TRK_short
 TRK_short <- TRK_short %>%
   left_join(
     TRK_wide %>%
       ungroup() %>% # keep r from adding these variables twice
-      select(sample_ID, year_CE_top:duration), 
+      select(sample_ID, year_CE_top:weight), 
     by = "sample_ID"
   )
 
@@ -757,12 +763,18 @@ UFM_wide <- UFM_wide %>%
     by = "depth_bottom") %>%
   mutate(duration = year_CE_top - year_CE_bottom) # calculate duration 
 
+# add weight term to UFM_wide 
+# see gavin simpson 2018 - normalize weight against the mean(weight) to avoid changing 
+# the model likelihood.
+duration_mean_UFM <- mean(UFM_wide$duration, na.rm = TRUE)
+UFM_wide <- mutate(UFM_wide, weight = duration / duration_mean_UFM)
+
 # Repeat for UFM_short
 UFM_short <- UFM_short %>%
   left_join(
     UFM_wide %>%
       ungroup() %>% # keep r from adding these variables twice
-      select(sample_ID, year_CE_top:duration), 
+      select(sample_ID, year_CE_top:weight), 
     by = "sample_ID"
   )
 ```
@@ -816,12 +828,18 @@ LFM_wide <- LFM_wide %>%
     by = "depth_bottom") %>%
   mutate(duration = year_CE_top - year_CE_bottom) # calculate duration 
 
+# add weight term to LFM_wide 
+# see gavin simpson 2018 - normalize weight against the mean(weight) to avoid changing 
+# the model likelihood.
+duration_mean_LFM <- mean(LFM_wide$duration, na.rm = TRUE)
+LFM_wide <- mutate(LFM_wide, weight = duration / duration_mean_LFM)
+
 # Repeat for LFM_short
 LFM_short <- LFM_short %>%
   left_join(
     LFM_wide %>%
       ungroup() %>% # keep r from adding these variables twice
-      select(sample_ID, year_CE_top:duration), 
+      select(sample_ID, year_CE_top:weight), 
     by = "sample_ID"
   )
 ```
