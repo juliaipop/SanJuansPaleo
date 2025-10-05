@@ -302,7 +302,7 @@ ggsave("figures/GREEBS_pigments.png", pigment_plot_GREEBS, width = 14, height = 
 
 ```
 
-## GREEBS Pigment Plots (but with fluxes instead now!)
+##Pigment flux plots
 ```{R}
 
 # create a 4 x 2 plot!
@@ -356,15 +356,4 @@ pigment_flux_plot <-
 ggsave("figures/pigment_flux_plot.png", pigment_flux_plot, width = 14, height = 5, units = "in", dpi = 300) 
 
 # has no units, will go back and add those manually (can check quickly by deleting "strip.text = ..." line)
-
-```
-
-```{r}
-library(dplyr)
-subset_lakes <- all_lakes %>%
-  filter(sample_ID %in% c("LFM2_010", "LFM2_020", "LFM2_044", "UFM1_014", "UFM1_030", "UFM1_044", "TRK2_010", "TRK2_030", "TRK2_070")) %>%
-  select(sample_ID, percent.C)
-
-subset_lakes
-
 ```
