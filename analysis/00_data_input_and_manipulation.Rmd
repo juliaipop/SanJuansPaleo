@@ -31,15 +31,28 @@ source("scripts/libraries.R") # manipulate this file in the scripts folder to ad
 ```{r, echo = FALSE}
 # echo = FALSE shows output but not code. 
 
-# read in metadata 
-TRK_metadata <- read_excel("data/0_TRK2_core_metadata_20250726.xlsx")  %>%
-  select(lake_name:depth_bottom)
+# read in bulk density data
+bulk_density <- read_excel("data/bulk_density_export_from_sent_to_flett_20250602_saved_20250909.xlsx") %>%
+  rename(bd = `bulk_density_g/cm3`)
 
+# read in metadata, join with bd values
+TRK_metadata <- read_excel("data/0_TRK2_core_metadata_20250726.xlsx")  %>%
+  select(lake_name:depth_bottom) %>%
+  left_join(bulk_density %>% 
+              select(sample_ID, bd),
+            by = "sample_ID")
+  
 UFM_metadata <- read_excel("data/0_UFM1_core_metadata_20250726.xlsx") %>% 
-  select(lake_name:depth_bottom)
+  select(lake_name:depth_bottom) %>%
+  left_join(bulk_density %>% 
+              select(sample_ID, bd),
+            by = "sample_ID")
 
 LFM_metadata <- read_excel("data/0_LFM2_core_metadata_20250726.xlsx") %>% 
-  select(lake_name:depth_bottom)
+  select(lake_name:depth_bottom) %>%
+  left_join(bulk_density %>% 
+              select(sample_ID, bd),
+            by = "sample_ID")
 ```
 
 #Stable isotopes
@@ -104,7 +117,7 @@ row_TRK2_002_SIA <- SIA_run2_TRK_LFM %>%
 # two c) do regular cleaning
 TRK_SIA <- TRK_SIA %>%
     drop_na() %>% # drop all TRK samples for which we did not run SIA
-    group_by(lake_name, core_number, sample_ID, sample_range, depth_top, depth_bottom) %>% # add a step to run the summarize fn on groups of rows (each row could be grouped just by sample_ID, but output would then not include the other metadata; bc metadata should stay the same for duplicate samples, we can use this shortcut). 
+    group_by(lake_name, core_number, sample_ID, sample_range, depth_top, depth_bottom, bd) %>% # add a step to run the summarize fn on groups of rows (each row could be grouped just by sample_ID, but output would then not include the other metadata; bc metadata should stay the same for duplicate samples, we can use this shortcut). 
     summarize(across(d13C:"C:N", ~mean(.x, na.rm=TRUE)), .groups = "keep") # summarize collapses rows--this fn will take the average of all the triplicates for every row (grouped by the columns above). ".x" is tidyverse's way of saying insert the line before right here when you choose what to take the mean of.
 
 # two d) add row TRK2_002 back in
@@ -117,13 +130,13 @@ UFM_SIA <- left_join(UFM_metadata, SIA_run1_TRK_UFM, by = "sample_ID") %>%
 # take avg of triplicates
 UFM_SIA <- UFM_SIA %>%
     drop_na() %>%
-    group_by(lake_name, core_number, sample_ID, sample_range, depth_top, depth_bottom) %>%
+    group_by(lake_name, core_number, sample_ID, sample_range, depth_top, depth_bottom, bd) %>%
     summarize(across(d13C:"C:N", ~mean(.x, na.rm=TRUE)), .groups = "keep")
   
 # create an LFM stable isotope file.
 LFM_SIA <- left_join(LFM_metadata, SIA_run2_TRK_LFM, by = "sample_ID") %>%
   drop_na() %>%
-  group_by(lake_name, core_number, sample_ID, sample_range, depth_top, depth_bottom) %>%
+  group_by(lake_name, core_number, sample_ID, sample_range, depth_top, depth_bottom, bd) %>%
   summarize(across(d13C:"C:N", ~mean(.x, na.rm=TRUE)), .groups = "keep")
 
 # export data for Peter
@@ -169,6 +182,9 @@ UFM_wide <- left_join(UFM_SIA, UFM_pigments_raw, by = "depth_top") %>%
 TRK_wide <- left_join(TRK_SIA, TRK_pigments_raw, by = "depth_top") %>%
   mutate(depth_plot = depth_top + 0.25) %>%
   relocate(depth_plot, .after = depth_bottom)
+
+TRK_wide <- TRK_wide %>%
+  arrange(desc(sample_ID == "TRK2_002"))
 
 LFM_wide <- left_join(LFM_SIA, LFM_pigments_raw, by = "depth_top") %>%
   mutate(depth_plot = depth_top + 0.25) %>%
@@ -842,6 +858,101 @@ LFM_short <- LFM_short %>%
       select(sample_ID, year_CE_top:weight), 
     by = "sample_ID"
   )
+```
+
+##Interpolating sedimentation rates
+```{r}
+# sit down with a pen for this part... 
+TRK_short <- TRK_short %>%
+  mutate(s = (bd*0.5)/duration)
+
+# check that I can get the same answer as Flett (once from a core with CRS dating and once from a core with the lin regression)
+# I think the mismatch is coming from the fact that accumulation rate is calculated for the extrapolated section. let's check on TRK2_004: 
+
+# sed accumulation rate (CRS) = 0.0291
+# my est improved: 0.02792188 (~4% diff)
+# my estimate: 0.02463377 (not exact...)
+
+# TRK2_001: 0.139
+# TRK2_003 corresponds to bd = 0.12656729
+# TRK2_005: 0.115
+
+# TRK2_003 represents 0.75 to 2.25cm, or 1 - 1.5
+# extrap = 
+(0.139*0.25+0.127*0.5+(2.25-1.5)*0.113) / (2022.359 - 2015.805)
+  
+  # Flett "mass in extrapolated section" column is wrong? misestimates the mass depth... 
+
+    # this is what they did instead (assign bd of given depth to whole extrapolated section...)
+    (0.127*(2.25-0.75))/(2022.359 - 2015.805) # = 0.02906622
+
+# repeat for TRK_wide
+TRK_wide <- TRK_wide %>%
+  mutate(s = (bd*0.5)/duration)
+
+# repeat for other cores
+UFM_short <- UFM_short %>%
+  mutate(s = (bd*0.5)/duration)
+UFM_wide <- UFM_wide %>%
+  mutate(s = (bd*0.5)/duration)
+
+LFM_short <- LFM_short %>%
+  mutate(s = (bd*0.5)/duration)
+LFM_wide <- LFM_wide %>%
+  mutate(s = (bd*0.5)/duration)
+
+# plot TRK sedimentation rate / t
+TRK_sedimentation <- ggplot(TRK_short %>% filter(!is.na(year_CE_plot), !is.na(s)), # remove na values 
+  aes(x = year_CE_plot, y = s)) +
+  geom_line(color = "green4", size = 1) +    # connects the dots
+  geom_point(color = "green4", size = 2) +   # adds the dots
+  labs(
+    title = "TRK inst. sedimentation rate vs. time",
+    x = "Year",
+    y = expression(s~(g/cm^2/yr))            # renders s (g/cm²/yr) nicely
+  ) +
+  ylim(0, 0.06) + 
+  theme_bw(base_size = 14)
+
+ggsave("figures/TRK_sedimentation.png", TRK_sedimentation, width = 10, height = 5, units = "in", dpi = 300) 
+
+# plot UFM sedimentation rate / t
+UFM_sedimentation <- ggplot(UFM_short %>% filter(!is.na(year_CE_plot), !is.na(s)), # remove na values 
+  aes(x = year_CE_plot, y = s)) +
+  geom_line(color = "green4", size = 1) +    # connects the dots
+  geom_point(color = "green4", size = 2) +   # adds the dots
+  labs(
+    title = "UFM inst. sedimentation rate vs. time",
+    x = "Year",
+    y = expression(s~(g/cm^2/yr))            # renders s (g/cm²/yr) nicely
+  ) +
+  ylim(0, 0.011) + 
+  theme_bw(base_size = 14)
+
+ggsave("figures/UFM_sedimentation.png", UFM_sedimentation, width = 10, height = 5, units = "in", dpi = 300) 
+
+# plot LFM sedimentation rate / t
+LFM_sedimentation <- ggplot(LFM_short %>% filter(!is.na(year_CE_plot), !is.na(s)), # remove na values 
+  aes(x = year_CE_plot, y = s)) +
+  geom_line(color = "green4", size = 1) +    # connects the dots
+  geom_point(color = "green4", size = 2) +   # adds the dots
+  labs(
+    title = "LFM inst. sedimentation rate vs. time",
+    x = "Year",
+    y = expression(s~(g/cm^2/yr))            # renders s (g/cm²/yr) nicely
+  ) +
+  ylim(0, 0.0275) + 
+  theme_bw(base_size = 14)
+
+ggsave("figures/LFM_sedimentation.png", LFM_sedimentation, width = 10, height = 5, units = "in", dpi = 300) 
+
+```
+
+#Mass flux calculations (%C, %N, pigments?)
+```{r}
+
+
+
 ```
 
 #All parameter vis

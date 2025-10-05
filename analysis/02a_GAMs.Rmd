@@ -43,7 +43,6 @@ theme_set(theme_SJ())  # pre-set the bw theme
 
 ### Adding a weight term
 ```{r}
-
 ## Add weight to paleo data
 ### This is not very elegant but it does work
 ## You need to have a top row of blank cells to make this work - i.e, 0 depth and year of sampling
@@ -56,7 +55,6 @@ LFM_short <- LFM_short %>%
   mutate(weight = interval / mean(interval, na.rm=TRUE)) ### make the weight term 
   
 ### Now you have a weight term
-
 ```
 
 
