@@ -1,5 +1,5 @@
 ---
-title: "02_GAMs"
+title: "02a_GAMs"
 author: "Julia Pop"
 date: "2025-09-22"
 output: html_document
@@ -20,47 +20,88 @@ knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_proje
 
 #Libraries -- add these here
 ```{r}
-
 source("scripts/libraries.R")
 source("scripts/GAM_functions.R")
-
-theme_SJ <- function () {
-  theme_base(base_size=12, base_family="PT Sans") %+replace% # base size scales everything
-    theme(
-      panel.background  = element_blank(), # back panel blank
-      plot.background = element_rect(fill="white", colour=NA), # plot bgd white, with no border
-      plot.title=element_text(face="plain",hjust=0), #
-      plot.subtitle = element_text(color="dimgrey", hjust=0, size=12), # hjust = left aligned
-      axis.title=element_text(face="plain"), # face = plain means not bold
-      panel.grid.minor=element_blank(), # removes minor grid lines
-      strip.text.x = element_text(face="italic"),
-      panel.grid.major=element_line(color="lightgrey"))}
-
-theme_set(theme_SJ())  # pre-set the bw theme
 ```
 
 **NOTE! use the short files for the gams unless interested in comparing pigment units (g TC vs g dry mass)**
 
-### Adding a weight term
+## Pull in data
 ```{r}
-## Add weight to paleo data
-### This is not very elegant but it does work
-## You need to have a top row of blank cells to make this work - i.e, 0 depth and year of sampling
-#### read in your data (now with dates!)
-LFM_short <- read.csv("output/LFM_short.csv") 
-### mutate your data
-LFM_short <- LFM_short %>%
-  mutate(interval = lag(year_CE) - year_CE) %>% ### use the interpolated dates to calculate temporal averaging
-  slice(-1) %>% ## cut the top row of blank data
-  mutate(weight = interval / mean(interval, na.rm=TRUE)) ### make the weight term 
-  
-### Now you have a weight term
+all_lakes <- read.csv("output/all_lakes.csv")
+
+UFM_short <- read.csv("output/UFM_short.csv")
+LFM_short <- read.csv("output/LFM_short.csv")
+TRK_short <- read.csv("output/TRK_short.csv")
+```
+
+### Adding a weight term
+
+Added the weight term already in 00_data_input_and_manipulation.Rmd. Instead of calculating weights with interval = lag(), weight corresponds to the duration captured by each slice, as in Simpson 2018. Addresses HETERO - SKA - DA - STI - CITY.
+
+**Questions:** 
+
+- Gamma distributed vs. gaussian distributed data... 
+
+### GAMs- Bella's way, but with Julias annotations: 
+Bella's way without annotations is reproduced below.
+```{r}
+### FAMILY:
+# For our purposes, family = gaussian (normal) for isotopes 
+# (they can have negative and positive values), and
+# family = gamma for concentrations and rates
+# in that case the mean of the response variable is restricted to [0,inf)... 
+
+### K (sets the maximum # of bases for our spline): 
+
+# Our dataset is very small: rule of thumb is to not let k approach n
+    # how much data are we working with? 
+    sum(!is.na(LFM_short$year_CE_plot)) # 18 observations. 
+    
+# try with and without corCAR1, then examine the residuals. 
+mod_d15N_LFM <- gamm(d15N ~ s(year_CE_plot, k = 10), 
+                     family = gaussian(link = "identity"), 
+                     # does family correspond to the data or their residuals? 
+                     # check with bella
+                     data = LFM_short,
+                     weight = weight, 
+                     method = "REML")
+
+mod_d15N_LFM_CAR1 <- gamm(d15N ~ s(year_CE_plot, k = 10), 
+                     family = gaussian(link = "identity"), 
+                     # does family correspond to the data or their residuals? 
+                     # check with bella
+                     data = LFM_short,
+                     weight = weight, 
+                     correlation = corCAR1(form = ~ year_CE_plot),
+                     method = "REML")
+                 # correlation = corCAR1(form = ~ year_CE_plot)
+
+
+resid_values <- residuals(mod_d15N_LFM$lme, type = "normalized")       # no CAR(1)
+resid_values_CAR1 <- residuals(mod_d15N_LFM_CAR1$lme, type = "normalized")   # with CAR(1)
+all.equal(resid_values, resid_values_CAR1)  # Check if they are identical
+# residuals are basically equal, so CAR(1) isn't doing much
+
+# examine again using AIC:
+AIC(mod_d15N_LFM$lme)   # without CAR(1): -6.85481
+AIC(mod_d15N_LFM_CAR1$lme) # without CAR(1): -4.845512
+# lower AIC = better? 
+# AIC=2k−2ln(L), where k = # parameters, L = likelihood.
+
+# stopped here!!!
+## summary object for use in document
+d15NSumm_LFM <- summary(mod_d15N_LFM$gam)
+d15NSumm_LFM #Gives you the P values, degrees of freedom...
+print.summary.gam(d15NSumm_LFM)
+
+### Check diagnostics. You might need to adjust model
+gam.check(mod_d15N_LFM$gam)
 ```
 
 
 ### GAMs- Bella's way
 ```{r}
-
 ### family=Gamma(link="log") for gamma distributed errors
 ### family = gaussian(link = "identity") for normal data with negative values
 mod_d15N_LFM <- gamm(d15N ~ s(year_CE, k = 10),
@@ -228,8 +269,6 @@ lines(unlist(m2.dsig$decr) ~ year_CE, data = d15NYear_LFM, col = "red", lwd = 3)
 decr<-data.frame(unlist(m2.dsig$decr), d15NYear_LFM$age_sky) %>%
   rename(value=unlist.m2.dsig.decr.,
          age_sky=del15NYear_S.age_sky)
-
-
 ```
 
 ### Gams - Cale's way

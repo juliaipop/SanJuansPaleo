@@ -18,17 +18,19 @@ library(ggpmisc)
 library(ggpubr)
 
 #load packages necessary for GAMS
-library("mgcv")
+library(mgcv)
+library(gratia)
+library(cowplot)
+library(nlme) # for non linear mixed effects models
 library("scam")
-library("cowplot")
 library("grid")              # for unit.pmax(), unit.list()
 library("schoenberg")
-library("tidyr")
-library("nlme")
 
 #from Cale (delete what I don't need) 
 library(tidypaleo) ### for dealing with dates and vertical plotting
-library(gratia) ## for improving GAMs
 
 #troubleshooting wd issues
 library(here)
+
+# loading cowplot overrides the ggplot default theme: to set it back, run
+theme_set(theme_bw())
