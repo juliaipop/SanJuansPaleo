@@ -117,6 +117,10 @@ LFM_short_extrap <- mutate(LFM_short_extrap,
                            weight_extrap = duration_extrap / duration_mean_LFM_short_extrap)
 
 # ages stay the same, but the weight term changes because the average is pulled off by the extrapolated dates... don't use it in the final analysis? tbd. at least can say I looked into it. 
+
+# specify which ages were interpolated and which were extrapolated
+LFM_short_extrap <- LFM_short_extrap %>%
+  mutate(age_cert = ifelse(year_plot_extrap > 1861, "interp", "extrap"))
 ```
 
 ##See what changed:
