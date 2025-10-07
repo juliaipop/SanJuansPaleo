@@ -1167,4 +1167,9 @@ write.csv(TRK_wide, file="output/TRK_wide.csv")
 write.csv(LFM_short, file="output/LFM_short.csv")
 write.csv(UFM_short, file="output/UFM_short.csv")
 write.csv(TRK_short, file="output/TRK_short.csv")
+
+# save the age-depth models too
+saveRDS(UFM_adm, "output/UFM_adm.rds")
+saveRDS(LFM_adm, "output/LFM_adm.rds")
+saveRDS(TRK_adm, "output/TRK_adm.rds")
 ```

@@ -1,0 +1,191 @@
+---
+title: "02c_date_extrapolation"
+author: "Julia Pop"
+date: "2025-10-06"
+output: html_document
+---
+```{r setup, include=FALSE}
+# code to troublesheet file path issues. 
+# By default, knitr uses the folder containing the .Rmd file as
+# the working directory. This code allows us to set the folder
+# with our .rProj in it as the root. 
+
+# find_root looks upwards from the .Rmd until it finds a file or
+# folder that matches the criteria "folder with a .Rproj file in
+# it."
+
+knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_project))
+```
+
+#Libraries -- add these here
+```{r}
+source("scripts/libraries.R")
+```
+
+# Pull in data
+```{r}
+all_lakes <- read.csv("output/all_lakes.csv")
+
+UFM_short <- read.csv("output/UFM_short.csv")
+LFM_short <- read.csv("output/LFM_short.csv")
+TRK_short <- read.csv("output/TRK_short.csv")
+```
+
+# Age-depth models
+```{r}
+# read in raw info from Flett for reference
+all_dates <- read_excel("data/Flett_dates_simplified_20250917.xlsx")
+
+# adms from 00_data_input_and...
+UFM_adm <- readRDS("output/UFM_adm.rds")
+LFM_adm <- readRDS("output/LFM_adm.rds")
+TRK_adm <- readRDS("output/TRK_adm.rds")
+# now we have an adm to mess with!
+```
+
+
+# Date extrapolation
+```{r}
+# We have 43 cm of LFM2. According to our adm how many years should that go back? 
+predict(LFM_adm, depth = 43)$age # to ~1613
+
+# next steps: 
+# extrapolate the dates to 43 cm using the predict function. 
+# calculate sedimentation rates using the code from 00_analysis
+# see what predict did to the sedimentation rates and if I should set my own age depth model... (at an avg sed rate for example)
+
+# extrapolate the dates to 43 cm using the predict function. 
+LFM_extrap <- predict(LFM_adm, depth = seq(0.25, 43, 0.25)) %>%
+  mutate(year_CE = age) %>%
+  select(depth, year_CE)
+
+# plot the extrapolated adm...
+plot(depth ~ year_CE, data = LFM_extrap, type = "l", 
+     xlab = "Year CE", ylab = "Depth (cm)")
+points(LFM_extrap$year_CE, LFM_extrap$depth, pch = 20, cex = 0.3)
+abline(v = 1861.67, lty = "aa")
+
+# plot the interpolated adm
+plot(LFM_adm)
+
+```
+
+##Calculate depth top, bottom, plot, duration and weight
+```{r}
+## create new columns in the extrap df based on the ending digits of depth
+## to easily join the interpolated ages later
+
+  # functions to categorize depths by ending digits
+  is_whole  <- function(x, tol = 1e-8) abs(x %% 1) < tol
+  is_half   <- function(x, tol = 1e-8) abs(x %% 1 - 0.5) < tol
+  is_three_quarters <- function(x, tol = 1e-8) abs(x %% 1 - 0.75) < tol
+  
+  # making new columns
+  LFM_extrap <- LFM_extrap %>%
+    mutate(
+      depth_top    = ifelse(is_half(depth), depth, NA_real_),
+      depth_plot   = ifelse(is_three_quarters(depth), depth, NA_real_),
+      depth_bottom = ifelse(is_whole(depth), depth, NA_real_)
+    ) %>%
+    select(depth, year_CE, depth_top, depth_plot, depth_bottom)
+
+# Join new columns to LFM_wide: top, plot, then bottom
+LFM_short_extrap <- LFM_short %>%
+  left_join(
+    LFM_extrap %>% 
+      select(depth_top, year_CE) %>%
+      rename(year_top_extrap = year_CE),
+    by = "depth_top")
+
+LFM_short_extrap <- LFM_short_extrap %>%
+  left_join(
+    LFM_extrap %>% 
+      select(depth_plot, year_CE) %>%
+      rename(year_plot_extrap = year_CE),
+    by = "depth_plot")
+
+LFM_short_extrap <- LFM_short_extrap %>%
+  left_join(
+    LFM_extrap %>% 
+      select(depth_bottom, year_CE) %>%
+      rename(year_bottom_extrap = year_CE),
+    by = "depth_bottom") %>%
+  mutate(duration_extrap = year_top_extrap - year_bottom_extrap) # calculate duration 
+
+duration_mean_LFM_short_extrap <- mean(LFM_short_extrap$duration_extrap, na.rm = TRUE)
+LFM_short_extrap <- mutate(LFM_short_extrap, 
+                           weight_extrap = duration_extrap / duration_mean_LFM_short_extrap)
+
+# ages stay the same, but the weight term changes because the average is pulled off by the extrapolated dates... don't use it in the final analysis? tbd. at least can say I looked into it. 
+```
+
+##See what changed:
+```{r}
+
+LFM_short_extrap_view <- LFM_short_extrap %>%
+       select(lake_name, 
+              sample_ID, 
+              sample_range, 
+              depth_top, 
+              depth_bottom, 
+              depth_plot, 
+              year_CE_top, 
+              year_CE_plot, 
+              year_CE_bottom, 
+              duration, 
+              weight, 
+              s,
+              year_top_extrap,
+              year_plot_extrap, 
+              year_bottom_extrap,
+              duration_extrap,
+              weight_extrap)
+
+View(LFM_short_extrap_view)
+
+rm(LFM_short_extrap_view)
+
+```
+
+Okay. If we want to model gams over the whole core using extrapolated dates (and only interpret them in the interpolated sections) we might need to drop the weight term (bc it's pulled off by the extrapolated dates) and all the accumulation rate metrics... 
+
+Whether it's reasonable to interpolate so far back is another question. Can show the graph from above. 
+
+**Or run it the regular way first then see if running first derivs on fluxes gives any significant periods of change?**
+
+# Removing variables from LFM_wide...
+```{r}
+names(LFM_short_extrap)
+
+LFM_short_extrap <- LFM_short_extrap %>%
+  select(
+    -"X",
+    -"C.mar",
+    -"N.mar",
+    -"year_CE_top",
+    -"year_CE_plot",
+    -"year_CE_bottom",
+    -"duration",
+    -"weight",
+    -"s",
+    -"duration_extrap", 
+    -"weight_extrap", 
+    -"fuco_flux",
+    -"allo_flux",
+    -"diato_flux",
+    -"lutein_flux",
+    -"cantha_flux",
+    -"chl_b_flux",
+    -"chl_a_flux",
+    -"chl_ap_flux",
+    -"echine_flux", 
+    -"phaeo_b_flux",
+    -"pheo_a_flux",
+    -"b_car_flux"
+  )
+```
+
+```{r}
+# export important dfs as csvs 
+write.csv(LFM_short_extrap, file="output/LFM_short_extrap.csv")
+```
