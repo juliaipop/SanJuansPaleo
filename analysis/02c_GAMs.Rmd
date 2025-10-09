@@ -287,9 +287,6 @@ ggsave("figures/LFM_d15N.png",
        units="in")
 ```
 
-
-
-
 ## d13C
 Use LFM_short_extrap to be able to plot all the data vs. time, but model only the interpolated dates. 
 ```{r}
@@ -434,6 +431,7 @@ ggsave("figures/LFM_d13C.png",
        width=8,
        units="in")
 ```
+
 
 
 ## percent C
