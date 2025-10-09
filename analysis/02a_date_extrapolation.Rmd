@@ -1,5 +1,5 @@
 ---
-title: "02c_date_extrapolation"
+title: "02a_date_extrapolation"
 author: "Julia Pop"
 date: "2025-10-06"
 output: html_document
@@ -26,9 +26,12 @@ source("scripts/libraries.R")
 ```{r}
 all_lakes <- read.csv("output/all_lakes.csv")
 
-UFM_short <- read.csv("output/UFM_short.csv")
-LFM_short <- read.csv("output/LFM_short.csv")
-TRK_short <- read.csv("output/TRK_short.csv")
+UFM_short <- read.csv("output/UFM_short.csv") %>%
+  select(-X)
+LFM_short <- read.csv("output/LFM_short.csv") %>%
+  select(-X)
+TRK_short <- read.csv("output/TRK_short.csv") %>%
+  select(-X)
 ```
 
 # Age-depth models
@@ -153,7 +156,9 @@ rm(LFM_short_extrap_view)
 
 Okay. If we want to model gams over the whole core using extrapolated dates (and only interpret them in the interpolated sections) we might need to drop the weight term (bc it's pulled off by the extrapolated dates) and all the accumulation rate metrics... 
 
-Whether it's reasonable to interpolate so far back is another question. Can show the graph from above. 
+Whether it's reasonable to interpolate so far back is another question. Can show the graph from above...
+
+UPDATE: not going to model the whole core, just going to plot the data and model the dated section. 
 
 **Or run it the regular way first then see if running first derivs on fluxes gives any significant periods of change?**
 
@@ -161,32 +166,32 @@ Whether it's reasonable to interpolate so far back is another question. Can show
 ```{r}
 names(LFM_short_extrap)
 
-LFM_short_extrap <- LFM_short_extrap %>%
-  select(
-    -"X",
-    -"C.mar",
-    -"N.mar",
-    -"year_CE_top",
-    -"year_CE_plot",
-    -"year_CE_bottom",
-    -"duration",
-    -"weight",
-    -"s",
-    -"duration_extrap", 
-    -"weight_extrap", 
-    -"fuco_flux",
-    -"allo_flux",
-    -"diato_flux",
-    -"lutein_flux",
-    -"cantha_flux",
-    -"chl_b_flux",
-    -"chl_a_flux",
-    -"chl_ap_flux",
-    -"echine_flux", 
-    -"phaeo_b_flux",
-    -"pheo_a_flux",
-    -"b_car_flux"
-  )
+# LFM_short_extrap <- LFM_short_extrap %>%
+#   select(
+#    -"X",
+#    -"C.mar",
+#    -"N.mar",
+#    -"year_CE_top",
+#    -"year_CE_plot",
+#    -"year_CE_bottom",
+#    -"duration",
+#    -"weight",
+#    -"s",
+#    -"duration_extrap", 
+#    -"weight_extrap", 
+#    -"fuco_flux",
+#    -"allo_flux",
+#    -"diato_flux",
+#    -"lutein_flux",
+#    -"cantha_flux",
+#    -"chl_b_flux",
+#    -"chl_a_flux",
+#    -"chl_ap_flux",
+#    -"echine_flux", 
+#    -"phaeo_b_flux",
+#    -"pheo_a_flux",
+#    -"b_car_flux"
+#  )
 ```
 
 ```{r}

@@ -582,13 +582,14 @@ UFM_dates <- all_dates %>%
        # UFM ages derived from linear model!
 
   # repeat for TRK (make year_CE column)
+  # doesn't make sense to extrapolate for TRK, just will have to show the data in two separate plots... 
   TRK_dates <- all_dates %>%
         filter(str_starts(sample_ID, "TRK")) %>%
         left_join(TRK_metadata %>% select(-depth_top, -depth_bottom),
                   by = "sample_ID") %>%
         relocate(all_of(c(names(TRK_metadata)))) %>%
-        mutate(year_CE = 2025 - extrap_bottom_age_CRS) %>% 
-        filter(!sample_ID %in% c("TRK2_058", "TRK2_082"))  # remove specific samples (reassigned in the core reconstruction)
+        mutate(year_CE = 2025 - extrap_bottom_age_CRS) %>%
+        filter(!sample_ID %in% c("TRK2_058", "TRK2_082"))
     
          # NOTE !!!
          # AGES CORRESPOND TO EXTRAP BOTTOM!
@@ -601,7 +602,7 @@ UFM_dates <- all_dates %>%
     
     # discuss with Bella/Flett how to handle splitting of the core. 
     # for now proceed with bottom portion of reconstructed core
-    # (portion with no reassigned depths).
+    # (portion with no reassigned depths)...
 
   # repeat for LFM
   LFM_dates <- all_dates %>%
@@ -661,14 +662,14 @@ plot(TRK_adm)
 # JP: Pb-210 samples are on odd samples 1-20 and even after that. 
 # For pigments we want dates from even 1 - end. i.e. 0.75, 1.75, 2.75 etc.
 
-# dates_clean length (lowest depth_bottom)
+# dates_clean length (lowest extrap_bottom)
   # UFM: 5 cm
   # LFM: 18 cm
   # TRK: 11 cm
 
 # NOTE: SWITCHING HERE FROM EXTRAP BOTTOM TO REGULAR depth_bottom
 
-# interpolate adm to all TRK segments in the dated range with SIA or pigment measurements
+# extrapolate to first section of TRK
 TRK_interp <- predict(TRK_adm, depth = seq(0.25, 11, 0.25)) %>%
   mutate(year_CE = age) %>%
   select(depth, year_CE)
@@ -716,6 +717,7 @@ TRK_wide <- TRK_wide %>%
 # add weight term to TRK_wide (need to do this separately because of how mutate groups)
 # see gavin simpson 2018 - normalize weight against the mean(weight) to avoid changing 
 # the model likelihood.
+
 duration_mean_TRK <- mean(TRK_wide$duration, na.rm = TRUE)
 TRK_wide <- mutate(TRK_wide, weight = duration / duration_mean_TRK)
 
@@ -727,6 +729,8 @@ TRK_short <- TRK_short %>%
       select(sample_ID, year_CE_top:weight), 
     by = "sample_ID"
   )
+
+View(TRK_wide %>% select(lake_name:bd, year_CE_top: duration))
 
 ```
 

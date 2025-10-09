@@ -1,5 +1,5 @@
 ---
-title: "02a_GAMs"
+title: "02c_GAMs"
 author: "Julia Pop"
 date: "2025-09-22"
 output: html_document
@@ -19,7 +19,7 @@ knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_proje
 ```
 
 #Libraries -- add these here
-```{r}
+```{r, echo = FALSE}
 source("scripts/libraries.R")
 source("scripts/GAM_functions.R")
 ```
@@ -28,25 +28,27 @@ source("scripts/GAM_functions.R")
 
 ## Pull in data
 ```{r}
-all_lakes <- read.csv("output/all_lakes.csv")
+all_lakes <- read.csv("output/all_lakes.csv") %>%
+  select(-X)
 
-UFM_short <- read.csv("output/UFM_short.csv")
-LFM_short <- read.csv("output/LFM_short.csv")
-TRK_short <- read.csv("output/TRK_short.csv")
+UFM_short <- read.csv("output/UFM_short.csv") %>%
+  select(-X)
+LFM_short <- read.csv("output/LFM_short.csv") %>%
+  select(-X)
+TRK_short <- read.csv("output/TRK_short.csv") %>%
+  select(-X)
 
-LFM_short_extrap <- read.csv("output/LFM_short_extrap.csv")
+LFM_short_extrap <- read.csv("output/LFM_short_extrap.csv") %>%
+  select(-X)
 ```
 
 ### Adding a weight term
-
 Added the weight term already in 00_data_input_and_manipulation.Rmd. Instead of calculating weights with interval = lag(), weight corresponds to the duration captured by each slice, as in Simpson 2018. Addresses HETERO - SKA - DA - STI - CITY.
 
 **Questions:** 
-
 - Gamma distributed vs. gaussian distributed data... 
 
-### GAMs- Bella's way, but with Julias annotations: 
-Bella's way without annotations is reproduced below.
+### Exploring interpolated d15N LFM 
 ```{r}
 ### FAMILY:
 # For our purposes, family = gaussian (normal) for isotopes 
@@ -60,7 +62,9 @@ Bella's way without annotations is reproduced below.
     # how much data are we working with? 
     sum(!is.na(LFM_short$year_CE_plot)) # 18 observations. 
     
-# try with and without corCAR1, then examine the residuals. 
+# try with and without corCAR1, and without weights then examine the residuals. 
+
+# without weights
 mod_d15N_LFM_nw <- gamm(d15N ~ s(year_CE_plot, k = 10), 
                      family = gaussian(link = "identity"), 
                      # does family correspond to the data or their residuals? 
@@ -68,100 +72,112 @@ mod_d15N_LFM_nw <- gamm(d15N ~ s(year_CE_plot, k = 10),
                      data = LFM_short,
                      method = "REML")
 
+# with weights, without car1
 mod_d15N_LFM <- gamm(d15N ~ s(year_CE_plot, k = 10), 
                      family = gaussian(link = "identity"), 
-                     # does family correspond to the data or their residuals? 
-                     # check with bella
                      data = LFM_short,
-                     weight = weight, 
+                     weights = weight, 
                      method = "REML")
 
+# with weights, with car1
 mod_d15N_LFM_CAR1 <- gamm(d15N ~ s(year_CE_plot, k = 10), 
                      family = gaussian(link = "identity"), 
-                     # does family correspond to the data or their residuals? 
-                     # check with bella
                      data = LFM_short,
-                     weight = weight, 
+                     weights = weight, 
                      correlation = corCAR1(form = ~ year_CE_plot),
                      method = "REML")
-                 # correlation = corCAR1(form = ~ year_CE_plot)
 
-resid_values_nw <- residuals(mod_d15N_LFM_nw, type = "normalized") # no CAR(1), no weights
-resid_values <- residuals(mod_d15N_LFM$lme, type = "normalized")       # no CAR(1)
-resid_values_CAR1 <- residuals(mod_d15N_LFM_CAR1$lme, type = "normalized")   # with CAR(1)
-all.equal(resid_values, resid_values_CAR1)  # Check if they are identical
-# residuals are basically equal, so CAR(1) isn't doing much
+resid_values_nw <- residuals(mod_d15N_LFM_nw$lme, type = "normalized") 
+# no CAR(1), no weights
+resid_values <- residuals(mod_d15N_LFM$lme, type = "normalized")  
+# no CAR(1), with weights
+resid_values_CAR1 <- residuals(mod_d15N_LFM_CAR1$lme, type = "normalized")   
+# with CAR(1), with weights
+all.equal(resid_values, resid_values_CAR1)  # Check if w and without car 1 are identical
+# residuals are basically equal, so CAR(1) isn't doing much...
+
+# check residuals
+acf(resid_values_nw)
+acf(resid_values)
+acf(resid_values_CAR1)
+# negative autocorrelation at lag 1, but CAR1 doesn't do anything about it...
 
 # examine again using AIC:
 AIC(mod_d15N_LFM_nw$lme) # without CAR(1) & without weights: -0.5703
-AIC(mod_d15N_LFM$lme)   # without CAR(1): -6.85481
+# R is running the two models below this with ML instead of REML because of the weights. 
+# to compare models, plot all with ML. then this AIC = -7.13, which is the best. so using no weight is ideal...
+AIC(mod_d15N_LFM$lme)   # without CAR(1): -6.85481 
 AIC(mod_d15N_LFM_CAR1$lme) # with CAR(1): -4.845512
 
-# stopped here!!!
+summary(mod_d15N_LFM$gam)
+summary(mod_d15N_LFM$lme)
+summary(mod_d15N_LFM_nw$lme) # this one does use REML
+
+gam.check(mod_d15N_LFM_nw$gam)
+# best was without CAR1 and with the weights
+# R is being annoying anyways and using ML instead of REML because of the weights... see if this matters in the future?
 ```
 
-### Try again but with extrapolated dates this time!
+
+# LFM
+
+## d15N
+Use LFM_short_extrap to be able to plot all the data vs. time, but model only the interpolated dates. 
 ```{r}
 ### K (sets the maximum # of bases for our spline): 
 # Our dataset is still small: rule of thumb is to not let k approach n
     # how much data are we working with? 
     sum(!is.na(LFM_short_extrap$year_plot_extrap)) # 43 observations. 
+
+# Weights didn't help at all above. Model here without... 
     
 # try with and without corCAR1, then examine the residuals. 
-mod_d15N_LFM_ex <- gamm(d15N ~ s(year_plot_extrap, k = 10), 
+mod_d15N_LFM_ex <- gamm(d15N ~ s(year_CE_plot, k = 10), 
                      family = gaussian(link = "identity"), 
-                     # should I use weights here?                     
-                     # check with bella
                      data = LFM_short_extrap,
                      method = "REML")
 
-mod_d15N_LFM_ex_CAR1 <- gamm(d15N ~ s(year_plot_extrap, k = 10), 
+mod_d15N_LFM_CAR1_ex <- gamm(d15N ~ s(year_CE_plot, k = 10), 
                      family = gaussian(link = "identity"), 
-                     # does family correspond to the data or their residuals? 
-                     # check with bella
                      data = LFM_short_extrap,
-                     correlation = corCAR1(form = ~ year_plot_extrap),
+                     correlation = corCAR1(form = ~ year_CE_plot),
                      method = "REML")
+
+summary(mod_d15N_LFM_CAR1_ex$lme) # no longer overriding reml! that's good.
 
 resid_values_ex <- residuals(mod_d15N_LFM_ex$lme, type = "normalized")       # no CAR(1)
-resid_values_ex_CAR1 <- residuals(mod_d15N_LFM_ex_CAR1$lme, type = "normalized")   # with CAR(1)
-all.equal(resid_values_ex, resid_values_ex_CAR1)  # Check if they are identical
-# not the same
+resid_values_CAR1_ex <- residuals(mod_d15N_LFM_CAR1_ex$lme, type = "normalized")   # with CAR(1)
+all.equal(resid_values_ex, resid_values_CAR1_ex)  # Check if they are identical
+# same! so CAR1 isn't helping -> drop
 
 acf(resid_values_ex)
-acf(resid_values_ex_CAR1)
+acf(resid_values_CAR1_ex)
 
 # examine again using AIC:
-AIC(mod_d15N_LFM_ex$lme)   # without CAR(1): -19.76936
-AIC(mod_d15N_LFM_ex_CAR1$lme) # with CAR(1): -28.97341
+AIC(mod_d15N_LFM_ex$lme)   # without CAR(1): -0.57
+AIC(mod_d15N_LFM_CAR1$lme) # with CAR(1) from before: -4.84 (don't compare, was with ML)
+AIC(mod_d15N_LFM_CAR1_ex$lme) # with CAR(1) now: 1.42
 # lower AIC = better? better with CAR(1) still. 
 # AIC=2k−2ln(L), where k = # parameters, L = likelihood.
 
-
-# check phi in the CAR1 gam
-d15N_LFM_ex_CAR1_phi <- intervals(mod_d15N_LFM_ex_CAR1$lme)$corStruct
-d15N_LFM_ex_CAR1_phi
-# ^was rly low earlier when we were modeling just the interpolated dates.
-# higher now but has huge confidence intervals
-
-
-### NEXT, MODEL CHECKS:
+    ### DECISION: move forward with mod_d15N_LFM_ex (no weights, no CAR1) ###
 
 ## summary object for use in document
 d15NSumm_LFM_ex <- summary(mod_d15N_LFM_ex$gam)
 d15NSumm_LFM_ex #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
-gam.check(mod_d15N_LFM$gam)
+gam.check(mod_d15N_LFM_ex$gam)
 
 
 
-### NOW PLOT!
+
+### NOW PLOT! ###
 N <- 300    # number of points at which to evaluate the splines
 
 # Second, if you're only concerned about the response, include "response" in type of predict()???
 d15NYear_LFM_ex <- with(LFM_short_extrap, 
-                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
+                     data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
 d15NYear_LFM_ex <- cbind(d15NYear_LFM_ex,
                       data.frame(predict(mod_d15N_LFM_ex$gam, d15NYear_LFM_ex,
@@ -172,36 +188,14 @@ d15NYear_LFM_ex <- transform(d15NYear_LFM_ex, upper = fit + (2 * se.fit), lower 
 d15NYear_LFM_ex$lake_ID <- 'LFM'
 
 ## Plot fitted trends
-ggplot(d15NYear_LFM_ex, aes(x = year_plot_extrap, y = fit)) +
+ggplot(d15NYear_LFM_ex, aes(x = year_CE_plot, y = fit)) +
   geom_ribbon(aes(ymin = (lower),
-                  ymax = (upper), x = year_plot_extrap),
+                  ymax = (upper), x = year_CE_plot),
               alpha = 0.2, inherit.aes = FALSE, fill = "black") +
   geom_point(data = LFM_short_extrap, mapping = aes(x = year_plot_extrap, y = d15N), inherit.aes = FALSE) +
   geom_line() 
 
-
-
-### Do it again for the other model...
-d15NYear_LFM_ex_CAR1 <- with(LFM_short_extrap, 
-                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
-
-d15NYear_LFM_ex_CAR1 <- cbind(d15NYear_LFM_ex_CAR1,
-                      data.frame(predict(mod_d15N_LFM_ex_CAR1$gam, d15NYear_LFM_ex_CAR1,
-                                         type="response", se.fit = TRUE)))
-
-### this calculates on the link scale 
-d15NYear_LFM_ex_CAR1 <- transform(d15NYear_LFM_ex_CAR1, upper = fit + (2 * se.fit), lower = fit - (2 * se.fit))
-d15NYear_LFM_ex_CAR1$lake_ID <- 'LFM'
-
-## Plot fitted trends
-ggplot(d15NYear_LFM_ex_CAR1, aes(x = year_plot_extrap, y = fit)) +
-  geom_ribbon(aes(ymin = (lower),
-                  ymax = (upper), x = year_plot_extrap),
-              alpha = 0.2, inherit.aes = FALSE, fill = "black") +
-  geom_point(data = LFM_short_extrap, mapping = aes(x = year_plot_extrap, y = d15N), inherit.aes = FALSE) +
-  geom_line() 
-
-# CAR1 doesn't help anyway! drop. 
+# year_plot_extrap = year_CE_plot where dates are interpolated. Can use either for plotting points.
 
 #First derivatives using gratia package instead of the 
 #functions "helper_functions.R" (that Cale sent)
@@ -212,7 +206,7 @@ fd_inc
 
 #Add years for plotting
 years <- with(LFM_short_extrap,
-                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
+                     data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
 fd_inc <- cbind(fd_inc,years)
 
@@ -220,7 +214,314 @@ fd_inc <- cbind(fd_inc,years)
 fd_inc %>%
   select(-term) %>%
   pivot_longer(lower:upper) %>%
-  ggplot(aes(x=year_plot_extrap,y=value,linetype=name))+
+  ggplot(aes(x=year_CE_plot,y=value,linetype=name))+
+  geom_line()+
+    scale_linetype_manual(values = c(
+    "lower" = "dashed", #lower 95% confidence interval
+    "upper" = "dashed", #upper 95% confidence interval
+    "est"   = "solid"
+  ))+
+  theme(legend.position="none")+
+  geom_hline(yintercept=0, color="red")
+# Anywhere the confidence intervals DONT overlap zero is a statistically
+# significant acceleration or deceleration in the trend
+
+
+# When do they occur? You can check with an if/else type statement
+fd_inc_timing <- fd_inc %>%
+  mutate(change_type = case_when(lower < 0 & upper < 0 ~ "sig. dec.",
+                                 lower > 0 & upper > 0 ~ "sig. inc.",
+                                 TRUE ~ NA))
+# View(fd_inc_timing)
+#What you can see if a brief period of decline ~1900-1934, and again from 
+#1960-present. This model, relative to Cale's seems more sensitive to that
+#slight increase pre-1900. I think Cale's weighting is probably better
+
+# For graphing, we want to join the predicted/fitted data with the 
+# information with significant periods of change. Let's call it 'pred'
+
+pred <- left_join(d15NYear_LFM_ex,
+                  fd_inc_timing %>% 
+                    select(year_CE_plot, change_type), #select only 2 columns since
+                  #lower and upper have two different meanings in these 2 dataframes
+                  by="year_CE_plot") 
+  # mutate(fit = ifelse(change_type == "sig. dec.", fit, NA))
+
+# Add a segment ID for plotting, so there there are multiple
+# periods of change, ggplot doesn't connect the lines together
+pred2 <- pred %>%
+  mutate(seg_id = with(rle(ifelse(is.na(change_type), "none", change_type)),
+                       rep(seq_along(values), lengths)))
+
+# Keep only rows that are sig. inc or sig. dec
+pred2 <- pred2 %>% filter(!is.na(change_type))
+
+# Now make a pretty graph that shows the raw data, fitted trend,
+# trend as well as periods of statistically significant increase/decrease!
+ggplot(LFM_short_extrap) +
+  geom_point(aes(year_plot_extrap, d15N)) +
+  geom_ribbon(data = pred,
+              aes(x = year_CE_plot, ymin = lower, ymax = upper),
+              alpha = 0.2) +
+  geom_line(data = pred,
+            aes(x = year_CE_plot, y = fit),
+            linewidth = 1,
+            color = "black") +
+  geom_line(data = pred2,
+            aes(x = year_CE_plot, y = fit,
+                color = change_type,
+                group = seg_id),
+            linewidth = 1) +
+  scale_color_manual(values = c("sig. inc." = "#CC9933",
+                                "sig. dec." = "#2f6cad"),
+                     name ="Statistic") +
+  scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  ylab(expression(paste(delta^{15}, "N (", "\u2030", ")"))) +
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("Lower Fourmile Lake")
+
+ggsave("figures/LFM_d15N.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+```
+
+
+
+
+## d13C
+Use LFM_short_extrap to be able to plot all the data vs. time, but model only the interpolated dates. 
+```{r}
+### K (sets the maximum # of bases for our spline): 
+# Our dataset is still small: rule of thumb is to not let k approach n
+    # how much data are we working with? 
+    sum(!is.na(LFM_short_extrap$year_plot_extrap)) # 43 observations. 
+    sum(!is.na(LFM_short_extrap$year_CE_plot)) # 18 observations.
+
+# check later how weights, corCAR1 compare. 
+    
+# drop the "ex" for simplicity now that we know the dataset shouldn't affect the outcomes. 
+mod_d13C_LFM <- gamm(d13C ~ s(year_CE_plot, k = 10), 
+                     family = gaussian(link = "identity"), 
+                     data = LFM_short_extrap,
+                     method = "REML")
+
+summary(mod_d13C_LFM$lme) # using REML - good.
+
+resid_values_d13C_LFM <- residuals(mod_d13C_LFM$lme, type = "normalized")
+acf(resid_values_d13C_LFM) # no lag, looks good without...
+
+## summary object for use in document
+d13CSumm_LFM <- summary(mod_d13C_LFM$gam)
+d13CSumm_LFM #Gives you the P values, degrees of freedom...
+
+### Check diagnostics. You might need to adjust model
+gam.check(mod_d13C_LFM$gam)
+
+
+### NOW PLOT! ###
+N <- 300    # number of points at which to evaluate the splines
+
+# Second, if you're only concerned about the response, include "response" in type of predict()???
+d13CYear_LFM <- with(LFM_short_extrap, 
+                     data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
+
+d13CYear_LFM <- cbind(d13CYear_LFM,
+                      data.frame(predict(mod_d13C_LFM$gam, d13CYear_LFM,
+                                         type="response", se.fit = TRUE)))
+
+### this calculates on the link scale 
+d13CYear_LFM <- transform(d13CYear_LFM, upper = fit + (2 * se.fit), lower = fit - (2 * se.fit))
+d13CYear_LFM$lake_ID <- 'LFM'
+
+## Plot fitted trends
+ggplot(d13CYear_LFM, aes(x = year_CE_plot, y = fit)) +
+  geom_ribbon(aes(ymin = (lower),
+                  ymax = (upper), x = year_CE_plot),
+              alpha = 0.2, inherit.aes = FALSE, fill = "black") +
+  geom_point(data = LFM_short_extrap, mapping = aes(x = year_plot_extrap, y = d13C), inherit.aes = FALSE) +
+  geom_line() 
+
+# year_plot_extrap = year_CE_plot where dates are interpolated. Can use either for plotting points.
+
+#First derivatives using gratia package instead of the 
+#functions "helper_functions.R" (that Cale sent)
+############
+############
+fd_inc = confint(fderiv(mod_d13C_LFM))
+fd_inc
+
+#Add years for plotting
+years <- with(LFM_short_extrap,
+                     data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
+
+fd_inc <- cbind(fd_inc,years)
+
+#Plot the first derivatives
+fd_inc %>%
+  select(-term) %>%
+  pivot_longer(lower:upper) %>%
+  ggplot(aes(x=year_CE_plot,y=value,linetype=name))+
+  geom_line()+
+    scale_linetype_manual(values = c(
+    "lower" = "dashed", #lower 95% confidence interval
+    "upper" = "dashed", #upper 95% confidence interval
+    "est"   = "solid"
+  ))+
+  theme(legend.position="none")+
+  geom_hline(yintercept=0, color="red")
+# Anywhere the confidence intervals DONT overlap zero is a statistically
+# significant acceleration or deceleration in the trend
+
+
+# When do they occur? You can check with an if/else type statement
+fd_inc_timing <- fd_inc %>%
+  mutate(change_type = case_when(lower < 0 & upper < 0 ~ "sig. dec.",
+                                 lower > 0 & upper > 0 ~ "sig. inc.",
+                                 TRUE ~ NA))
+# View(fd_inc_timing)
+#What you can see if a brief period of decline ~1900-1934, and again from 
+#1960-present. This model, relative to Cale's seems more sensitive to that
+#slight increase pre-1900. I think Cale's weighting is probably better
+
+# For graphing, we want to join the predicted/fitted data with the 
+# information with significant periods of change. Let's call it 'pred'
+
+pred <- left_join(d13CYear_LFM,
+                  fd_inc_timing %>% 
+                    select(year_CE_plot, change_type), #select only 2 columns since
+                  #lower and upper have two different meanings in these 2 dataframes
+                  by="year_CE_plot") 
+  # mutate(fit = ifelse(change_type == "sig. dec.", fit, NA))
+
+# Add a segment ID for plotting, so there there are multiple
+# periods of change, ggplot doesn't connect the lines together
+pred2 <- pred %>%
+  mutate(seg_id = with(rle(ifelse(is.na(change_type), "none", change_type)),
+                       rep(seq_along(values), lengths)))
+
+# Keep only rows that are sig. inc or sig. dec
+pred2 <- pred2 %>% filter(!is.na(change_type))
+
+# Now make a pretty graph that shows the raw data, fitted trend,
+# trend as well as periods of statistically significant increase/decrease!
+ggplot(LFM_short_extrap) +
+  geom_point(aes(year_plot_extrap, d13C)) +
+  geom_ribbon(data = pred,
+              aes(x = year_CE_plot, ymin = lower, ymax = upper),
+              alpha = 0.2) +
+  geom_line(data = pred,
+            aes(x = year_CE_plot, y = fit),
+            linewidth = 1,
+            color = "black") +
+  geom_line(data = pred2,
+            aes(x = year_CE_plot, y = fit,
+                color = change_type,
+                group = seg_id),
+            linewidth = 1) +
+  scale_color_manual(values = c("sig. inc." = "#CC9933",
+                                "sig. dec." = "#2f6cad"),
+                     name ="Statistic") +
+  scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  ylab(expression(paste(delta^{13}, "C (", "\u2030", ")"))) +
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("Lower Fourmile Lake")
+
+ggsave("figures/LFM_d13C.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+```
+
+
+## percent C
+```{r}
+### K (sets the maximum # of bases for our spline): 
+# Our dataset is still small: rule of thumb is to not let k approach n
+    # how much data are we working with? 
+    sum(!is.na(LFM_short_extrap$year_plot_extrap)) # 43 observations. 
+    sum(!is.na(LFM_short_extrap$year_CE_plot)) # 18 observations.
+
+# check later how weights, corCAR1 compare. 
+    
+# drop the "ex" for simplicity now that we know the dataset shouldn't affect the outcomes. 
+mod_perC_LFM <- gamm(percent.C ~ s(year_CE_plot, k = 10), 
+                     family=Gamma(link="log"),  
+                     data = LFM_short_extrap,
+                     method = "REML")
+
+summary(mod_d13C_LFM$lme) # using REML - good.
+
+resid_values_perC_LFM <- residuals(mod_perC_LFM$lme, type = "normalized")
+acf(resid_values_perC_LFM) # slight negative lag at 2
+
+## summary object for use in document
+perCSumm_LFM <- summary(mod_perC_LFM$gam)
+perCSumm_LFM #Gives you the P values, degrees of freedom...
+
+### Check diagnostics. You might need to adjust model
+gam.check(mod_perC_LFM$gam)
+
+
+### now transform data: 
+fam<-family(mod_perC_LFM)
+fam
+str(fam) 
+ilink <- fam$linkinv
+ilink 
+Gamma()$linkinv 
+ilink <- family(mod_perC_LFM)$linkinv 
+
+
+### NOW PLOT! ###
+N <- 300    # number of points at which to evaluate the splines
+
+# Second, if you're only concerned about the response, include "response" in type of predict()???
+perCYear_LFM <- with(LFM_short_extrap, 
+                     data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
+
+perCYear_LFM <- cbind(perCYear_LFM,
+                      data.frame(predict(mod_perC_LFM$gam, perCYear_LFM,
+                                         type="response", se.fit = TRUE)))
+
+### this calculates on the link scale 
+perCYear_LFM <- transform(perCYear_LFM, fit = ilink(fit),
+                           upper = ilink(fit + (2 * se.fit)),
+                           lower = ilink(fit - (2 * se.fit))) ## and this creates confidence intervals for your model
+                    
+perCYear_LFM$lake_ID <- 'LFM'
+     
+    ## BROKEN - Plot fitted trends
+    ggplot(perCYear_LFM, aes(x = year_CE_plot, y = fit)) +
+    geom_ribbon(aes(ymin = (lower),
+                  ymax = (upper), x = year_CE_plot),
+                  alpha = 0.2, inherit.aes = FALSE, fill = "black") +
+      geom_point(data = LFM_short_extrap, mapping = aes(x = year_plot_extrap, y = percent.C), inherit.aes = FALSE) +
+      geom_line() 
+
+# year_plot_extrap = year_CE_plot where dates are interpolated. Can use either for plotting points.
+
+#First derivatives using gratia package instead of the 
+#functions "helper_functions.R" (that Cale sent)
+############
+############
+
+fd_inc = confint(fderiv(mod_perC_LFM))
+fd_inc
+
+#Add years for plotting
+years <- with(LFM_short_extrap,
+                     data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
+
+fd_inc <- cbind(fd_inc,years)
+
+#Plot the first derivatives
+fd_inc %>%
+  select(-term) %>%
+  pivot_longer(lower:upper) %>%
+  ggplot(aes(x=year_CE_plot,y=value,linetype=name))+
   geom_line()+
     scale_linetype_manual(values = c(
     "lower" = "dashed", #lower 95% confidence interval
@@ -246,11 +547,11 @@ View(fd_inc_timing)
 # For graphing, we want to join the predicted/fitted data with the 
 # information with significant periods of change. Let's call it 'pred'
 
-pred <- left_join(d15NYear_LFM_ex,
+pred <- left_join(perCYear_LFM,
                   fd_inc_timing %>% 
-                    select(year_plot_extrap, change_type), #select only 2 columns since
+                    select(year_CE_plot, change_type), #select only 2 columns since
                   #lower and upper have two different meanings in these 2 dataframes
-                  by="year_plot_extrap") 
+                  by="year_CE_plot") 
   # mutate(fit = ifelse(change_type == "sig. dec.", fit, NA))
 
 # Add a segment ID for plotting, so there there are multiple
@@ -265,16 +566,16 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 # Now make a pretty graph that shows the raw data, fitted trend,
 # trend as well as periods of statistically significant increase/decrease!
 ggplot(LFM_short_extrap) +
-  geom_point(aes(year_plot_extrap, d15N)) +
+  geom_point(aes(year_plot_extrap, percent.C)) +
   geom_ribbon(data = pred,
-              aes(x = year_plot_extrap, ymin = lower, ymax = upper),
+              aes(x = year_CE_plot, ymin = lower, ymax = upper),
               alpha = 0.2) +
   geom_line(data = pred,
-            aes(x = year_plot_extrap, y = fit),
+            aes(x = year_CE_plot, y = fit),
             linewidth = 1,
             color = "black") +
   geom_line(data = pred2,
-            aes(x = year_plot_extrap, y = fit,
+            aes(x = year_CE_plot, y = fit,
                 color = change_type,
                 group = seg_id),
             linewidth = 1) +
@@ -282,130 +583,81 @@ ggplot(LFM_short_extrap) +
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
   scale_x_continuous(breaks=seq(1880,2025,by=25))+
-  ylab(expression(paste(delta^{15}, "N (", "\u2030", ")"))) +
+  ylab("Total Carbon (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Lower Fourmile Lake")
 
-ggsave("figures/LFM_d15N.png",
+ggsave("figures/LFM_perC.png",
        dpi=600,
        height=5,
        width=8,
        units="in")
 ```
 
-### d13C
+
+## percent N
 ```{r}
 ### K (sets the maximum # of bases for our spline): 
 # Our dataset is still small: rule of thumb is to not let k approach n
     # how much data are we working with? 
     sum(!is.na(LFM_short_extrap$year_plot_extrap)) # 43 observations. 
+    sum(!is.na(LFM_short_extrap$year_CE_plot)) # 18 observations.
+
+# check later how weights, corCAR1 compare. 
     
-# try with and without corCAR1, then examine the residuals. 
-mod_d15N_LFM_ex <- gamm(d15N ~ s(year_plot_extrap, k = 10), 
+# drop the "ex" for simplicity now that we know the dataset shouldn't affect the outcomes. 
+mod_perN_LFM <- gamm(percent.N ~ s(year_CE_plot, k = 10), 
                      family = gaussian(link = "identity"), 
-                     # should I use weights here?                     
-                     # check with bella
                      data = LFM_short_extrap,
                      method = "REML")
 
-mod_d15N_LFM_ex_CAR1 <- gamm(d15N ~ s(year_plot_extrap, k = 10), 
-                     family = gaussian(link = "identity"), 
-                     # does family correspond to the data or their residuals? 
-                     # check with bella
-                     data = LFM_short_extrap,
-                     correlation = corCAR1(form = ~ year_plot_extrap),
-                     method = "REML")
+summary(mod_d13C_LFM$lme) # using REML - good.
 
-resid_values_ex <- residuals(mod_d15N_LFM_ex$lme, type = "normalized")       # no CAR(1)
-resid_values_ex_CAR1 <- residuals(mod_d15N_LFM_ex_CAR1$lme, type = "normalized")   # with CAR(1)
-all.equal(resid_values_ex, resid_values_ex_CAR1)  # Check if they are identical
-# not the same
-
-acf(resid_values_ex)
-acf(resid_values_ex_CAR1)
-
-# examine again using AIC:
-AIC(mod_d15N_LFM_ex$lme)   # without CAR(1): -19.76936
-AIC(mod_d15N_LFM_ex_CAR1$lme) # with CAR(1): -28.97341
-# lower AIC = better? better with CAR(1) still. 
-# AIC=2k−2ln(L), where k = # parameters, L = likelihood.
-
-
-# check phi in the CAR1 gam
-d15N_LFM_ex_CAR1_phi <- intervals(mod_d15N_LFM_ex_CAR1$lme)$corStruct
-d15N_LFM_ex_CAR1_phi
-# ^was rly low earlier when we were modeling just the interpolated dates.
-# higher now but has huge confidence intervals
-
-
-### NEXT, MODEL CHECKS:
+resid_values_perC_LFM <- residuals(mod_perC_LFM$lme, type = "normalized")
+acf(resid_values_perC_LFM) # slight negative lag at 2
 
 ## summary object for use in document
-d15NSumm_LFM_ex <- summary(mod_d15N_LFM_ex$gam)
-d15NSumm_LFM_ex #Gives you the P values, degrees of freedom...
+perCSumm_LFM <- summary(mod_perC_LFM$gam)
+perCSumm_LFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
-gam.check(mod_d15N_LFM$gam)
+gam.check(mod_perC_LFM$gam)
 
-
-
-### NOW PLOT!
+### NOW PLOT! ###
 N <- 300    # number of points at which to evaluate the splines
 
 # Second, if you're only concerned about the response, include "response" in type of predict()???
-d15NYear_LFM_ex <- with(LFM_short_extrap, 
-                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
+perCYear_LFM <- with(LFM_short_extrap, 
+                     data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
-d15NYear_LFM_ex <- cbind(d15NYear_LFM_ex,
-                      data.frame(predict(mod_d15N_LFM_ex$gam, d15NYear_LFM_ex,
+perCYear_LFM <- cbind(perCYear_LFM,
+                      data.frame(predict(mod_perC_LFM$gam, perCYear_LFM,
                                          type="response", se.fit = TRUE)))
 
 ### this calculates on the link scale 
-d15NYear_LFM_ex <- transform(d15NYear_LFM_ex, upper = fit + (2 * se.fit), lower = fit - (2 * se.fit))
-d15NYear_LFM_ex$lake_ID <- 'LFM'
+perCYear_LFM <- transform(perCYear_LFM, upper = fit + (2 * se.fit), lower = fit - (2 * se.fit))
+perCYear_LFM$lake_ID <- 'LFM'
 
 ## Plot fitted trends
-ggplot(d15NYear_LFM_ex, aes(x = year_plot_extrap, y = fit)) +
+ggplot(perCYear_LFM, aes(x = year_CE_plot, y = fit)) +
   geom_ribbon(aes(ymin = (lower),
-                  ymax = (upper), x = year_plot_extrap),
+                  ymax = (upper), x = year_CE_plot),
               alpha = 0.2, inherit.aes = FALSE, fill = "black") +
-  geom_point(data = LFM_short_extrap, mapping = aes(x = year_plot_extrap, y = d15N), inherit.aes = FALSE) +
+  geom_point(data = LFM_short_extrap, mapping = aes(x = year_plot_extrap, y = percent.C), inherit.aes = FALSE) +
   geom_line() 
 
-
-
-### Do it again for the other model...
-d15NYear_LFM_ex_CAR1 <- with(LFM_short_extrap, 
-                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
-
-d15NYear_LFM_ex_CAR1 <- cbind(d15NYear_LFM_ex_CAR1,
-                      data.frame(predict(mod_d15N_LFM_ex_CAR1$gam, d15NYear_LFM_ex_CAR1,
-                                         type="response", se.fit = TRUE)))
-
-### this calculates on the link scale 
-d15NYear_LFM_ex_CAR1 <- transform(d15NYear_LFM_ex_CAR1, upper = fit + (2 * se.fit), lower = fit - (2 * se.fit))
-d15NYear_LFM_ex_CAR1$lake_ID <- 'LFM'
-
-## Plot fitted trends
-ggplot(d15NYear_LFM_ex_CAR1, aes(x = year_plot_extrap, y = fit)) +
-  geom_ribbon(aes(ymin = (lower),
-                  ymax = (upper), x = year_plot_extrap),
-              alpha = 0.2, inherit.aes = FALSE, fill = "black") +
-  geom_point(data = LFM_short_extrap, mapping = aes(x = year_plot_extrap, y = d15N), inherit.aes = FALSE) +
-  geom_line() 
-
-# CAR1 doesn't help anyway! drop. 
+# year_plot_extrap = year_CE_plot where dates are interpolated. Can use either for plotting points.
 
 #First derivatives using gratia package instead of the 
 #functions "helper_functions.R" (that Cale sent)
 ############
 ############
-fd_inc = confint(fderiv(mod_d15N_LFM_ex))
+fd_inc = confint(fderiv(mod_perC_LFM))
 fd_inc
 
 #Add years for plotting
 years <- with(LFM_short_extrap,
-                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
+                     data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
 fd_inc <- cbind(fd_inc,years)
 
@@ -413,7 +665,7 @@ fd_inc <- cbind(fd_inc,years)
 fd_inc %>%
   select(-term) %>%
   pivot_longer(lower:upper) %>%
-  ggplot(aes(x=year_plot_extrap,y=value,linetype=name))+
+  ggplot(aes(x=year_CE_plot,y=value,linetype=name))+
   geom_line()+
     scale_linetype_manual(values = c(
     "lower" = "dashed", #lower 95% confidence interval
@@ -439,11 +691,11 @@ View(fd_inc_timing)
 # For graphing, we want to join the predicted/fitted data with the 
 # information with significant periods of change. Let's call it 'pred'
 
-pred <- left_join(d15NYear_LFM_ex,
+pred <- left_join(perCYear_LFM,
                   fd_inc_timing %>% 
-                    select(year_plot_extrap, change_type), #select only 2 columns since
+                    select(year_CE_plot, change_type), #select only 2 columns since
                   #lower and upper have two different meanings in these 2 dataframes
-                  by="year_plot_extrap") 
+                  by="year_CE_plot") 
   # mutate(fit = ifelse(change_type == "sig. dec.", fit, NA))
 
 # Add a segment ID for plotting, so there there are multiple
@@ -458,16 +710,16 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 # Now make a pretty graph that shows the raw data, fitted trend,
 # trend as well as periods of statistically significant increase/decrease!
 ggplot(LFM_short_extrap) +
-  geom_point(aes(year_plot_extrap, d15N)) +
+  geom_point(aes(year_plot_extrap, percent.C)) +
   geom_ribbon(data = pred,
-              aes(x = year_plot_extrap, ymin = lower, ymax = upper),
+              aes(x = year_CE_plot, ymin = lower, ymax = upper),
               alpha = 0.2) +
   geom_line(data = pred,
-            aes(x = year_plot_extrap, y = fit),
+            aes(x = year_CE_plot, y = fit),
             linewidth = 1,
             color = "black") +
   geom_line(data = pred2,
-            aes(x = year_plot_extrap, y = fit,
+            aes(x = year_CE_plot, y = fit,
                 color = change_type,
                 group = seg_id),
             linewidth = 1) +
@@ -475,17 +727,18 @@ ggplot(LFM_short_extrap) +
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
   scale_x_continuous(breaks=seq(1880,2025,by=25))+
-  ylab(expression(paste(delta^{15}, "N (", "\u2030", ")"))) +
+  ylab("Total Carbon (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Lower Fourmile Lake")
 
-ggsave("figures/LFM_d15N.png",
+ggsave("figures/LFM_perC.png",
        dpi=600,
        height=5,
        width=8,
        units="in")
 ```
 
+# Example Code
 ### GAMs- Bella's way
 ```{r}
 ### family=Gamma(link="log") for gamma distributed errors
@@ -656,7 +909,6 @@ decr<-data.frame(unlist(m2.dsig$decr), d15NYear_LFM$age_sky) %>%
   rename(value=unlist.m2.dsig.decr.,
          age_sky=del15NYear_S.age_sky)
 ```
-
 ### Gams - Cale's way
 ```{r}
 
@@ -722,7 +974,7 @@ p.beta
 
 ```
 
-# Compare model fits - edited
+### Compare pheo model fits - edited
 ```{r}
 
 hist(LFM_short_extrap$phaeo_b_nmol_gTC)
@@ -766,7 +1018,7 @@ abline(h = 0, col = "red")
 # Let's look at the model fits and decide? 
 ```
 
-## Pheo b normal/gaussian family
+#### Pheo b normal/gaussian family
 ```{r}
 ### now that you have a good model, you need to predict new data over your original data
 ### before we predict, we need to transform the data to deal
@@ -811,7 +1063,7 @@ dt.dsig<-signifD(pred$fit, d = dt.Der[[Term]]$deriv,
 ```
 
 
-## Pheo b gamma family
+#### Pheo b gamma family
 ```{r}
 ### now that you have a good model, you need to predict new data over your original data
 ### before we predict, we need to transform the data to deal
