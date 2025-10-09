@@ -452,7 +452,7 @@ mod_perC_LFM <- gamm(percent.C ~ s(year_CE_plot, k = 10),
                      data = LFM_short_extrap,
                      method = "REML")
 
-summary(mod_d13C_LFM$lme) # using REML - good.
+summary(mod_perC_LFM$lme) # using REML - good.
 
 resid_values_perC_LFM <- residuals(mod_perC_LFM$lme, type = "normalized")
 acf(resid_values_perC_LFM) # slight negative lag at 2
@@ -487,9 +487,12 @@ perCYear_LFM <- cbind(perCYear_LFM,
                                          type="response", se.fit = TRUE)))
 
 ### this calculates on the link scale 
-perCYear_LFM <- transform(perCYear_LFM, fit = ilink(fit),
-                           upper = ilink(fit + (2 * se.fit)),
-                           lower = ilink(fit - (2 * se.fit))) ## and this creates confidence intervals for your model
+# perCYear_LFM <- transform(perCYear_LFM, fit = ilink(fit),
+#                            upper = ilink(fit + (2 * se.fit)),
+#                            lower = ilink(fit - (2 * se.fit))) ## and this creates confidence intervals for your model
+perCYear_LFM <- transform(perCYear_LFM, fit = (fit),
+                           upper = (fit + (2 * se.fit)),
+                           lower = (fit - (2 * se.fit)))
                     
 perCYear_LFM$lake_ID <- 'LFM'
      
@@ -539,7 +542,7 @@ fd_inc_timing <- fd_inc %>%
   mutate(change_type = case_when(lower < 0 & upper < 0 ~ "sig. dec.",
                                  lower > 0 & upper > 0 ~ "sig. inc.",
                                  TRUE ~ NA))
-View(fd_inc_timing)
+# View(fd_inc_timing)
 #What you can see if a brief period of decline ~1900-1934, and again from 
 #1960-present. This model, relative to Cale's seems more sensitive to that
 #slight increase pre-1900. I think Cale's weighting is probably better
@@ -582,7 +585,7 @@ ggplot(LFM_short_extrap) +
   scale_color_manual(values = c("sig. inc." = "#CC9933",
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
-  scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab("Total Carbon (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Lower Fourmile Lake")
@@ -1077,7 +1080,7 @@ Gamma()$linkinv
 ilink <- family(m.pheob.gamma)$linkinv 
 
 ### now we predict 
-pred <- with(LFM_short_extrap, data.frame(year_plot_extrap = seq(min(year_plot_extrap,na.rm=TRUE), max(year_plot_extrap,na.rm=TRUE), ## this is making fake dates to model through
+pred <- with(LFM_short_extrap, data.frame(year_plot_extrap = seq(min(1850,na.rm=TRUE), max(year_plot_extrap,na.rm=TRUE), ## this is making fake dates to model through
                                         length.out = 200))) ### 200-300 are usually good numbers of data points
 pred <- cbind(pred,
               data.frame(predict(m.pheob.gamma, pred, se.fit = TRUE))) # add the prediction to your data
@@ -1103,7 +1106,7 @@ dt.dsig<-signifD(pred$fit, d = dt.Der[[Term]]$deriv,
   geom_line(data=pred, aes(year_plot_extrap, fit), linewidth=1, color="black")+
   geom_line(data=pred, aes(year_plot_extrap, dt.dsig$decr), color="#CC9933", lwd=2)+ ## this highlights what areas have significant changes
   geom_line(data=pred, aes(year_plot_extrap, dt.dsig$incr), color="#CC9933", lwd=2)+
-  scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab('pheo b - gaussian family')+
   xlab('Year')+
   theme_bw()
