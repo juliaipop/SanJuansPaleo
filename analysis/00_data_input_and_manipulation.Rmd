@@ -387,6 +387,8 @@ TRK_short <- TRK_wide %>% # make a new subset df with variables of interest
          AD_ratio = allo_nmol_gTC / diato_nmol_gTC, 
          master_chl = (chl_a_nmol_gTC + chl_b_nmol_gTC) / (chl_ap_nmol_gTC + pheo_a_nmol_gTC + phaeo_b_nmol_gTC),
          perc_chlb = (phaeo_b_nmol_gTC / pheo_a_nmol_gTC), 
+         greens = phaeo_b_nmol_gTC + lutein_nmol_gTC,
+         cyanos = cantha_nmol_gTC + echine_nmol_gTC,
          perc_diatox = (diato_nmol_gTC/chla_pheoa))
     
 UFM_short <- UFM_wide %>% # make a new subset df with variables of interest
@@ -420,6 +422,8 @@ UFM_short <- UFM_wide %>% # make a new subset df with variables of interest
          AD_ratio = allo_nmol_gTC / diato_nmol_gTC, 
          master_chl = (chl_a_nmol_gTC + chl_b_nmol_gTC) / (chl_ap_nmol_gTC + pheo_a_nmol_gTC + phaeo_b_nmol_gTC),
          perc_chlb = (phaeo_b_nmol_gTC / pheo_a_nmol_gTC), 
+         greens = phaeo_b_nmol_gTC + lutein_nmol_gTC,
+         cyanos = cantha_nmol_gTC + echine_nmol_gTC,
          perc_diatox = (diato_nmol_gTC/chla_pheoa))
 
 
@@ -455,6 +459,8 @@ LFM_short <- LFM_wide %>% # make a new subset df with variables of interest
          AD_ratio = allo_nmol_gTC / diato_nmol_gTC, 
          master_chl = (chl_a_nmol_gTC + chl_b_nmol_gTC) / (chl_ap_nmol_gTC + pheo_a_nmol_gTC + phaeo_b_nmol_gTC),
          perc_chlb = (phaeo_b_nmol_gTC / pheo_a_nmol_gTC), 
+         greens = phaeo_b_nmol_gTC + lutein_nmol_gTC,
+         cyanos = cantha_nmol_gTC + echine_nmol_gTC,
          perc_diatox = (diato_nmol_gTC/chla_pheoa))
 
 ```
@@ -471,6 +477,8 @@ TRK_wide <- TRK_wide %>%
          AD_ratio = allo_nmol_gTC / diato_nmol_gTC, 
          master_chl = (chl_a_nmol_gTC + chl_b_nmol_gTC) / (chl_ap_nmol_gTC + pheo_a_nmol_gTC + phaeo_b_nmol_gTC),
          perc_chlb = (phaeo_b_nmol_gTC / pheo_a_nmol_gTC), 
+         greens = phaeo_b_nmol_gTC + lutein_nmol_gTC,
+         cyanos = cantha_nmol_gTC + echine_nmol_gTC,
          perc_diatox = (diato_nmol_gTC/chla_pheoa)) %>%
   relocate(chla_pheoa:last_col(), .after = car_z_nmol_gTC)
   
@@ -482,6 +490,8 @@ UFM_wide <- UFM_wide %>%
          AD_ratio = allo_nmol_gTC / diato_nmol_gTC, 
          master_chl = (chl_a_nmol_gTC + chl_b_nmol_gTC) / (chl_ap_nmol_gTC + pheo_a_nmol_gTC + phaeo_b_nmol_gTC),
          perc_chlb = (phaeo_b_nmol_gTC / pheo_a_nmol_gTC), 
+         greens = phaeo_b_nmol_gTC + lutein_nmol_gTC,
+         cyanos = cantha_nmol_gTC + echine_nmol_gTC,
          perc_diatox = (diato_nmol_gTC/chla_pheoa)) %>%
   relocate(chla_pheoa:last_col(), .after = car_z_nmol_gTC)
 
@@ -493,6 +503,8 @@ LFM_wide <- LFM_wide %>%
          AD_ratio = allo_nmol_gTC / diato_nmol_gTC, 
          master_chl = (chl_a_nmol_gTC + chl_b_nmol_gTC) / (chl_ap_nmol_gTC + pheo_a_nmol_gTC + phaeo_b_nmol_gTC),
          perc_chlb = (phaeo_b_nmol_gTC / pheo_a_nmol_gTC), 
+         greens = phaeo_b_nmol_gTC + lutein_nmol_gTC,
+         cyanos = cantha_nmol_gTC + echine_nmol_gTC,
          perc_diatox = (diato_nmol_gTC/chla_pheoa)) %>%
   relocate(chla_pheoa:last_col(), .after = car_z_nmol_gTC)
 
