@@ -740,10 +740,16 @@ TRK_wide <- TRK_wide %>%
       rename(year_CE_bottom = year_CE),
     by = "depth_bottom") 
 
-View(TRK_wide)
-TRK_wide <- TRK_wide %>%
-  mutate(duration = if_else(year_CE_plot > 1980, year_CE_top - year_CE_bottom, NA_real_))
+# this is a little circular but I actually want the TRK dfs in the same format as UFM and LFM
+# copy year_CE_plot over (the long one) and name it year_plot_extrap
+# trim year_CE_plot so it is empty past the end of the dated core 
 
+TRK_wide <- TRK_wide %>%
+  mutate(duration = if_else(year_CE_plot > 1980, year_CE_top - year_CE_bottom, NA_real_),
+         year_plot_extrap = year_CE_plot,
+         across(c(year_CE_plot, year_CE_top, year_CE_bottom),
+           ~ if_else(is.na(duration), NA_real_, .)))
+         
 # add weight term to TRK_wide (need to do this separately because of how mutate groups)
 # see gavin simpson 2018 - normalize weight against the mean(weight) to avoid changing 
 # the model likelihood.

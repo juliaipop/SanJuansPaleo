@@ -1760,8 +1760,12 @@ ggsave("figures/LFM_cyanos.png",
 # TRK
 
 ## d15N
-Use LFM_short_extrap to be able to plot all the data vs. time, but model only the interpolated dates. 
+Use TRK_short. Columns are: 
+
 ```{r}
+names(TRK_short)
+View(TRK_short)
+
 ### K (sets the maximum # of bases for our spline): 
 # Our dataset is still small: rule of thumb is to not let k approach n
     # how much data are we working with? 
