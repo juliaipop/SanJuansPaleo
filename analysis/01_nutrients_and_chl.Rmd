@@ -336,4 +336,65 @@ DO_plot + temp_plot + cond_plot + pH_plot +
   theme(legend.position="bottom")
 ggsave("figures/YSI_profiles_all_lakes.png",
        width = 8, height = 8, units = "in", dpi = 300)
+
+
+
+#Plot redox potential Turkey Creek lake
+#For EBIO 4030 lecture
+ORP <- all_profiles %>%
+  filter(parameter %in% c("orp_mV")) %>%
+  filter(lake == "Turkey Creek Lake") %>%
+  filter(timing=="Sept `24") %>%
+    arrange(depth_m) %>%          # order shallow -> deep
+    ggplot(aes(x=value, y=depth_m, color=parameter))+
+    geom_path(color="navyblue",aes(group = 1)) +                 # path follows the data order 
+    geom_point(color="navyblue")+
+    scale_y_reverse()+
+    facet_wrap(timing~., ncol = 2, scales="free_x")+
+  labs(x="Oxidation-reduction\npotential (Eh,mv)",
+       y="Lake depth (m)")+
+  theme(legend.position = "none")+
+  theme(legend.position = "none",
+        axis.title.y=element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank())
+
+pH <- all_profiles %>%
+  filter(parameter %in% c("pH")) %>%
+  filter(lake == "Turkey Creek Lake") %>%
+  filter(timing=="Sept `24") %>%
+    arrange(depth_m) %>%          # order shallow -> deep
+    ggplot(aes(x=value, y=depth_m, color=parameter))+
+    geom_path(color="navyblue",aes(group = 1)) +                 # path follows the data order 
+    geom_point(color="navyblue")+
+    scale_y_reverse()+
+    facet_wrap(timing~., ncol = 2, scales="free_x")+
+  labs(x="pH",
+       y="Lake depth (m)")+
+  theme(legend.position = "none")+
+  theme(legend.position = "none",
+        axis.title.y=element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank())
+
+DO <- all_profiles %>%
+  filter(parameter %in% c("do_mgL")) %>%
+  filter(lake == "Turkey Creek Lake") %>%
+  filter(timing=="Sept `24") %>%
+    arrange(depth_m) %>%          # order shallow -> deep
+    ggplot(aes(x=value, y=depth_m, color=parameter))+
+    geom_path(color="navyblue",aes(group = 1)) +                 # path follows the data order 
+    geom_point(color="navyblue")+
+    scale_y_reverse()+
+    facet_wrap(timing~., ncol = 2, scales="free_x")+
+  labs(x="DO (mg/L)",
+       y="Lake depth (m)")
+
+DO  + ORP + pH +
+  plot_layout(ncol = 3) +
+  plot_layout(guides = "collect") & 
+  theme(legend.position="bottom")
+
+ggsave("~/Library/CloudStorage/OneDrive-UCB-O365/Research/Data/R/EBIO4030/figures/TUC_DO_ORP_pH_profiles_Sept24.png",
+       width = 8, height = 8, units = "in", dpi = 300)
 ```
