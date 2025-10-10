@@ -581,8 +581,7 @@ UFM_dates <- all_dates %>%
        # AGES CORRESPOND TO EXTRAP BOTTOM!!
        # UFM ages derived from linear model!
 
-  # repeat for TRK (make year_CE column)
-  # doesn't make sense to extrapolate for TRK, just will have to show the data in two separate plots... 
+  ### Original code ### repeat for TRK (make year_CE column) 
   TRK_dates <- all_dates %>%
         filter(str_starts(sample_ID, "TRK")) %>%
         left_join(TRK_metadata %>% select(-depth_top, -depth_bottom),
@@ -595,9 +594,24 @@ UFM_dates <- all_dates %>%
          # AGES CORRESPOND TO EXTRAP BOTTOM!
          # TRK ages come from lin-derived CRS!!!
   
+  TRK_reconstructed <- read_xlsx("data/TRK_dates_interpolated_JP.xlsx")
+
+  # this file will look incomplete, but it's because the values for extrap_bottom 
+  # and year are the only ones we really need.
+  
+  TRK_dates_try <- TRK_reconstructed %>%
+    left_join(TRK_metadata %>% select(-depth_top, -depth_bottom),
+              by = "sample_ID") %>%
+    relocate(all_of(c(names(TRK_metadata)))) %>%
+    mutate(year_CE = year) %>%
+    filter(!is.na(extrap_bottom))
+  
+    # not all dates are trustworthy (just TRK2_002 - 020)
+    # ages come from lin-derived CRS, correspond to extrap_bottom
+    
     # the issue here is that TRK_metadata has different depth_top 
-    # and _bottoms from TRK_dates because Flett reassigned dates for
-    # TRK2_058 and TRK2_082 those are the ones we dropped, but in the 
+    # and _bottoms from "TRK_dates" because Flett reassigned dates for
+    # TRK2_058 and TRK2_082. those are the ones we dropped, but in the 
     # adm we want the metadata depths. 
     
     # discuss with Bella/Flett how to handle splitting of the core. 
@@ -638,9 +652,10 @@ LFM_adm <- age_depth_model(LFM_dates_clean,
                              age = year_CE)
   
 # Repeat for TRK
-TRK_dates_clean <- TRK_dates %>% # filter to remove nas
-   filter(!is.na(extrap_bottom) & !is.na(year_CE)) 
-TRK_adm <- age_depth_model(TRK_dates_clean,
+# TRK_dates_clean <- TRK_dates %>% # filter to remove nas
+#   filter(!is.na(extrap_bottom) & !is.na(year_CE)) 
+
+TRK_adm <- age_depth_model(TRK_dates_try,
                              depth = extrap_bottom,
                              age = year_CE)
 
@@ -669,8 +684,8 @@ plot(TRK_adm)
 
 # NOTE: SWITCHING HERE FROM EXTRAP BOTTOM TO REGULAR depth_bottom
 
-# extrapolate to first section of TRK
-TRK_interp <- predict(TRK_adm, depth = seq(0.25, 11, 0.25)) %>%
+# extrapolate whole core
+TRK_interp <- predict(TRK_adm, depth = seq(0.25, 41, 0.25)) %>%
   mutate(year_CE = age) %>%
   select(depth, year_CE)
 
@@ -711,9 +726,12 @@ TRK_wide <- TRK_wide %>%
     TRK_interp %>% 
       select(depth_bottom, year_CE) %>%
       rename(year_CE_bottom = year_CE),
-    by = "depth_bottom") %>%
-  mutate(duration = year_CE_top - year_CE_bottom) # calculate duration 
-      
+    by = "depth_bottom") 
+
+View(TRK_wide)
+TRK_wide <- TRK_wide %>%
+  mutate(duration = if_else(year_CE_plot > 1980, year_CE_top - year_CE_bottom, NA_real_))
+
 # add weight term to TRK_wide (need to do this separately because of how mutate groups)
 # see gavin simpson 2018 - normalize weight against the mean(weight) to avoid changing 
 # the model likelihood.
@@ -731,7 +749,6 @@ TRK_short <- TRK_short %>%
   )
 
 View(TRK_wide %>% select(lake_name:bd, year_CE_top: duration))
-
 ```
 
 ## Interpolate dates & join to dfs - UFM

@@ -28,10 +28,23 @@ all_lakes <- read.csv("output/all_lakes.csv")
 
 UFM_short <- read.csv("output/UFM_short.csv") %>%
   select(-X)
+UFM_wide <- read.csv("output/UFM_wide.csv") %>%
+  select(-X)
 LFM_short <- read.csv("output/LFM_short.csv") %>%
   select(-X)
 TRK_short <- read.csv("output/TRK_short.csv") %>%
   select(-X)
+
+# read in bulk density data
+bulk_density <- read_excel("data/bulk_density_export_from_sent_to_flett_20250602_saved_20250909.xlsx") %>%
+  rename(bd = `bulk_density_g/cm3`)
+
+# read in UFM metadata
+UFM_metadata <- read_excel("data/0_UFM1_core_metadata_20250726.xlsx") %>% 
+  select(lake_name:depth_bottom) %>%
+  left_join(bulk_density %>% 
+              select(sample_ID, bd),
+            by = "sample_ID")
 ```
 
 # Age-depth models
@@ -48,6 +61,110 @@ TRK_adm <- readRDS("output/TRK_adm.rds")
 
 
 # Date extrapolation
+##TRK
+```{r}
+# see what predict did to the sedimentation rates and if I should set my own age depth model... (at an avg sed rate for example)
+names(TRK_short)
+# plot the extrapolated adm...
+plot(depth_plot ~ year_CE_plot, data = TRK_short, type = "l", 
+     xlab = "Year CE", ylab = "Depth (cm)")
+points(TRK_short$year_CE_plot, TRK_short$depth_plot, pch = 20, cex = 0.3)
+abline(v = 1982.209, lty = "aa")
+
+# plot the interpolated adm
+plot(TRK_adm)
+
+```
+
+##UFM
+```{r}
+# dates_clean length (lowest depth_bottom)
+  # UFM: 5 cm
+  # LFM: 18 cm
+  # TRK: 11 cm
+
+  # UFM_adm is only for the interpolated dates. 
+  # making another adm here for the extrapolated dates.
+
+# NOTE: SWITCHING HERE FROM EXTRAP BOTTOM TO REGULAR depth_bottom
+
+  # pull in extrapolated estimate (Flett's file with an approximation 
+  # on the timing of UFM1_024)
+
+  UFM_estimate <- read_xlsx("data/UFM_estimate.xlsx")
+
+  # bind the extrapolated estimate to the metadata, cut out nas
+  UFM_dates_try <- UFM_estimate %>%
+    left_join(UFM_metadata %>% select(-depth_top, -depth_bottom),
+              by = "sample_ID") %>%
+    relocate(all_of(c(names(UFM_metadata)))) %>%
+    mutate(year_CE = 2025 - extrap_bottom_age_lin) %>%
+    filter(!is.na(extrap_bottom_age_lin))
+  
+  # adjust the old adm
+    UFM_adm <- age_depth_model(UFM_dates_try,
+                               depth = extrap_bottom,
+                               age = year_CE)
+
+  # goes back pretty far but this looks good. age:depth rate is constant.
+  plot(UFM_adm)
+
+  # extrapolate the dates to 44 cm using the predict function. 
+  UFM_extrap <- predict(UFM_adm, depth = seq(0.25, 44, 0.25)) %>%
+    mutate(year_CE = age) %>%
+    select(depth, year_CE)
+
+## create new columns in the interp df based on the ending digits of depth
+## to easily join the interpolated ages later
+
+  # functions to categorize depths by ending digits
+  is_whole  <- function(x, tol = 1e-8) abs(x %% 1) < tol
+  is_half   <- function(x, tol = 1e-8) abs(x %% 1 - 0.5) < tol
+  is_three_quarters <- function(x, tol = 1e-8) abs(x %% 1 - 0.75) < tol
+  
+  # make new columns in the extrapolating adm df
+  UFM_extrap <- UFM_extrap %>%
+    mutate(
+      depth_top    = ifelse(is_half(depth), depth, NA_real_),
+      depth_plot   = ifelse(is_three_quarters(depth), depth, NA_real_),
+      depth_bottom = ifelse(is_whole(depth), depth, NA_real_)
+    ) %>%
+    select(depth, year_CE, depth_top, depth_plot, depth_bottom)
+  
+# Join new columns to UFM_short: top, plot, then bottom
+  
+UFM_short_extrap <- UFM_short %>%
+  left_join(
+    UFM_extrap %>% 
+      select(depth_top, year_CE) %>%
+      rename(year_top_extrap = year_CE),
+    by = "depth_top")
+
+UFM_short_extrap <- UFM_short_extrap %>%
+  left_join(
+    UFM_extrap %>% 
+      select(depth_plot, year_CE) %>%
+      rename(year_plot_extrap = year_CE),
+    by = "depth_plot")
+
+UFM_short_extrap <- UFM_short_extrap %>%
+  left_join(
+    UFM_extrap %>% 
+      select(depth_bottom, year_CE) %>%
+      rename(year_bottom_extrap = year_CE),
+    by = "depth_bottom") 
+
+# Repeat for UFM_wide
+UFM_wide <- UFM_wide %>%
+  left_join(
+    UFM_short_extrap %>%
+      ungroup() %>% # keep r from adding these variables twice
+      select(sample_ID, year_top_extrap:year_bottom_extrap), 
+    by = "sample_ID"
+  )
+```
+
+##LFM
 ```{r}
 # We have 43 cm of LFM2. According to our adm how many years should that go back? 
 predict(LFM_adm, depth = 43)$age # to ~1613
@@ -73,7 +190,7 @@ plot(LFM_adm)
 
 ```
 
-##Calculate depth top, bottom, plot, duration and weight
+###Calculate depth top, bottom, plot, duration and weight
 ```{r}
 ## create new columns in the extrap df based on the ending digits of depth
 ## to easily join the interpolated ages later
@@ -126,7 +243,7 @@ LFM_short_extrap <- LFM_short_extrap %>%
   mutate(age_cert = ifelse(year_plot_extrap > 1861, "interp", "extrap"))
 ```
 
-##See what changed:
+###See what changed:
 ```{r}
 
 LFM_short_extrap_view <- LFM_short_extrap %>%
@@ -162,7 +279,7 @@ UPDATE: not going to model the whole core, just going to plot the data and model
 
 **Or run it the regular way first then see if running first derivs on fluxes gives any significant periods of change?**
 
-# Removing variables from LFM_wide...
+### Removing variables from LFM_wide...
 ```{r}
 names(LFM_short_extrap)
 
@@ -194,7 +311,13 @@ names(LFM_short_extrap)
 #  )
 ```
 
+
+#Export
 ```{r}
 # export important dfs as csvs 
+# LFM_wide won't have the extrapolated dates. TRK_wide does. 
 write.csv(LFM_short_extrap, file="output/LFM_short_extrap.csv")
+
+write.csv(UFM_short_extrap, file="output/UFM_short_extrap.csv")
+write.csv(UFM_wide, file="output/UFM_wide.csv")
 ```
