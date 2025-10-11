@@ -31,7 +31,7 @@ source("scripts/GAM_functions.R")
 all_lakes <- read.csv("output/all_lakes.csv") %>%
   select(-X)
 
-UFM_short <- read.csv("output/UFM_short.csv") %>%
+UFM_short_extrap <- read.csv("output/UFM_short_extrap.csv") %>%
   select(-X)
 LFM_short <- read.csv("output/LFM_short.csv") %>%
   select(-X)
@@ -167,7 +167,12 @@ d15NSumm_LFM_ex <- summary(mod_d15N_LFM_ex$gam)
 d15NSumm_LFM_ex #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
+
+
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_d15N_LFM_ex$gam)
+par(mfrow = c(1, 1)) 
+
 
 
 
@@ -285,6 +290,7 @@ ggsave("figures/LFM_d15N.png",
        height=5,
        width=8,
        units="in")
+
 ```
 
 ## d13C
@@ -308,7 +314,10 @@ d13CSumm_LFM <- summary(mod_d13C_LFM$gam)
 d13CSumm_LFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
+
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_d13C_LFM$gam)
+par(mfrow = c(1, 1)) 
 
 
 ### NOW PLOT! ###
@@ -414,7 +423,7 @@ ggplot(LFM_short_extrap) +
   scale_color_manual(values = c("sig. inc." = "#CC9933",
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
-  scale_x_continuous(breaks=seq(1880,2025,by=25))+
+ #  scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression(paste(delta^{13}, "C (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Lower Fourmile Lake")
@@ -424,6 +433,7 @@ ggsave("figures/LFM_d13C.png",
        height=5,
        width=8,
        units="in")
+
 ```
 
 
@@ -453,7 +463,10 @@ perCSumm_LFM <- summary(mod_perC_LFM$gam)
 perCSumm_LFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
+
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_perC_LFM$gam)
+par(mfrow = c(1, 1)) 
 
 ### now transform response variable (in this case percent.C): 
 fam<-family(mod_perC_LFM)
@@ -614,7 +627,10 @@ perNSumm_LFM <- summary(mod_perN_LFM$gam)
 perNSumm_LFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
+
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_perN_LFM$gam)
+par(mfrow = c(1, 1)) 
 
 ### now transform response variable (in this case percent.N): 
 fam<-family(mod_perN_LFM)
@@ -767,7 +783,10 @@ AIC(mod_CN_LFM$lme)
 summary(mod_CN_LFM$lme)
 
 ### Check diagnostics. You might need to adjust model
+
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_CN_LFM$gam)
+par(mfrow = c(1, 1)) 
 
 # p value too low if you change anything (add car 1 etc.)
 
@@ -930,7 +949,9 @@ pheoaSumm_LFM <- summary(mod_pheoa_LFM$gam)
 pheoaSumm_LFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_pheoa_LFM$gam)
+par(mfrow = c(1, 1)) 
 
 ### now transform response variable:
 fam<-family(mod_pheoa_LFM)
@@ -1089,7 +1110,10 @@ greensSumm_LFM <- summary(mod_greens_LFM$gam)
 greensSumm_LFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
-gam.check(mod_pheoa_LFM$gam)
+
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
+gam.check(mod_greens_LFM$gam)
+par(mfrow = c(1, 1)) 
 
 ### now transform response variable:
 fam<-family(mod_greens_LFM)
@@ -1247,7 +1271,10 @@ diatoSumm_LFM <- summary(mod_diato_LFM$gam)
 diatoSumm_LFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
+
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_diato_LFM$gam)
+par(mfrow = c(1, 1)) 
 
       # not great... k=index less than 1, though p-value is fine
 
@@ -1407,7 +1434,9 @@ alloSumm_LFM <- summary(mod_allo_LFM$gam)
 alloSumm_LFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_allo_LFM$gam)
+par(mfrow = c(1, 1)) 
 
       # not great...? k=index = 1, though p-value is fine
 
@@ -1567,7 +1596,10 @@ cyanosSumm_LFM <- summary(mod_cyanos_LFM$gam)
 cyanosSumm_LFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
+
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_cyanos_LFM$gam)
+par(mfrow = c(1, 1)) 
 
 ### now transform response variable:
 fam<-family(mod_cyanos_LFM)
@@ -1731,7 +1763,10 @@ d15NSumm_TRK <- summary(mod_d15N_TRK$gam)
 d15NSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
+
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_d15N_TRK$gam)
+par(mfrow = c(1, 1)) 
 
 
 
@@ -1872,7 +1907,9 @@ d13CSumm_TRK <- summary(mod_d13C_TRK$gam)
 d13CSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_d13C_TRK$gam)
+par(mfrow = c(1, 1)) 
 
 
 ### NOW PLOT! ###
@@ -1981,7 +2018,7 @@ ggplot(TRK_short) +
   scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression(paste(delta^{13}, "C (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake)
+  ggtitle("Turkey Creek Lake")
 
 ggsave("figures/TRK_d13C.png",
        dpi=600,
@@ -2018,7 +2055,9 @@ perCSumm_TRK <- summary(mod_perC_TRK$gam)
 perCSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_perC_TRK$gam)
+par(mfrow = c(1, 1)) 
 
 ### now transform response variable (in this case percent.C): 
 fam<-family(mod_perC_TRK)
@@ -2143,7 +2182,7 @@ ggplot(TRK_short) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab("Total Carbon (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake)
+  ggtitle("Turkey Creek Lake")
 
 ggsave("figures/TRK_perC.png",
        dpi=600,
@@ -2180,7 +2219,9 @@ perNSumm_TRK <- summary(mod_perN_TRK$gam)
 perNSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_perN_TRK$gam)
+par(mfrow = c(1, 1)) 
 
 ### now transform response variable (in this case percent.N): 
 fam<-family(mod_perN_TRK)
@@ -2318,8 +2359,8 @@ ggsave("figures/TRK_perN.png",
 
 ```{r}
 # this column name is annoying so change it to match LFM
-TRK_short <- rename(TRK_short, C.N = `C:N`)
-names(TRK_short)
+  # names(TRK_short)
+  # TRK_short <- rename(TRK_short, C.N = `C:N`)
 
 # check later how weights, corCAR1 compare. 
     
@@ -2337,7 +2378,9 @@ AIC(mod_CN_TRK$lme)
 summary(mod_CN_TRK$lme)
 
 ### Check diagnostics. You might need to adjust model
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_CN_TRK$gam)
+par(mfrow = c(1, 1)) 
 
 # p value too low if you change anything (add car 1 etc.)
 
@@ -2503,7 +2546,9 @@ pheoaSumm_TRK <- summary(mod_pheoa_TRK$gam)
 pheoaSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_pheoa_TRK$gam)
+par(mfrow = c(1, 1)) 
 
 ### now transform response variable:
 fam<-family(mod_pheoa_TRK)
@@ -2661,7 +2706,10 @@ greensSumm_TRK <- summary(mod_greens_TRK$gam)
 greensSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
-gam.check(mod_pheoa_TRK$gam)
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
+gam.check(mod_greens_TRK$gam)
+par(mfrow = c(1, 1)) 
+
 
 ### now transform response variable:
 fam<-family(mod_greens_TRK)
@@ -2820,7 +2868,9 @@ diatoSumm_TRK <- summary(mod_diato_TRK$gam)
 diatoSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_diato_TRK$gam)
+par(mfrow = c(1, 1)) 
 
       # not great... k=index less than 1, though p-value is fine
 
@@ -2981,7 +3031,9 @@ alloSumm_TRK <- summary(mod_allo_TRK$gam)
 alloSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_allo_TRK$gam)
+par(mfrow = c(1, 1)) 
 
       # not great...? k=index = 1, though p-value is fine
 
@@ -3141,7 +3193,9 @@ cyanosSumm_TRK <- summary(mod_cyanos_TRK$gam)
 cyanosSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_cyanos_TRK$gam)
+par(mfrow = c(1, 1)) 
 
 ### now transform response variable:
 fam<-family(mod_cyanos_TRK)
@@ -3277,28 +3331,26 @@ ggsave("figures/TRK_cyanos.png",
 
 
 
-# UFM
+# UFM - hold off
 ```{r}
 # some housekeeping
-names(UFM_short)
-View(UFM_short)
-
-
+names(UFM_short_extrap)
+# Use UFM_short. Columns are the same (year_CE_plot for interp and year_plot_extrap for extrapolated)
 ```
+
 ## d15N
-Use UFM_short. Columns are the same (year_CE_plot for interp and extrap for extrapolated)
 ```{r}
 
 ### K (sets the maximum # of bases for our spline): 
 # Our dataset is still small: rule of thumb is to not let k approach n
     # how much data are we working with? 
-    sum(!is.na(UFM_short$year_CE_plot)) # 10 observations... not so many
-    sum(!is.na(UFM_short$year_plot_extrap)) # 41 observations. 
+    sum(!is.na(UFM_short_extrap$year_CE_plot)) # only 5 observations. Can you even run a gam here...?
+    sum(!is.na(UFM_short_extrap$year_plot_extrap)) # 43 total. 
 
 # try with and without corCAR1, then examine the residuals. 
-mod_d15N_UFM <- gamm(d15N ~ s(year_CE_plot, k = 10), 
+mod_d15N_UFM <- gamm(d15N ~ s(year_CE_plot, k = 5), 
                      family = gaussian(link = "identity"), 
-                     data = UFM_short,
+                     data = UFM_short_extrap,
                      method = "REML")
 
 summary(mod_d15N_UFM$lme)
@@ -3320,7 +3372,7 @@ gam.check(mod_d15N_UFM$gam)
 N <- 300    # number of points at which to evaluate the splines
 
 # Predict (get 200 points at which to evaluate)
-d15NYear_UFM <- with(UFM_short, 
+d15NYear_UFM <- with(UFM_short_extrap, 
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
 d15NYear_UFM <- cbind(d15NYear_UFM,
@@ -3336,7 +3388,7 @@ ggplot(d15NYear_UFM, aes(x = year_CE_plot, y = fit)) +
   geom_ribbon(aes(ymin = (lower),
                   ymax = (upper), x = year_CE_plot),
               alpha = 0.2, inherit.aes = FALSE, fill = "black") +
-  geom_point(data = UFM_short, mapping = aes(x = year_plot_extrap, y = d15N), inherit.aes = FALSE) +
+  geom_point(data = UFM_short_extrap, mapping = aes(x = year_plot_extrap, y = d15N), inherit.aes = FALSE) +
   geom_line() 
 
 # year_plot_extrap = year_CE_plot where dates are interpolated. Can use either for plotting points.
@@ -3349,7 +3401,7 @@ fd_inc = confint(fderiv(mod_d15N_UFM))
 fd_inc
 
 #Add years for plotting
-years <- with(UFM_short,
+years <- with(UFM_short_extrap,
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
 fd_inc <- cbind(fd_inc,years)
@@ -3402,7 +3454,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 
 # Now make a pretty graph that shows the raw data, fitted trend,
 # trend as well as periods of statistically significant increase/decrease!
-ggplot(UFM_short) +
+ggplot(UFM_short_extrap) +
   geom_point(aes(year_plot_extrap, d15N)) +
   geom_ribbon(data = pred,
               aes(x = year_CE_plot, ymin = lower, ymax = upper),
@@ -3422,7 +3474,7 @@ ggplot(UFM_short) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression(paste(delta^{15}, "N (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake")
+  ggtitle("Upper Fourmile Lake")
 
 ggsave("figures/UFM_d15N.png",
        dpi=600,
@@ -3432,14 +3484,14 @@ ggsave("figures/UFM_d15N.png",
 ```
 
 ## d13C
-Use UFM_short to be able to plot all the data vs. time, but model only the interpolated dates. 
+Use UFM_short_extrap to be able to plot all the data vs. time, but model only the interpolated dates. 
 ```{r}
 
 # check later how weights, corCAR1 compare. 
     
 mod_d13C_UFM <- gamm(d13C ~ s(year_CE_plot, k = 10), 
                      family = gaussian(link = "identity"), 
-                     data = UFM_short,
+                     data = UFM_short_extrap,
                      method = "REML")
 
 summary(mod_d13C_UFM$lme) # using REML - good.
@@ -3459,7 +3511,7 @@ gam.check(mod_d13C_UFM$gam)
 N <- 300    # number of points at which to evaluate the splines
 
 # Second, if you're only concerned about the response, include "response" in type of predict()???
-d13CYear_UFM <- with(UFM_short, 
+d13CYear_UFM <- with(UFM_short_extrap, 
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
 d13CYear_UFM <- cbind(d13CYear_UFM,
@@ -3475,7 +3527,7 @@ ggplot(d13CYear_UFM, aes(x = year_CE_plot, y = fit)) +
   geom_ribbon(aes(ymin = (lower),
                   ymax = (upper), x = year_CE_plot),
               alpha = 0.2, inherit.aes = FALSE, fill = "black") +
-  geom_point(data = UFM_short, mapping = aes(x = year_plot_extrap, y = d13C), inherit.aes = FALSE) +
+  geom_point(data = UFM_short_extrap, mapping = aes(x = year_plot_extrap, y = d13C), inherit.aes = FALSE) +
   geom_line() 
 
 # year_plot_extrap = year_CE_plot where dates are interpolated. Can use either for plotting points.
@@ -3488,7 +3540,7 @@ fd_inc = confint(fderiv(mod_d13C_UFM))
 fd_inc
 
 #Add years for plotting
-years <- with(UFM_short,
+years <- with(UFM_short_extrap,
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
 fd_inc <- cbind(fd_inc,years)
@@ -3541,7 +3593,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 
 # Now make a pretty graph that shows the raw data, fitted trend,
 # trend as well as periods of statistically significant increase/decrease!
-ggplot(UFM_short) +
+ggplot(UFM_short_extrap) +
   geom_point(aes(year_plot_extrap, d13C)) +
   geom_ribbon(data = pred,
               aes(x = year_CE_plot, ymin = lower, ymax = upper),
@@ -3576,15 +3628,15 @@ ggsave("figures/UFM_d13C.png",
 ```{r}
 
 # breaks = ?
-  hist(UFM_short$percent.C)
-  hist(log(UFM_short$percent.C))
+  hist(UFM_short_extrap$percent.C)
+  hist(log(UFM_short_extrap$percent.C))
   
 # check later how weights, corCAR1 compare. 
     
 # drop the "ex" for simplicity now that we know the dataset shouldn't affect the outcomes. 
 mod_perC_UFM <- gamm(percent.C ~ s(year_CE_plot, k = 10), 
                      family=Gamma(link="log"),  
-                     data = UFM_short,
+                     data = UFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
@@ -3610,7 +3662,7 @@ ilink
 N <- 300    # number of points at which to evaluate the splines
 
 # Make a 200 row list of possible year_CE_plot values from min to max.
-perCYear_UFM <- with(UFM_short, 
+perCYear_UFM <- with(UFM_short_extrap, 
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), 
                                                    max(year_CE_plot, na.rm=TRUE), 
                                                    length.out = 200)))
@@ -3633,7 +3685,7 @@ ggplot(perCYear_UFM, aes(x = year_CE_plot, y = fit)) + # year_CE_plot is the int
 geom_ribbon(aes(ymin = (lower),
                 ymax = (upper), x = year_CE_plot),
             alpha = 0.2, inherit.aes = FALSE, fill = "black") +
-      geom_point(data = UFM_short, mapping = aes(x = year_plot_extrap, y = percent.C), inherit.aes = FALSE) +
+      geom_point(data = UFM_short_extrap, mapping = aes(x = year_plot_extrap, y = percent.C), inherit.aes = FALSE) +
       geom_line() 
 
 # year_plot_extrap = year_CE_plot where dates are interpolated. Can use either for plotting points.
@@ -3650,7 +3702,7 @@ fd_inc = confint(fderiv(mod_perC_UFM))
 fd_inc
 
 #Add years for plotting
-years <- with(UFM_short,
+years <- with(UFM_short_extrap,
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
 fd_inc <- cbind(fd_inc,years)
@@ -3703,7 +3755,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 
 # Now make a pretty graph that shows the raw data, fitted trend,
 # trend as well as periods of statistically significant increase/decrease!
-ggplot(UFM_short) +
+ggplot(UFM_short_extrap) +
   geom_point(aes(year_plot_extrap, percent.C)) +
   geom_ribbon(data = pred,
               aes(x = year_CE_plot, ymin = lower, ymax = upper),
@@ -3736,8 +3788,8 @@ ggsave("figures/UFM_perC.png",
 ## percent N
 ```{r}
 
-  hist(UFM_short$percent.N)
-  hist(log(UFM_short$percent.N))
+  hist(UFM_short_extrap$percent.N)
+  hist(log(UFM_short_extrap$percent.N))
 
 
 # check later how weights, corCAR1 compare. 
@@ -3745,7 +3797,7 @@ ggsave("figures/UFM_perC.png",
 # drop the "ex" for simplicity now that we know the dataset shouldn't affect the outcomes. 
 mod_perN_UFM <- gamm(percent.N ~ s(year_CE_plot, k = 10), 
                      family=Gamma(link="log"),  
-                     data = UFM_short,
+                     data = UFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
@@ -3772,7 +3824,7 @@ ilink
 N <- 300    # number of points at which to evaluate the splines
 
 # Make a 200 row list of possible year_CE_plot values from min to max.
-perNYear_UFM <- with(UFM_short, 
+perNYear_UFM <- with(UFM_short_extrap, 
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), 
                                                    max(year_CE_plot, na.rm=TRUE), 
                                                    length.out = 200)))
@@ -3795,7 +3847,7 @@ ggplot(perNYear_UFM, aes(x = year_CE_plot, y = fit)) + # year_CE_plot is the int
 geom_ribbon(aes(ymin = (lower),
                 ymax = (upper), x = year_CE_plot),
             alpha = 0.2, inherit.aes = FALSE, fill = "black") +
-      geom_point(data = UFM_short, mapping = aes(x = year_plot_extrap, y = percent.N), inherit.aes = FALSE) +
+      geom_point(data = UFM_short_extrap, mapping = aes(x = year_plot_extrap, y = percent.N), inherit.aes = FALSE) +
       geom_line() 
 
 # year_plot_extrap = year_CE_plot where dates are interpolated. Can use either for plotting points.
@@ -3810,7 +3862,7 @@ fd_inc = confint(fderiv(mod_perN_UFM))
 fd_inc
 
 #Add years for plotting
-years <- with(UFM_short,
+years <- with(UFM_short_extrap,
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
 fd_inc <- cbind(fd_inc,years)
@@ -3863,7 +3915,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 
 # Now make a pretty graph that shows the raw data, fitted trend,
 # trend as well as periods of statistically significant increase/decrease!
-ggplot(UFM_short) +
+ggplot(UFM_short_extrap) +
   geom_point(aes(year_plot_extrap, percent.N)) +
   geom_ribbon(data = pred,
               aes(x = year_CE_plot, ymin = lower, ymax = upper),
@@ -3898,18 +3950,18 @@ ggsave("figures/UFM_perN.png",
 
 ```{r}
 # this column name is annoying so change it to match LFM
-UFM_short <- rename(UFM_short, C.N = `C:N`)
-names(UFM_short)
+UFM_short_extrap <- rename(UFM_short_extrap, C.N = `C:N`)
+names(UFM_short_extrap)
 
 # check later how weights, corCAR1 compare. 
     
-  hist(UFM_short$C.N)
-  hist(log(UFM_short$C.N))
+  hist(UFM_short_extrap$C.N)
+  hist(log(UFM_short_extrap$C.N))
   # data is left skewed, log transform makes it worse? in this case it looks a little better?
     
 mod_CN_UFM <- gamm(C.N ~ s(year_CE_plot, k = 10), 
                      family = gaussian(link = "identity"), 
-                     data = UFM_short,
+                     data = UFM_short_extrap,
                    #  correlation = corCAR1(form = ~ year_CE_plot),
                      method = "REML")
 
@@ -3936,7 +3988,7 @@ CNSumm_UFM #Gives you the P values, degrees of freedom...
 N <- 300    # number of points at which to evaluate the splines
 
 # Make a 200 row list of possible year_CE_plot values from min to max.
-CNYear_UFM <- with(UFM_short, 
+CNYear_UFM <- with(UFM_short_extrap, 
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), 
                                                    max(year_CE_plot, na.rm=TRUE), 
                                                    length.out = 200)))
@@ -3959,7 +4011,7 @@ ggplot(CNYear_UFM, aes(x = year_CE_plot, y = fit)) + # year_CE_plot is the inter
 geom_ribbon(aes(ymin = (lower),
                 ymax = (upper), x = year_CE_plot),
             alpha = 0.2, inherit.aes = FALSE, fill = "black") +
-      geom_point(data = UFM_short, mapping = aes(x = year_plot_extrap, y = C.N), inherit.aes = FALSE) +
+      geom_point(data = UFM_short_extrap, mapping = aes(x = year_plot_extrap, y = C.N), inherit.aes = FALSE) +
       geom_line() 
 
 # year_plot_extrap = year_CE_plot where dates are interpolated. Can use either for plotting points.
@@ -3974,7 +4026,7 @@ fd_inc = confint(fderiv(mod_CN_UFM))
 fd_inc
 
 #Add years for plotting
-years <- with(UFM_short,
+years <- with(UFM_short_extrap,
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
 fd_inc <- cbind(fd_inc,years)
@@ -4027,7 +4079,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 
 # Now make a pretty graph that shows the raw data, fitted trend,
 # trend as well as periods of statistically significant increase/decrease!
-ggplot(UFM_short) +
+ggplot(UFM_short_extrap) +
   geom_point(aes(year_plot_extrap, C.N)) +
   geom_ribbon(data = pred,
               aes(x = year_CE_plot, ymin = lower, ymax = upper),
@@ -4061,14 +4113,14 @@ ggsave("figures/UFM_CN.png",
 ###Pheo a
 ```{r}
 # compare data distributions
-  hist(UFM_short$pheo_a_nmol_gTC)
-  hist(log(UFM_short$pheo_a_nmol_gTC)) # better!
+  hist(UFM_short_extrap$pheo_a_nmol_gTC)
+  hist(log(UFM_short_extrap$pheo_a_nmol_gTC)) # better!
 
     # check later how weights, corCAR1 compare. 
     
 mod_pheoa_UFM <- gamm(pheo_a_nmol_gTC ~ s(year_CE_plot, k = 10),
                      family=Gamma(link="log"),  
-                     data = UFM_short,
+                     data = UFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
@@ -4095,7 +4147,7 @@ ilink
 N <- 300    # number of points at which to evaluate the splines
 
 # Make a 200 row list of possible year_CE_plot values from min to max.
-pheoaYear_UFM <- with(UFM_short, 
+pheoaYear_UFM <- with(UFM_short_extrap, 
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), 
                                                    max(year_CE_plot, na.rm=TRUE), 
                                                    length.out = 200)))
@@ -4118,7 +4170,7 @@ ggplot(pheoaYear_UFM, aes(x = year_CE_plot, y = fit)) + # year_CE_plot is the in
 geom_ribbon(aes(ymin = (lower),
                 ymax = (upper), x = year_CE_plot),
             alpha = 0.2, inherit.aes = FALSE, fill = "black") +
-      geom_point(data = UFM_short, mapping = aes(x = year_plot_extrap, y = pheo_a_nmol_gTC), inherit.aes = FALSE) +
+      geom_point(data = UFM_short_extrap, mapping = aes(x = year_plot_extrap, y = pheo_a_nmol_gTC), inherit.aes = FALSE) +
       geom_line() 
 
 # year_plot_extrap = year_CE_plot where dates are interpolated. Can use either for plotting points.
@@ -4135,7 +4187,7 @@ fd_inc = confint(fderiv(mod_pheoa_UFM))
 fd_inc
 
 #Add years for plotting
-years <- with(UFM_short,
+years <- with(UFM_short_extrap,
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
 fd_inc <- cbind(fd_inc,years)
@@ -4188,7 +4240,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 
 # Now make a pretty graph that shows the raw data, fitted trend,
 # trend as well as periods of statistically significant increase/decrease!
-ggplot(UFM_short) +
+ggplot(UFM_short_extrap) +
   geom_point(aes(year_plot_extrap, pheo_a_nmol_gTC)) +
   geom_ribbon(data = pred,
               aes(x = year_CE_plot, ymin = lower, ymax = upper),
@@ -4219,14 +4271,14 @@ ggsave("figures/UFM_pheo_a.png",
 ###Greens
 ```{r}
 # compare data distributions
-  hist(UFM_short$greens)
-  hist(log(UFM_short$greens)) # log is better
+  hist(UFM_short_extrap$greens)
+  hist(log(UFM_short_extrap$greens)) # log is better
 
     # check later how weights, corCAR1 compare. 
     
 mod_greens_UFM <- gamm(greens ~ s(year_CE_plot, k = 10),
                      family=Gamma(link="log"),  
-                     data = UFM_short,
+                     data = UFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
@@ -4253,7 +4305,7 @@ ilink
 N <- 300    # number of points at which to evaluate the splines
 
 # Make a 200 row list of possible year_CE_plot values from min to max.
-greensYear_UFM <- with(UFM_short, 
+greensYear_UFM <- with(UFM_short_extrap, 
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), 
                                                    max(year_CE_plot, na.rm=TRUE), 
                                                    length.out = 200)))
@@ -4276,7 +4328,7 @@ ggplot(greensYear_UFM, aes(x = year_CE_plot, y = fit)) + # year_CE_plot is the i
 geom_ribbon(aes(ymin = (lower),
                 ymax = (upper), x = year_CE_plot),
             alpha = 0.2, inherit.aes = FALSE, fill = "black") +
-      geom_point(data = UFM_short, mapping = aes(x = year_plot_extrap, y = greens), inherit.aes = FALSE) +
+      geom_point(data = UFM_short_extrap, mapping = aes(x = year_plot_extrap, y = greens), inherit.aes = FALSE) +
       geom_line() 
 
 # year_plot_extrap = year_CE_plot where dates are interpolated. Can use either for plotting points.
@@ -4293,7 +4345,7 @@ fd_inc = confint(fderiv(mod_greens_UFM))
 fd_inc
 
 #Add years for plotting
-years <- with(UFM_short,
+years <- with(UFM_short_extrap,
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
 fd_inc <- cbind(fd_inc,years)
@@ -4346,7 +4398,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 
 # Now make a pretty graph that shows the raw data, fitted trend,
 # trend as well as periods of statistically significant increase/decrease!
-ggplot(UFM_short) +
+ggplot(UFM_short_extrap) +
   geom_point(aes(year_plot_extrap, greens)) +
   geom_ribbon(data = pred,
               aes(x = year_CE_plot, ymin = lower, ymax = upper),
@@ -4379,14 +4431,14 @@ ggsave("figures/UFM_greens.png",
 ```{r}
 
 # compare data distributions
-  hist(UFM_short$diato_nmol_gTC)
-  hist(log(UFM_short$diato_nmol_gTC)) # log transformation is rly helpful
+  hist(UFM_short_extrap$diato_nmol_gTC)
+  hist(log(UFM_short_extrap$diato_nmol_gTC)) # log transformation is rly helpful
 
     # check later how weights, corCAR1 compare. 
     
 mod_diato_UFM <- gamm(diato_nmol_gTC ~ s(year_CE_plot, k = 10),
                      family=Gamma(link="log"),  
-                     data = UFM_short,
+                     data = UFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
@@ -4414,7 +4466,7 @@ ilink
 N <- 300    # number of points at which to evaluate the splines
 
 # Make a 200 row list of possible year_CE_plot values from min to max.
-diatoYear_UFM <- with(UFM_short, 
+diatoYear_UFM <- with(UFM_short_extrap, 
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), 
                                                    max(year_CE_plot, na.rm=TRUE), 
                                                    length.out = 200)))
@@ -4437,7 +4489,7 @@ ggplot(diatoYear_UFM, aes(x = year_CE_plot, y = fit)) + # year_CE_plot is the in
 geom_ribbon(aes(ymin = (lower),
                 ymax = (upper), x = year_CE_plot),
             alpha = 0.2, inherit.aes = FALSE, fill = "black") +
-      geom_point(data = UFM_short, mapping = aes(x = year_plot_extrap, y = diato_nmol_gTC), inherit.aes = FALSE) +
+      geom_point(data = UFM_short_extrap, mapping = aes(x = year_plot_extrap, y = diato_nmol_gTC), inherit.aes = FALSE) +
       geom_line() 
 
 # year_plot_extrap = year_CE_plot where dates are interpolated. Can use either for plotting points.
@@ -4454,7 +4506,7 @@ fd_inc = confint(fderiv(mod_diato_UFM))
 fd_inc
 
 #Add years for plotting
-years <- with(UFM_short,
+years <- with(UFM_short_extrap,
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
 fd_inc <- cbind(fd_inc,years)
@@ -4507,7 +4559,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 
 # Now make a pretty graph that shows the raw data, fitted trend,
 # trend as well as periods of statistically significant increase/decrease!
-ggplot(UFM_short) +
+ggplot(UFM_short_extrap) +
   geom_point(aes(year_plot_extrap, diato_nmol_gTC)) +
   geom_ribbon(data = pred,
               aes(x = year_CE_plot, ymin = lower, ymax = upper),
@@ -4540,14 +4592,14 @@ ggsave("figures/UFM_diato.png",
 ```{r}
 
 # compare data distributions
-  hist(UFM_short$allo_nmol_gTC)
-  hist(log(UFM_short$allo_nmol_gTC)) # log transformation not that helpful but use it out of principle? 
+  hist(UFM_short_extrap$allo_nmol_gTC)
+  hist(log(UFM_short_extrap$allo_nmol_gTC)) # log transformation not that helpful but use it out of principle? 
 
     # check later how weights, corCAR1 compare. 
     
 mod_allo_UFM <- gamm(allo_nmol_gTC ~ s(year_CE_plot, k = 10),
                      family=Gamma(link="log"),  
-                     data = UFM_short,
+                     data = UFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
@@ -4575,7 +4627,7 @@ ilink
 N <- 300    # number of points at which to evaluate the splines
 
 # Make a 200 row list of possible year_CE_plot values from min to max.
-alloYear_UFM <- with(UFM_short, 
+alloYear_UFM <- with(UFM_short_extrap, 
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), 
                                                    max(year_CE_plot, na.rm=TRUE), 
                                                    length.out = 200)))
@@ -4598,7 +4650,7 @@ ggplot(alloYear_UFM, aes(x = year_CE_plot, y = fit)) + # year_CE_plot is the int
 geom_ribbon(aes(ymin = (lower),
                 ymax = (upper), x = year_CE_plot),
             alpha = 0.2, inherit.aes = FALSE, fill = "black") +
-      geom_point(data = UFM_short, mapping = aes(x = year_plot_extrap, y = allo_nmol_gTC), inherit.aes = FALSE) +
+      geom_point(data = UFM_short_extrap, mapping = aes(x = year_plot_extrap, y = allo_nmol_gTC), inherit.aes = FALSE) +
       geom_line() 
 
 # year_plot_extrap = year_CE_plot where dates are interpolated. Can use either for plotting points.
@@ -4615,7 +4667,7 @@ fd_inc = confint(fderiv(mod_allo_UFM))
 fd_inc
 
 #Add years for plotting
-years <- with(UFM_short,
+years <- with(UFM_short_extrap,
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
 fd_inc <- cbind(fd_inc,years)
@@ -4668,7 +4720,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 
 # Now make a pretty graph that shows the raw data, fitted trend,
 # trend as well as periods of statistically significant increase/decrease!
-ggplot(UFM_short) +
+ggplot(UFM_short_extrap) +
   geom_point(aes(year_plot_extrap, allo_nmol_gTC)) +
   geom_ribbon(data = pred,
               aes(x = year_CE_plot, ymin = lower, ymax = upper),
@@ -4700,14 +4752,14 @@ ggsave("figures/UFM_allo.png",
 ```{r}
 
 # compare data distributions
-  hist(UFM_short$cyanos)
-  hist(log(UFM_short$cyanos)) # log transformation is rly helpful
+  hist(UFM_short_extrap$cyanos)
+  hist(log(UFM_short_extrap$cyanos)) # log transformation is rly helpful
 
     # check later how weights, corCAR1 compare. 
     
 mod_cyanos_UFM <- gamm(cyanos ~ s(year_CE_plot, k = 10),
                      family=Gamma(link="log"),  
-                     data = UFM_short,
+                     data = UFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
@@ -4733,7 +4785,7 @@ ilink
 N <- 300    # number of points at which to evaluate the splines
 
 # Make a 200 row list of possible year_CE_plot values from min to max.
-cyanosYear_UFM <- with(UFM_short, 
+cyanosYear_UFM <- with(UFM_short_extrap, 
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), 
                                                    max(year_CE_plot, na.rm=TRUE), 
                                                    length.out = 200)))
@@ -4756,7 +4808,7 @@ ggplot(cyanosYear_UFM, aes(x = year_CE_plot, y = fit)) + # year_CE_plot is the i
 geom_ribbon(aes(ymin = (lower),
                 ymax = (upper), x = year_CE_plot),
             alpha = 0.2, inherit.aes = FALSE, fill = "black") +
-      geom_point(data = UFM_short, mapping = aes(x = year_plot_extrap, y = cyanos), inherit.aes = FALSE) +
+      geom_point(data = UFM_short_extrap, mapping = aes(x = year_plot_extrap, y = cyanos), inherit.aes = FALSE) +
       geom_line() 
 
 # year_plot_extrap = year_CE_plot where dates are interpolated. Can use either for plotting points.
@@ -4773,7 +4825,7 @@ fd_inc = confint(fderiv(mod_cyanos_UFM))
 fd_inc
 
 #Add years for plotting
-years <- with(UFM_short,
+years <- with(UFM_short_extrap,
                      data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
 fd_inc <- cbind(fd_inc,years)
@@ -4826,7 +4878,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 
 # Now make a pretty graph that shows the raw data, fitted trend,
 # trend as well as periods of statistically significant increase/decrease!
-ggplot(UFM_short) +
+ggplot(UFM_short_extrap) +
   geom_point(aes(year_plot_extrap, cyanos)) +
   geom_ribbon(data = pred,
               aes(x = year_CE_plot, ymin = lower, ymax = upper),
