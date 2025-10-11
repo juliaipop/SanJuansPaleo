@@ -1,0 +1,377 @@
+---
+title: "02d_LMs"
+author: "Julia Pop"
+date: "2025-10-11"
+output: html_document
+---
+
+For UFM you could just run a linear model for those dates. Then, you can just plot the raw data and draw a box with geom_rect() or color the points with dates so that we can visually see the more reliable dated period or use geom_smooth(method="lm", se=TRUE) to plot the linear model fit only on the dated segments (like you did above for the gam). You'll just need to qualitatively describe the patterns in your results and explain in the methods that we don't have reliable dates going back farther, and what you did to extrapolate the dates from a constant sedimentation rate. For example, for d15N you could say something like "For the dated period, d15N declined linearly from a high of 2.8 in 19XX to a low of 2.0 in 20XX (slope & 95% confidence interval, F-statistic). Prior to the dated sediments, d15N deviated between XX and XX for likely several hundred years before declining in modern sediments". If there is no linear "trend" don't bother plotting the predictions or confidence intervals, but do report the null results in the results section. 
+
+
+```{r setup, include=FALSE}
+# code to troublesheet file path issues. 
+# By default, knitr uses the folder containing the .Rmd file as
+# the working directory. This code allows us to set the folder
+# with our .rProj in it as the root. 
+
+# find_root looks upwards from the .Rmd until it finds a file or
+# folder that matches the criteria "folder with a .Rproj file in
+# it."
+
+knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_project))
+```
+
+#Libraries -- add these here
+```{r, echo = FALSE}
+source("scripts/libraries.R")
+source("scripts/GAM_functions.R")
+```
+
+## Pull in data
+```{r}
+UFM_short_extrap <- read.csv("output/UFM_short_extrap.csv") %>%
+  select(-X)
+
+View(UFM_short_extrap)
+```
+
+# Linear Models
+##d15N - signif
+```{r}
+
+# Fit a linear model to interpolated dates.
+UFM_d15N_lm <- lm(d15N ~ year_CE_plot, data = UFM_short_extrap)
+summary(UFM_d15N_lm)
+
+acf(residuals(UFM_d15N_lm))
+# wide CI for zero autocorrelation because n is small
+# the test is not very sensitive because the sample size is so small. 
+# but still it looks decent. (no consistent trends)
+
+# plot: 
+ggplot(UFM_short_extrap) +
+  geom_point(aes(year_plot_extrap, d15N)) + # plot all the points
+  geom_smooth(                              # plot the model 
+    data = UFM_short_extrap %>% filter(!is.na(year_CE_plot)),
+    aes(x = year_CE_plot, y = d15N),
+    method = "lm", se = TRUE, linewidth = 0.8, col = "black", linetype = "twodash") + 
+  ylab(expression(paste(delta^{15}, "N (", "\u2030", ")"))) +
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("Upper Fourmile Lake") + 
+  # adjust gridlines and axis labels
+  scale_x_continuous(
+  breaks = seq(1400, 2025, by = 50),      # major tick labels every 50 years
+  minor_breaks = seq(1400, 2030, by = 10) # grid lines every 10 years
+) +
+theme_bw() 
+
+ggsave("figures/UFM_d15N.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+
+```
+
+##d13C - not signif
+```{r}
+
+# Fit a linear model to interpolated dates.
+UFM_d13C_lm <- lm(d13C ~ year_CE_plot, data = UFM_short_extrap)
+summary(UFM_d13C_lm)
+
+acf(residuals(UFM_d13C_lm))
+
+# plot: 
+ggplot(UFM_short_extrap) +
+  geom_point(aes(year_plot_extrap, d13C)) + # plot all the points
+  geom_smooth(                              # plot the model 
+    data = UFM_short_extrap %>% filter(!is.na(year_CE_plot)),
+    aes(x = year_CE_plot, y = d13C),
+    method = "lm", se = TRUE, linewidth = 0.8, col = "black", linetype = "twodash") + 
+  ylab(expression(paste(delta^{13}, "C (", "\u2030", ")"))) +
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("Upper Fourmile Lake") + 
+  # adjust gridlines and axis labels
+  scale_x_continuous(
+  breaks = seq(1400, 2025, by = 50),      # major tick labels every 50 years
+  minor_breaks = seq(1400, 2030, by = 10) # grid lines every 10 years
+) +
+theme_bw() 
+
+ggsave("figures/UFM_d13C.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+
+```
+
+##percent C - signif
+```{r}
+# Fit a linear model to interpolated dates.
+UFM_percent.C_lm <- lm(percent.C ~ year_CE_plot, data = UFM_short_extrap)
+summary(UFM_percent.C_lm)
+
+acf(residuals(UFM_percent.C_lm))
+
+# plot: 
+ggplot(UFM_short_extrap) +
+  geom_point(aes(year_plot_extrap, percent.C)) + # plot all the points
+  geom_smooth(                              # plot the model 
+    data = UFM_short_extrap %>% filter(!is.na(year_CE_plot)),
+    aes(x = year_CE_plot, y = percent.C),
+    method = "lm", se = TRUE, linewidth = 0.8, col = "black", linetype = "twodash") + 
+  ylab("Total Carbon (%)") +
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("Upper Fourmile Lake") + 
+  # adjust gridlines and axis labels
+  scale_x_continuous(
+  breaks = seq(1400, 2025, by = 50),      # major tick labels every 50 years
+  minor_breaks = seq(1400, 2030, by = 10) # grid lines every 10 years
+) +
+theme_bw() 
+
+ggsave("figures/UFM_percent.C.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+```
+
+
+##percent N - marginally signif
+```{r}
+
+# Fit a linear model to interpolated dates.
+UFM_percent.N_lm <- lm(percent.N ~ year_CE_plot, data = UFM_short_extrap)
+summary(UFM_percent.N_lm)
+
+acf(residuals(UFM_percent.N_lm))
+
+# plot: 
+ggplot(UFM_short_extrap) +
+  geom_point(aes(year_plot_extrap, percent.N)) + # plot all the points
+  geom_smooth(                              # plot the model 
+    data = UFM_short_extrap %>% filter(!is.na(year_CE_plot)),
+    aes(x = year_CE_plot, y = percent.N),
+    method = "lm", se = TRUE, linewidth = 0.8, col = "black", linetype = "twodash") + 
+  ylab("Total Nitrogen (%)") +
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("Upper Fourmile Lake") + 
+  # adjust gridlines and axis labels
+  scale_x_continuous(
+  breaks = seq(1400, 2025, by = 50),      # major tick labels every 50 years
+  minor_breaks = seq(1400, 2030, by = 10) # grid lines every 10 years
+) +
+theme_bw() + 
+coord_cartesian(ylim = c(0, 1.1))
+
+
+ggsave("figures/UFM_percent.N.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+```
+
+##C:N - not signif
+```{r}
+# Fit a linear model to interpolated dates.
+UFM_C.N_lm <- lm(C.N ~ year_CE_plot, data = UFM_short_extrap)
+summary(UFM_C.N_lm)
+
+acf(residuals(UFM_C.N_lm))
+
+# plot: 
+ggplot(UFM_short_extrap) +
+  geom_point(aes(year_plot_extrap, C.N)) + # plot all the points
+  geom_smooth(                              # plot the model 
+    data = UFM_short_extrap %>% filter(!is.na(year_CE_plot)),
+    aes(x = year_CE_plot, y = C.N),
+    method = "lm", se = TRUE, linewidth = 0.8, col = "black", linetype = "twodash") + 
+  ylab("C:N ratio") +
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("Upper Fourmile Lake") + 
+  # adjust gridlines and axis labels
+  scale_x_continuous(
+  breaks = seq(1400, 2025, by = 50),      # major tick labels every 50 years
+  minor_breaks = seq(1400, 2030, by = 10) # grid lines every 10 years
+) +
+theme_bw() 
+
+ggsave("figures/UFM_C.N.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+```
+
+##Pheo a - not signif
+```{r}
+
+# Fit a linear model to interpolated dates.
+UFM_pheoa_lm <- lm(pheo_a_nmol_gTC ~ year_CE_plot, data = UFM_short_extrap)
+summary(UFM_pheoa_lm)
+
+acf(residuals(UFM_pheoa_lm))
+
+# plot: 
+ggplot(UFM_short_extrap) +
+  geom_point(aes(year_plot_extrap, pheo_a_nmol_gTC)) + # plot all the points
+  geom_smooth(                              # plot the model 
+    data = UFM_short_extrap %>% filter(!is.na(year_CE_plot)),
+    aes(x = year_CE_plot, y = pheo_a_nmol_gTC),
+    method = "lm", se = TRUE, linewidth = 0.8, col = "black", linetype = "twodash") + 
+  ylab(expression("pheophytin a ("*nmol~g^-1~"total carbon"*")")) + 
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("Upper Fourmile Lake") + 
+  # adjust gridlines and axis labels
+  scale_x_continuous(
+  breaks = seq(1400, 2025, by = 50),      # major tick labels every 50 years
+  minor_breaks = seq(1400, 2030, by = 10)) +  # grid lines every 10 years
+theme_bw() + 
+  coord_cartesian(ylim = c(0, 1500))
+
+
+ggsave("figures/UFM_pheoa.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+```
+
+##Greens - not at all signif
+```{r}
+
+# Fit a linear model to interpolated dates.
+UFM_greens_lm <- lm(greens ~ year_CE_plot, data = UFM_short_extrap)
+summary(UFM_greens_lm)
+
+acf(residuals(UFM_greens_lm))
+
+# plot: 
+ggplot(UFM_short_extrap) +
+  geom_point(aes(year_plot_extrap, greens)) + # plot all the points
+  geom_smooth(                              # plot the model 
+    data = UFM_short_extrap %>% filter(!is.na(year_CE_plot)),
+    aes(x = year_CE_plot, y = greens),
+    method = "lm", se = TRUE, linewidth = 0.8, col = "black", linetype = "twodash") + 
+  ylab(expression("pheo b & lutein ("*nmol~g^-1~"total carbon"*")")) + 
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("Upper Fourmile Lake") + 
+  # adjust gridlines and axis labels
+  scale_x_continuous(
+  breaks = seq(1400, 2025, by = 50),      # major tick labels every 50 years
+  minor_breaks = seq(1400, 2030, by = 10)) +  # grid lines every 10 years
+theme_bw() + 
+  coord_cartesian(ylim = c(0, 1500))
+
+
+ggsave("figures/UFM_greens.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+```
+
+##Diatoxanthin - not at all signif
+```{r}
+
+# Fit a linear model to interpolated dates.
+UFM_diato_lm <- lm(diato_nmol_gTC ~ year_CE_plot, data = UFM_short_extrap)
+summary(UFM_diato_lm)
+
+acf(residuals(UFM_diato_lm))
+
+# plot: 
+ggplot(UFM_short_extrap) +
+  geom_point(aes(year_plot_extrap, diato_nmol_gTC)) + # plot all the points
+  geom_smooth(                              # plot the model 
+    data = UFM_short_extrap %>% filter(!is.na(year_CE_plot)),
+    aes(x = year_CE_plot, y = diato_nmol_gTC),
+    method = "lm", se = TRUE, linewidth = 0.8, col = "black", linetype = "twodash") + 
+  ylab(expression("diatoxanthin ("*nmol~g^-1~"total carbon"*")")) + 
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("Upper Fourmile Lake") + 
+  # adjust gridlines and axis labels
+  scale_x_continuous(
+  breaks = seq(1400, 2025, by = 50),      # major tick labels every 50 years
+  minor_breaks = seq(1400, 2030, by = 10)) +  # grid lines every 10 years
+theme_bw() + 
+  coord_cartesian(ylim = c(0, 150))
+
+
+ggsave("figures/UFM_diato.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+```
+
+##Alloxanthin - not signif
+```{r}
+
+# Fit a linear model to interpolated dates.
+UFM_allo_lm <- lm(allo_nmol_gTC ~ year_CE_plot, data = UFM_short_extrap)
+summary(UFM_allo_lm)
+
+acf(residuals(UFM_allo_lm))
+
+# plot: 
+ggplot(UFM_short_extrap) +
+  geom_point(aes(year_plot_extrap, allo_nmol_gTC)) + # plot all the points
+  geom_smooth(                              # plot the model 
+    data = UFM_short_extrap %>% filter(!is.na(year_CE_plot)),
+    aes(x = year_CE_plot, y = allo_nmol_gTC),
+    method = "lm", se = TRUE, linewidth = 0.8, col = "black", linetype = "twodash") + 
+  ylab(expression("alloxanthin ("*nmol~g^-1~"total carbon"*")")) + 
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("Upper Fourmile Lake") + 
+  # adjust gridlines and axis labels
+  scale_x_continuous(
+  breaks = seq(1400, 2025, by = 50),      # major tick labels every 50 years
+  minor_breaks = seq(1400, 2030, by = 10)) +  # grid lines every 10 years
+theme_bw() + 
+  coord_cartesian(ylim = c(0, 225))
+
+ggsave("figures/UFM_allo.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+```
+
+##Cyanos - not signif
+```{r}
+
+# Fit a linear model to interpolated dates.
+UFM_cyanos_lm <- lm(cyanos ~ year_CE_plot, data = UFM_short_extrap)
+summary(UFM_cyanos_lm)
+
+acf(residuals(UFM_cyanos_lm))
+
+# plot: 
+ggplot(UFM_short_extrap) +
+  geom_point(aes(year_plot_extrap, cyanos)) + # plot all the points
+  geom_smooth(                              # plot the model 
+    data = UFM_short_extrap %>% filter(!is.na(year_CE_plot)),
+    aes(x = year_CE_plot, y = cyanos),
+    method = "lm", se = TRUE, linewidth = 0.8, col = "black", linetype = "twodash") + 
+  ylab(expression("echinenone & canthaxanthin ("*nmol~g^-1~"total carbon"*")")) + 
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("Upper Fourmile Lake") + 
+  # adjust gridlines and axis labels
+  scale_x_continuous(
+  breaks = seq(1400, 2025, by = 50),      # major tick labels every 50 years
+  minor_breaks = seq(1400, 2030, by = 10)) +  # grid lines every 10 years
+theme_bw() + 
+  coord_cartesian(ylim = c(0, 150))
+
+
+ggsave("figures/UFM_cyanos.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+```
