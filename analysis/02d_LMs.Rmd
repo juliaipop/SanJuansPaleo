@@ -32,7 +32,6 @@ source("scripts/GAM_functions.R")
 UFM_short_extrap <- read.csv("output/UFM_short_extrap.csv") %>%
   select(-X)
 
-View(UFM_short_extrap)
 ```
 
 # Linear Models
@@ -42,6 +41,20 @@ View(UFM_short_extrap)
 # Fit a linear model to interpolated dates.
 UFM_d15N_lm <- lm(d15N ~ year_CE_plot, data = UFM_short_extrap)
 summary(UFM_d15N_lm)
+
+# calculate CIs auto
+confint(UFM_d15N_lm, level = 0.95)
+
+# calculate CIs manually
+df <- UFM_d15N_lm$df.residual
+t_value <- qt(0.975, df)  # 95% CI
+
+summary(UFM_d15N_lm)$coefficients[ , "Std. Error"] # se = 0.0035
+lower <- -0.01320 + t_value*0.003490199 # 
+upper <- -0.01320 - t_value*0.003490199 # 
+
+cbind(lower, upper)
+
 
 acf(residuals(UFM_d15N_lm))
 # wide CI for zero autocorrelation because n is small
@@ -80,6 +93,8 @@ ggsave("figures/UFM_d15N.png",
 UFM_d13C_lm <- lm(d13C ~ year_CE_plot, data = UFM_short_extrap)
 summary(UFM_d13C_lm)
 
+confint(UFM_d13C_lm, level = 0.95)
+
 acf(residuals(UFM_d13C_lm))
 
 # plot: 
@@ -112,6 +127,8 @@ ggsave("figures/UFM_d13C.png",
 # Fit a linear model to interpolated dates.
 UFM_percent.C_lm <- lm(percent.C ~ year_CE_plot, data = UFM_short_extrap)
 summary(UFM_percent.C_lm)
+
+confint(UFM_percent.C_lm, level = 0.95)
 
 acf(residuals(UFM_percent.C_lm))
 
@@ -147,6 +164,9 @@ ggsave("figures/UFM_percent.C.png",
 UFM_percent.N_lm <- lm(percent.N ~ year_CE_plot, data = UFM_short_extrap)
 summary(UFM_percent.N_lm)
 
+confint(UFM_percent.N_lm, level = 0.95)
+
+
 acf(residuals(UFM_percent.N_lm))
 
 # plot: 
@@ -181,6 +201,8 @@ ggsave("figures/UFM_percent.N.png",
 UFM_C.N_lm <- lm(C.N ~ year_CE_plot, data = UFM_short_extrap)
 summary(UFM_C.N_lm)
 
+confint(UFM_C.N_lm, level = 0.95)
+
 acf(residuals(UFM_C.N_lm))
 
 # plot: 
@@ -213,6 +235,9 @@ ggsave("figures/UFM_C.N.png",
 # Fit a linear model to interpolated dates.
 UFM_pheoa_lm <- lm(pheo_a_nmol_gTC ~ year_CE_plot, data = UFM_short_extrap)
 summary(UFM_pheoa_lm)
+
+confint(UFM_pheoa_lm, level = 0.95)
+
 
 acf(residuals(UFM_pheoa_lm))
 
@@ -248,6 +273,8 @@ ggsave("figures/UFM_pheoa.png",
 UFM_greens_lm <- lm(greens ~ year_CE_plot, data = UFM_short_extrap)
 summary(UFM_greens_lm)
 
+confint(UFM_greens_lm, level = 0.95)
+
 acf(residuals(UFM_greens_lm))
 
 # plot: 
@@ -281,6 +308,9 @@ ggsave("figures/UFM_greens.png",
 # Fit a linear model to interpolated dates.
 UFM_diato_lm <- lm(diato_nmol_gTC ~ year_CE_plot, data = UFM_short_extrap)
 summary(UFM_diato_lm)
+
+confint(UFM_diato_lm, level = 0.95)
+
 
 acf(residuals(UFM_diato_lm))
 
@@ -316,6 +346,9 @@ ggsave("figures/UFM_diato.png",
 UFM_allo_lm <- lm(allo_nmol_gTC ~ year_CE_plot, data = UFM_short_extrap)
 summary(UFM_allo_lm)
 
+confint(UFM_allo_lm, level = 0.95)
+
+
 acf(residuals(UFM_allo_lm))
 
 # plot: 
@@ -348,6 +381,9 @@ ggsave("figures/UFM_allo.png",
 # Fit a linear model to interpolated dates.
 UFM_cyanos_lm <- lm(cyanos ~ year_CE_plot, data = UFM_short_extrap)
 summary(UFM_cyanos_lm)
+
+confint(UFM_cyanos_lm, level = 0.95)
+
 
 acf(residuals(UFM_cyanos_lm))
 
