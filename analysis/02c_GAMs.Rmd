@@ -2008,7 +2008,18 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 
 # Now make a pretty graph that shows the raw data, fitted trend,
 # trend as well as periods of statistically significant increase/decrease!
+#Highlight area with most reliable dates
+highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
+
 ggplot(TRK_short) +
+      #Add a box to show the reader the time period for interpretation
+  geom_rect(
+    mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
+    data = highlight_data, 
+    alpha = 0.1,
+    fill = "blue",
+    inherit.aes = FALSE
+  )+
   geom_point(aes(year_plot_extrap, d15N)) +
   geom_ribbon(data = pred,
               aes(x = year_plot_extrap, ymin = lower, ymax = upper),
