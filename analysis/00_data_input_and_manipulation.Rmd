@@ -656,12 +656,23 @@ UFM_adm <- age_depth_model(UFM_dates_clean,
                            depth = extrap_bottom,
                            age = year_CE)
 
+plot(UFM_adm,
+     xlab="Depth (cm)",
+     ylab="Age (year AD)",
+     main="Upper Fourmile Lake") # You'll want to include these in your thesis- IAO
+
 # Repeat for LFM
 LFM_dates_clean <- LFM_dates %>% # filter to remove nas
   filter(!is.na(extrap_bottom) & !is.na(year_CE)) 
 LFM_adm <- age_depth_model(LFM_dates_clean,
                              depth = extrap_bottom,
                              age = year_CE)
+
+plot(LFM_adm,
+     xlab="Depth (cm)",
+     ylab="Age (year AD)",
+     main="Lower Fourmile Lake") # You'll want to include these in your thesis- IAO
+
   
 # Repeat for TRK
 # TRK_dates_clean <- TRK_dates %>% # filter to remove nas
@@ -670,12 +681,17 @@ LFM_adm <- age_depth_model(LFM_dates_clean,
 TRK_adm <- age_depth_model(TRK_dates_try,
                              depth = extrap_bottom,
                              age = year_CE)
+#For comparison  - IAO
+TRK_adm2 <- age_depth_model(TRK_dates,
+                             depth = extrap_bottom,
+                             age = year_CE)
 
-### plot the age-depth model
-# very basic, but shows the trend
-plot(UFM_adm)
-plot(LFM_adm)
-plot(TRK_adm)
+
+plot(TRK_adm,
+     xlab="Depth (cm)",
+     ylab="Age (year AD)",
+     main="Turkey Creek Lake") # You'll want to include these in your thesis - IAO
+
 ```
 
 ## Interpolate dates & join to dfs - TRK
@@ -700,6 +716,29 @@ plot(TRK_adm)
 TRK_interp <- predict(TRK_adm, depth = seq(0.25, 41, 0.25)) %>%
   mutate(year_CE = age) %>%
   select(depth, year_CE)
+
+#For comparison  - IAO
+TRK_interp2 <- predict(TRK_adm2, depth = seq(0.25, 41, 0.25)) %>%
+  mutate(year_CE = age) %>%
+  select(depth, year_CE)
+
+#Compare the two
+TRK_interp_B <- TRK_interp %>%
+  rename(depth_interp=depth)
+TRK_interp2_B <- TRK_interp2 %>%
+  rename(depth_interp2=depth)
+TRK_interp_compare <- full_join(TRK_interp_B,
+                               TRK_interp2_B) 
+
+# View(TRK_interp_compare)
+#IAO - added this step here to compare TRK_adm using TRK_dates_try vs
+
+TRK_interp_compare %>%
+  ggplot(aes(x=depth_interp, 
+             y=depth_interp2))+
+  geom_point()+
+  geom_abline(slope=1, intercept=0)
+# Only difference is one doesn't go back as far- identical ages.
 
 ## create new columns in the interp df based on the ending digits of depth
 ## to easily join the interpolated ages later
@@ -745,10 +784,14 @@ TRK_wide <- TRK_wide %>%
 # trim year_CE_plot so it is empty past the end of the dated core 
 
 TRK_wide <- TRK_wide %>%
-  mutate(duration = if_else(year_CE_plot > 1980, year_CE_top - year_CE_bottom, NA_real_),
-         year_plot_extrap = year_CE_plot,
-         across(c(year_CE_plot, year_CE_top, year_CE_bottom),
-           ~ if_else(is.na(duration), NA_real_, .)))
+  mutate(
+    duration = if_else(year_CE_plot > 1980, year_CE_top - year_CE_bottom, NA_real_),
+    year_plot_extrap = year_CE_plot,
+    across(
+      c(year_CE_plot, year_CE_top, year_CE_bottom),
+      ~ if_else(is.na(duration), NA_real_, .)
+    )
+  )
          
 # add weight term to TRK_wide (need to do this separately because of how mutate groups)
 # see gavin simpson 2018 - normalize weight against the mean(weight) to avoid changing 
