@@ -94,7 +94,7 @@ snow_phenology_df <- data.frame()
 
 for (site in unique_snotel_site_ids) {
   snotel_data <- snotel_download(site_id = site, network = "sntl", path = tempdir(), internal = TRUE)
-  phenology_results <- snotel_phenology(snotel_data, threshold = 0, offset = 180)
+  phenology_results <- snotel_phenology(snotel_data, threshold = 0, offset = 210)
   phenology_results <- phenology_results %>%
     mutate(snotel_site_id = site)
   snow_phenology_df <- bind_rows(snow_phenology_df, phenology_results)
@@ -144,16 +144,7 @@ snotel_data_combined %>%
   ggplot(aes(x=date, y=snow_water_equivalent)) +
   geom_point() +
   facet_wrap(.~water_year, scales="free_x") +
-  geom_vline(xintercept=snow_phenology_df$max_swe_date) # Note that the
-# date of max SWE for water-year 1996 calculates incorrectly 
-                                                                                                  date, y = snow_water_equivalent)) + geom_point() + facet_wrap(. ~ water_year, scales =
-                                                                                                                                                                  snotel_data_combined %>%
-                                                                                                                                                                  mutate(water_year = dataRetrieval::calcWaterYear(date)) %>%
-                                                                                                                                                                  ggplot(aes(x=date, y=snow_water_equivalent)) +
-                                                                                                                                                                  geom_point() +
-                                                                                                                                                                  facet_wrap(.~water_year, scales="free_x") +
-                                                                                                                                                                  geom_vline(xintercept=snow_phenology_df$max_swe_date) # Note that the
-                                                                                                                                                                # date of max SWE for water-year 1996 calculates incorrectly                                                                                                                                                      geom_vline(xintercept=snow_phenology_df$max_swe_date)                                                                                                                                                         "free_x")
+  geom_vline(xintercept=snow_phenology_df$max_swe_date) 
 
 # gridMET -----------------------------------------------------------------------------
 #pull gridMET data based on given site coords.
