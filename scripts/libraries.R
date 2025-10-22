@@ -2,35 +2,41 @@
 # rather than loading repeatedly for each .Rmd. 
 # can run this code in an .Rmd chunk by typing > source("scripts/libraries.R")
 
-library(tidyverse) 
-# incldues dplyr, tidyr, tibble, ggplot2, stringr, etc.
-library(ggpubr)
-library(grid) # for function unit() in ggplot2
-library(gtable) # for adding subtitle in ggplot2
-library(ggthemes)
-library(scales) # to add percentages to plots and pretty_breaks()
-library(gridExtra) # for arranging graphs side by side w ftn grid.arrange()
-library(skimr) # for summary statistics
-library(reshape2)
-library(readxl) # to read excel files
-library(writexl) # to ultimately create a .xlsx file for export
-library(ggpmisc)
-library(ggpubr)
 
-#load packages necessary for GAMS
-library(mgcv)
-library(gratia)
-library(cowplot)
-library(nlme) # for non linear mixed effects models
-library("scam")
-library("grid")              # for unit.pmax(), unit.list()
-library("schoenberg")
+if (!require('pacman')) install.packages('pacman'); library('pacman')
+# remotes::install_github("MilesMcBain/breakerofchains")
 
-#from Cale (delete what I don't need) 
-library(tidypaleo) ### for dealing with dates and vertical plotting
+# p_update(update = FALSE)  #Tells you which packages are out of date
+# p_update()  #actually updates the out of date packages
 
-#troubleshooting wd issues
-library(here)
+pacman::p_load("tidyverse",#incldues dplyr, tidyr, tibble, ggplot2, stringr, etc.
+               "ggpubr",
+               "grid",
+               "gtable",# for adding subtitle in ggplot2
+               "ggthemes",
+               "scales",# for function unit() in ggplot2
+               "scales",# to add percentages to plots and pretty_breaks()
+               "gridExtra",#for arranging graphs side by side w ftn grid.arrange()
+               "skimr",# for summary statistics
+               "readxl",
+               "writexl",
+               "ggpmisc",
+               "tidypaleo",
+               "here",
+               "snotelr", #for SNOTEL
+               "geosphere", #for SNOTEL
+               "sf", #for gridMET
+               "AOI",#for gridMET
+               "climateR",#for gridMET
+               #Packages for GAMS
+               "mgcv",
+               "gratia",
+               "cowplot",
+               "nlme",# for non linear mixed effects models
+               "scam",
+               "grid",# for unit.pmax(), unit.list()
+               "schoenberg")
+
 
 # loading cowplot overrides the ggplot default theme: to set it back, run
 theme_set(theme_bw())
