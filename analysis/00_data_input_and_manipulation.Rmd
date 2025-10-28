@@ -573,6 +573,12 @@ ggplot(TRK_short, aes(x = depth_top, y = PI)) +
 
 # Date Interpolation
 
+## TRK Take 2
+```{r}
+
+
+```
+
 ## Pull in dates
 ```{r}
 
@@ -724,6 +730,7 @@ TRK_interp2 <- predict(TRK_adm2, depth = seq(0.25, 41, 0.25)) %>%
   mutate(year_CE = age) %>%
   select(depth, year_CE)
 
+# Bella's code
 #Compare the two
 TRK_interp_B <- TRK_interp %>%
   rename(depth_interp=depth)
@@ -731,6 +738,13 @@ TRK_interp2_B <- TRK_interp2 %>%
   rename(depth_interp2=depth)
 TRK_interp_compare <- full_join(TRK_interp_B,
                                TRK_interp2_B) 
+
+# JIP attempt:
+TRK_interp_C <- TRK_interp %>%
+  rename(year_interp = year_CE)
+TRK_interp2_C <- TRK_interp2 %>%
+  rename(year_interp2 = year_CE)
+TRK_interp_compare_JIP <- full_join(TRK_interp_C, TRK_interp2_C)
 
 # View(TRK_interp_compare)
 #IAO - added this step here to compare TRK_adm using TRK_dates_try vs
@@ -741,6 +755,16 @@ TRK_interp_compare %>%
   geom_point()+
   geom_abline(slope=1, intercept=0)
 # Only difference is one doesn't go back as far- identical ages.
+
+TRK_interp_compare_JIP %>%
+  ggplot(aes(x=year_interp,
+             y=year_interp2))+
+  geom_point()+
+  geom_abline(slope=1, intercept=0)
+# same from 2022.359 to ~1975
+
+
+
 
 ## create new columns in the interp df based on the ending digits of depth
 ## to easily join the interpolated ages later

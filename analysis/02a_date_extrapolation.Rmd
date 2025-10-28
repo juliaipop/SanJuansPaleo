@@ -59,17 +59,22 @@ TRK_adm <- readRDS("output/TRK_adm.rds")
 # now we have an adm to mess with!
 ```
 
-
 # Date extrapolation
 ##TRK
 ```{r}
 # see what predict did to the sedimentation rates and if I should set my own age depth model... (at an avg sed rate for example)
 names(TRK_short)
 # plot the extrapolated adm...
-plot(depth_plot ~ year_plot_extrap, data = TRK_short, type = "l", 
+plot(depth_plot ~ year_plot_extrap, data = TRK_short, type = "l",
      xlab = "Year CE", ylab = "Depth (cm)")
 points(TRK_short$year_plot_extrap, TRK_short$depth_plot, pch = 20, cex = 0.3)
 abline(v = 1982.209, lty = "aa")
+
+# plot it so age is on the y axis
+plot(year_plot_extrap ~ depth_plot, data = TRK_short, type = "l",
+     xlab = "Depth (cm)", ylab = "Year CE")
+points(TRK_short$depth_plot,TRK_short$year_plot_extrap, pch = 20, cex = 0.3)
+abline(h = 1982.209, lty = "aa")
 
 # plot the interpolated adm
 plot(TRK_adm)
