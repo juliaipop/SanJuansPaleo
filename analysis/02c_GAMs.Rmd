@@ -2049,7 +2049,6 @@ ggsave("figures/TRK_d15N_alt.png",
 ```
 
 
-
 ## d13C
 Use TRK_short to be able to plot all the data vs. time, but model only the interpolated dates. 
 ```{r}
@@ -3332,6 +3331,7 @@ ggsave("figures/TRK_allo.png",
        width=8,
        units="in")
 ```
+
 ###Cyanos
 ```{r}
 

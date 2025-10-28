@@ -31,7 +31,6 @@ source("scripts/GAM_functions.R")
 ```{r}
 UFM_short_extrap <- read.csv("output/UFM_short_extrap.csv") %>%
   select(-X)
-
 ```
 
 # Linear Models
@@ -246,7 +245,6 @@ ggsave("figures/UFM_d15N_alt.png",
        width=8,
        units="in")
 ```
-
 
 ##d13C - not signif
 ```{r}

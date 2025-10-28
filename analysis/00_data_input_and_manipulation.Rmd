@@ -692,6 +692,8 @@ plot(TRK_adm,
      ylab="Age (year AD)",
      main="Turkey Creek Lake") # You'll want to include these in your thesis - IAO
 
+plot(TRK_adm2)
+
 ```
 
 ## Interpolate dates & join to dfs - TRK
