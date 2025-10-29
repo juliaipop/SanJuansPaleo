@@ -96,20 +96,20 @@ plot(TRK_adm)
   # pull in extrapolated estimate (Flett's file with an approximation 
   # on the timing of UFM1_024)
 
-  UFM_estimate <- read_xlsx("data/UFM_estimate.xlsx")
+#  UFM_estimate <- read_xlsx("data/UFM_estimate.xlsx")
 
   # bind the extrapolated estimate to the metadata, cut out nas
-  UFM_dates_try <- UFM_estimate %>%
-    left_join(UFM_metadata %>% select(-depth_top, -depth_bottom),
-              by = "sample_ID") %>%
-    relocate(all_of(c(names(UFM_metadata)))) %>%
-    mutate(year_CE = 2025 - extrap_bottom_age_lin) %>%
-    filter(!is.na(extrap_bottom_age_lin))
+#  UFM_dates_try <- UFM_estimate %>%
+#    left_join(UFM_metadata %>% select(-depth_top, -depth_bottom),
+#              by = "sample_ID") %>%
+#    relocate(all_of(c(names(UFM_metadata)))) %>%
+#    mutate(year_CE = 2025 - extrap_bottom_age_lin) %>%
+#    filter(!is.na(extrap_bottom_age_lin))
   
   # adjust the old adm
-    UFM_adm <- age_depth_model(UFM_dates_try,
-                               depth = extrap_bottom,
-                               age = year_CE)
+#    UFM_adm <- age_depth_model(UFM_dates_try,
+#                               depth = extrap_bottom,
+#                               age = year_CE)
 
   # goes back pretty far but this looks good. age:depth rate is constant.
   plot(UFM_adm)

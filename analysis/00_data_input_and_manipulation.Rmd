@@ -976,6 +976,7 @@ LFM_sedimentation <- ggplot(LFM_short %>% filter(!is.na(year_CE_plot), !is.na(s)
   ) +
   ylim(0, 0.0275) + 
   theme_bw(base_size = 14)
+LFM_sedimentation
 
 ggsave("figures/LFM_sedimentation.png", LFM_sedimentation, width = 10, height = 5, units = "in", dpi = 300) 
 
