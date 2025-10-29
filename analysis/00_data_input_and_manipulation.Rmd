@@ -573,12 +573,6 @@ ggplot(TRK_short, aes(x = depth_top, y = PI)) +
 
 # Date Interpolation
 
-## TRK Take 2
-```{r}
-
-
-```
-
 ## Pull in dates
 ```{r}
 
@@ -599,43 +593,6 @@ UFM_dates <- all_dates %>%
        # AGES CORRESPOND TO EXTRAP BOTTOM!!
        # UFM ages derived from linear model!
 
-  ### Original code ### repeat for TRK (make year_CE column) 
-  TRK_dates <- all_dates %>%
-        filter(str_starts(sample_ID, "TRK")) %>%
-        left_join(TRK_metadata %>% select(-depth_top, -depth_bottom),
-                  by = "sample_ID") %>%
-        relocate(all_of(c(names(TRK_metadata)))) %>%
-        mutate(year_CE = 2025 - extrap_bottom_age_CRS) %>%
-        filter(!sample_ID %in% c("TRK2_058", "TRK2_082"))
-    
-         # NOTE !!!
-         # AGES CORRESPOND TO EXTRAP BOTTOM!
-         # TRK ages come from lin-derived CRS!!!
-  
-  TRK_reconstructed <- read_xlsx("data/TRK_dates_interpolated_JP.xlsx")
-
-  # this file will look incomplete, but it's because the values for extrap_bottom 
-  # and year are the only ones we really need.
-  
-  TRK_dates_try <- TRK_reconstructed %>%
-    left_join(TRK_metadata %>% select(-depth_top, -depth_bottom),
-              by = "sample_ID") %>%
-    relocate(all_of(c(names(TRK_metadata)))) %>%
-    mutate(year_CE = year) %>%
-    filter(!is.na(extrap_bottom))
-  
-    # not all dates are trustworthy (just TRK2_002 - 020)
-    # ages come from lin-derived CRS, correspond to extrap_bottom
-    
-    # the issue here is that TRK_metadata has different depth_top 
-    # and _bottoms from "TRK_dates" because Flett reassigned dates for
-    # TRK2_058 and TRK2_082. those are the ones we dropped, but in the 
-    # adm we want the metadata depths. 
-    
-    # discuss with Bella/Flett how to handle splitting of the core. 
-    # for now proceed with bottom portion of reconstructed core
-    # (portion with no reassigned depths)...
-
   # repeat for LFM
   LFM_dates <- all_dates %>%
         filter(str_starts(sample_ID, "LFM")) %>%
@@ -647,6 +604,36 @@ UFM_dates <- all_dates %>%
          # AGES CORRESPOND TO EXTRAP BOTTOM!
          # LFM ages derived from CRS (simple)
 
+```
+
+
+## TRK Interpolation 10/28
+```{r}
+
+# Dates for the samples between TRK2_058 and TRK2_082 cannot be reliably determined based on the dating model Flett created (see questions for flett doc). So, in order to estimate SOME age for plotting, assume a constant sedimentation rate between the last dated segment of the original core and the bottom of the new/original core, such that the age at 41 cm is = 114 years old. This is a somewhat reasonable extrapolation for plotting purposes based on Flett's estimation that that slice in the original core is between 89 and 160 years old. 
+
+ TRK_dates <- all_dates %>%
+        filter(str_starts(sample_ID, "TRK")) %>%
+        left_join(TRK_metadata %>% select(-depth_top, -depth_bottom),
+                  by = "sample_ID") %>%
+        relocate(all_of(c(names(TRK_metadata)))) %>%
+        mutate(year_CE = 2025 - extrap_bottom_age_CRS) %>%
+        # remove TRK2_058
+        filter(!sample_ID %in% c("TRK2_058")) %>%
+        # replace extrap bottom from value in reconstructed core 
+        # to value in the original core.
+        mutate(extrap_top = if_else(sample_ID == "TRK2_082", NA, extrap_top),
+               extrap_bottom = if_else(sample_ID == "TRK2_082", 41, extrap_bottom))
+    
+      # NOTE 
+      # AGES CORRESPOND TO EXTRAP BOTTOM
+      # TRK ages come from lin-derived CRS
+  
+TRK_adm <- age_depth_model(TRK_dates, 
+                           depth = extrap_bottom,
+                           age = year_CE)
+
+plot(TRK_adm)
 ```
 
 ## Create age-depth models
@@ -679,27 +666,6 @@ plot(LFM_adm,
      ylab="Age (year AD)",
      main="Lower Fourmile Lake") # You'll want to include these in your thesis- IAO
 
-  
-# Repeat for TRK
-# TRK_dates_clean <- TRK_dates %>% # filter to remove nas
-#   filter(!is.na(extrap_bottom) & !is.na(year_CE)) 
-
-TRK_adm <- age_depth_model(TRK_dates_try,
-                             depth = extrap_bottom,
-                             age = year_CE)
-#For comparison  - IAO
-TRK_adm2 <- age_depth_model(TRK_dates,
-                             depth = extrap_bottom,
-                             age = year_CE)
-
-
-plot(TRK_adm,
-     xlab="Depth (cm)",
-     ylab="Age (year AD)",
-     main="Turkey Creek Lake") # You'll want to include these in your thesis - IAO
-
-plot(TRK_adm2)
-
 ```
 
 ## Interpolate dates & join to dfs - TRK
@@ -716,7 +682,7 @@ plot(TRK_adm2)
 # dates_clean length (lowest extrap_bottom)
   # UFM: 5 cm
   # LFM: 18 cm
-  # TRK: 11 cm
+  # TRK: 11 cm (10.75)
 
 # NOTE: SWITCHING HERE FROM EXTRAP BOTTOM TO REGULAR depth_bottom
 
@@ -724,47 +690,6 @@ plot(TRK_adm2)
 TRK_interp <- predict(TRK_adm, depth = seq(0.25, 41, 0.25)) %>%
   mutate(year_CE = age) %>%
   select(depth, year_CE)
-
-#For comparison  - IAO
-TRK_interp2 <- predict(TRK_adm2, depth = seq(0.25, 41, 0.25)) %>%
-  mutate(year_CE = age) %>%
-  select(depth, year_CE)
-
-# Bella's code
-#Compare the two
-TRK_interp_B <- TRK_interp %>%
-  rename(depth_interp=depth)
-TRK_interp2_B <- TRK_interp2 %>%
-  rename(depth_interp2=depth)
-TRK_interp_compare <- full_join(TRK_interp_B,
-                               TRK_interp2_B) 
-
-# JIP attempt:
-TRK_interp_C <- TRK_interp %>%
-  rename(year_interp = year_CE)
-TRK_interp2_C <- TRK_interp2 %>%
-  rename(year_interp2 = year_CE)
-TRK_interp_compare_JIP <- full_join(TRK_interp_C, TRK_interp2_C)
-
-# View(TRK_interp_compare)
-#IAO - added this step here to compare TRK_adm using TRK_dates_try vs
-
-TRK_interp_compare %>%
-  ggplot(aes(x=depth_interp, 
-             y=depth_interp2))+
-  geom_point()+
-  geom_abline(slope=1, intercept=0)
-# Only difference is one doesn't go back as far- identical ages.
-
-TRK_interp_compare_JIP %>%
-  ggplot(aes(x=year_interp,
-             y=year_interp2))+
-  geom_point()+
-  geom_abline(slope=1, intercept=0)
-# same from 2022.359 to ~1975
-
-
-
 
 ## create new columns in the interp df based on the ending digits of depth
 ## to easily join the interpolated ages later
@@ -835,7 +760,7 @@ TRK_short <- TRK_short %>%
     by = "sample_ID"
   )
 
-View(TRK_wide %>% select(lake_name:bd, year_CE_top: duration))
+# View(TRK_wide %>% select(lake_name:bd, year_CE_top:duration))
 ```
 
 ## Interpolate dates & join to dfs - UFM
