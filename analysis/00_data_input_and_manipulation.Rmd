@@ -1074,6 +1074,8 @@ ggplot(TRK_short %>% filter(!is.na(year_CE_plot), !is.na(s)), # remove na values
 
 #Mass flux calculations (pigments)
 ```{r}
+View(LFM_short_extrap)
+
 # start with TRK
 TRK_wide <- TRK_wide %>%
   mutate(

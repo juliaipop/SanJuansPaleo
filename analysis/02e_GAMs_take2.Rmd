@@ -2459,6 +2459,44 @@ ggsave("figures/LFM_perC.png",
        height=5,
        width=8,
        units="in")
+
+ggplot(LFM_short_extrap) +
+  #Add a box to show the reader the time period for interpretation
+    geom_rect(
+    mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
+    data = highlight_data, 
+    alpha = 0.1,
+    fill = "blue",
+    inherit.aes = FALSE) + 
+  geom_point(aes(year_plot_extrap, percent.C)) +
+  geom_ribbon(data = pred,
+              aes(x = year_plot_extrap, ymin = lower, ymax = upper),
+              alpha = 0.2) +
+  geom_line(data = pred,
+            aes(x = year_plot_extrap, y = fit),
+            linewidth = 1,
+            color = "black") +
+  geom_line(data = pred2,
+            aes(x = year_plot_extrap, y = fit,
+                color = change_type,
+                group = seg_id),
+            linewidth = 1) +
+  # add points for C.Mar (scaled to fit this axis)
+  geom_point(aes(year_plot_extrap, C.mar * 1000 + 4),
+             color = "red", shape = 15, size = 2) +
+  geom_line(aes(year_plot_extrap, C.mar * 1000 + 4),
+            color = "red", linetype = "dashed") +
+  scale_color_manual(values = c("sig. inc." = "#CC9933",
+                                "sig. dec." = "#2f6cad"),
+                     name ="Statistic") +
+  # scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  scale_y_continuous(
+    name = "Total Carbon (%)",
+    sec.axis = sec_axis(~ . / 1000 - 1/250, name = "Carbon MAR")
+  ) +
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("Lower Fourmile Lake")
+
 ```
 
 
@@ -2631,6 +2669,43 @@ ggsave("figures/LFM_perN.png",
        height=5,
        width=8,
        units="in")
+
+ggplot(LFM_short_extrap) +
+  #Add a box to show the reader the time period for interpretation
+    geom_rect(
+    mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
+    data = highlight_data, 
+    alpha = 0.1,
+    fill = "blue",
+    inherit.aes = FALSE) + 
+  geom_point(aes(year_plot_extrap, percent.N)) +
+  geom_ribbon(data = pred,
+              aes(x = year_plot_extrap, ymin = lower, ymax = upper),
+              alpha = 0.2) +
+  geom_line(data = pred,
+            aes(x = year_plot_extrap, y = fit),
+            linewidth = 1,
+            color = "black") +
+  geom_line(data = pred2,
+            aes(x = year_plot_extrap, y = fit,
+                color = change_type,
+                group = seg_id),
+            linewidth = 1) +
+ # add points for N.Mar (scaled to fit this axis)
+  geom_point(aes(year_plot_extrap, N.mar * 2000),
+             color = "red", shape = 15, size = 2) +
+  geom_line(aes(year_plot_extrap, N.mar * 2000),
+            color = "red", linetype = "dashed") +
+  scale_color_manual(values = c("sig. inc." = "#CC9933",
+                                "sig. dec." = "#2f6cad"),
+                     name ="Statistic") +
+  # scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  scale_y_continuous(
+    name = "Total Nitrogen (%)",
+    sec.axis = sec_axis(~ . / 2000, name = "Nitrogen MAR")) +
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("Lower Fourmile Lake")
+
 ```
 
 ## C:N -> wierd data distribution!
@@ -3713,6 +3788,7 @@ ggsave("figures/LFM_PI.png",
        height=5,
        width=8,
        units="in")
+
 ```
 
 # UFM
@@ -4198,6 +4274,39 @@ ggsave("figures/UFM_perC.png",
        height=5,
        width=8,
        units="in")
+
+
+ggplot(UFM_short_extrap) +
+  #Add a box to show the reader the time period for interpretation
+    geom_rect(
+    mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
+    data = highlight_data, 
+    alpha = 0.1,
+    fill = "blue",
+    inherit.aes = FALSE) + 
+  geom_point(aes(year_plot_extrap, percent.C)) +
+  geom_ribbon(data = pred,
+              aes(x = year_plot_extrap, ymin = lower, ymax = upper),
+              alpha = 0.2) +
+  geom_line(data = pred,
+            aes(x = year_plot_extrap, y = fit),
+            linewidth = 1,
+            color = "black") +
+ # add points for C.Mar (scaled to fit this axis)
+  geom_point(aes(year_plot_extrap, C.mar * 5000),
+             color = "red", shape = 15, size = 2) +
+  geom_line(aes(year_plot_extrap, C.mar * 5000),
+            color = "red", linetype = "dashed") +
+  scale_color_manual(values = c("sig. inc." = "#CC9933",
+                                "sig. dec." = "#2f6cad"),
+                     name ="Statistic") +
+  # scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  scale_y_continuous(
+    name = "Total Carbon (%)",
+    sec.axis = sec_axis(~ . / 5000, name = "Carbon MAR")) +
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("Upper Fourmile Lake")
+  
 ```
 
 
@@ -4368,6 +4477,43 @@ ggsave("figures/UFM_perN.png",
        height=5,
        width=8,
        units="in")
+
+ggplot(UFM_short_extrap) +
+  #Add a box to show the reader the time period for interpretation
+    geom_rect(
+    mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
+    data = highlight_data, 
+    alpha = 0.1,
+    fill = "blue",
+    inherit.aes = FALSE) + 
+  geom_point(aes(year_plot_extrap, percent.N)) +
+  geom_ribbon(data = pred,
+              aes(x = year_plot_extrap, ymin = lower, ymax = upper),
+              alpha = 0.2) +
+  geom_line(data = pred,
+            aes(x = year_plot_extrap, y = fit),
+            linewidth = 1,
+            color = "black") +
+# add points for N.Mar (scaled to fit this axis)
+  geom_point(aes(year_plot_extrap, N.mar * 10000),
+             color = "red", shape = 15, size = 2) +
+  geom_line(aes(year_plot_extrap, N.mar * 10000),
+            color = "red", linetype = "dashed") +
+#  geom_line(data = pred2,
+#            aes(x = year_plot_extrap, y = fit,
+#                color = change_type,
+#                group = seg_id),
+#            linewidth = 1) +
+  scale_color_manual(values = c("sig. inc." = "#CC9933",
+                                "sig. dec." = "#2f6cad"),
+                     name ="Statistic") +
+  scale_y_continuous(
+    name = "Total Nitrogen (%)",
+    sec.axis = sec_axis(~ . / 10000, name = "Nitrogen MAR")
+  ) +
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("Upper Fourmile Lake")
+
 ```
 
 ## C:N -> wierd data distribution!
