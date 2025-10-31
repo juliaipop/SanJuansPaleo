@@ -10,11 +10,11 @@
 ##
 ## ---------------------------
 
-install.packages(c("snotelr", "tidyverse","geosphere"))
-
-library(tidyverse)
-library(snotelr)
-library(geosphere)
+# install.packages(c("snotelr", "tidyverse","geosphere"))
+# 
+# library(tidyverse)
+# library(snotelr)
+# library(geosphere)
 
 
 
@@ -105,46 +105,6 @@ for (site in unique_snotel_site_ids) {
 
 
 
-# Graph SNOTEL data -------------------------------------------------------
-
-head(snow_phenology_df)
-
-# High interannual variability in maximum snow water equivelent
-snow_phenology_df %>%
-  ggplot(aes(y=max_swe, x=year))+
-  geom_point()+
-  geom_line()
-
-snow_phenology_df %>%
-  mutate(
-    # recalculate max_swe_doy for 1996.... 
-    # something went wrong in the function above
-    max_swe_doy = case_when(
-      year == 1996 ~ yday(max_swe_date),
-      TRUE ~ max_swe_doy
-    ),
-    # Convert DOY to a dummy date (e.g., year 2000)
-    max_swe_date_dummy = as.Date(max_swe_doy - 1, origin = "2000-01-01")
-  ) %>%
-  ggplot(aes(x = year, y = max_swe_date_dummy)) +
-  geom_point() +
-  geom_line() +
-  scale_y_date(
-    date_labels = "%b %d",   # show month/day (e.g., Mar 15)
-    date_breaks = "1 month"
-  ) +
-  labs(
-    y = "Date of Maximum SWE",
-    x = "Year"
-  ) 
-
-
-snotel_data_combined %>%
-  mutate(water_year = dataRetrieval::calcWaterYear(date)) %>%
-  ggplot(aes(x=date, y=snow_water_equivalent)) +
-  geom_point() +
-  facet_wrap(.~water_year, scales="free_x") +
-  geom_vline(xintercept=snow_phenology_df$max_swe_date) 
 
 # gridMET -----------------------------------------------------------------------------
 #pull gridMET data based on given site coords.
@@ -154,13 +114,13 @@ snotel_data_combined %>%
 #this code uses the package climateR (p good documentation on this github repo): https://github.com/mikejohnson51/climateR
 
 
-remotes::install_github("mikejohnson51/AOI")
-remotes::install_github("mikejohnson51/climateR")
-install.packages("sf")
-
-library(AOI)
-library(climateR)
-library(sf)
+# remotes::install_github("mikejohnson51/AOI")
+# remotes::install_github("mikejohnson51/climateR")
+# install.packages("sf")
+# 
+# library(AOI)
+# library(climateR)
+# library(sf)
 
 
 
@@ -233,7 +193,7 @@ gridmet_data$tmmx <- gridmet_data$tmmx - 273.15
 
 
 #final df:
-View(gridmet_data)
+# View(gridmet_data)
   
   
   
@@ -293,59 +253,4 @@ total_WY_snowfall <- gridmet_data_snow %>%
   
 #final dfs: gridmet_data (this one has no snow or calculated values); gridmet_data_snow (has snow estimated from precip and temp, and mean temp estimated from min/max); total_WY_snowfall (just estimated snowfall for each water year/site)
 
-
-# Graph the gridmet data --------------------------------------------------
-gridmet_data %>%
-  mutate(year=year(date))%>%
-  group_by(year) %>%
-  summarize(pdsi=median(pdsi, na.rm=TRUE)) %>%
-  ggplot(aes(x=year, y=pdsi))+
-  geom_point()+
-  geom_line()
-
-gridmet_data %>%
-  mutate(month=month(date),
-         year=year(date))%>%
-  group_by(month,year) %>%
-  summarize(pdsi=median(pdsi, na.rm=TRUE)) %>%
-  ggplot(aes(x=year, y=pdsi))+
-  geom_point()+
-  geom_line()+
-  facet_wrap(~month)+
-  labs(y="Mean monthly PDSI")+
-  geom_smooth(method="gam")
-
-
-total_WY_snowfall %>%
-  ggplot(aes(x=water_year, y=total_snowfall))+
-  geom_point()+
-  geom_smooth(method="lm")
-
-#How does this compare to estimates from SNOTEL?
-head(snotel_data_combined)
-total_WY_snowfall_SNOTEL <- snotel_data_combined %>%
-  mutate(snowfall = case_when(
-    temperature_mean < 0 ~ precipitation,
-    temperature_mean >= 0 & temperature_mean <= 6 ~ pmax(0, precipitation - 0.1678 * temperature_mean), 
-    temperature_mean > 6 ~ 0
-  )) %>%
-  mutate(water_year = dataRetrieval::calcWaterYear(date)) %>%
-  group_by(water_year) %>%
-  summarize(total_snowfall = sum(snowfall, na.rm = TRUE), .groups = "drop")
-
-total_WY_snowfall_SNOTEL %>%
-  filter(total_snowfall > 0) %>%
-  ggplot(aes(x=water_year, y=total_snowfall))+
-  geom_point()+
-  geom_smooth(method="lm")
-
-#Compare directly
-full_join(total_WY_snowfall %>% rename(total_snowfall_gridmet=total_snowfall),
-          total_WY_snowfall_SNOTEL %>% rename(total_snowfall_snotel=total_snowfall)) %>%
-  filter(total_snowfall_snotel > 0) %>%
-  ggplot(aes(x=total_snowfall_gridmet,
-             y=total_snowfall_snotel)) +
-  geom_point(aes(color=water_year))+
-  geom_abline(slope=1,
-              intercept=0)
 
