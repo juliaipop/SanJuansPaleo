@@ -162,6 +162,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
+TRK_d15N <- 
 ggplot(TRK_short) +
     #Add a box to show the reader the time period for interpretation
     geom_rect(
@@ -190,6 +191,7 @@ ggplot(TRK_short) +
   ylab(expression(paste(delta^{15}, "N (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Turkey Creek Lake")
+TRK_d15N #Saves the plot as an object -- need to do this this way for arranging plots with patchwork() later
 
 ggsave("figures/TRK_d15N.png",
        dpi=600,
@@ -205,7 +207,7 @@ Use TRK_short to be able to plot all the data vs. time, but model only the inter
 
 # check later how weights, corCAR1 compare. 
     
-mod_d13C_TRK <- gamm(d13C ~ s(year_plot_extrap, k = 10), 
+mod_d13C_TRK <- gamm(d13C ~ s(year_plot_extrap, k = 15), 
                      family = gaussian(link = "identity"), 
                      data = TRK_short,
                      method = "REML")
@@ -315,7 +317,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(TRK_short) +
+TRK_d13C <- ggplot(TRK_short) +
     #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -343,6 +345,7 @@ ggplot(TRK_short) +
   ylab(expression(paste(delta^{13}, "C (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Turkey Creek Lake")
+TRK_d13C
 
 ggsave("figures/TRK_d13C.png",
        dpi=600,
