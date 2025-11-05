@@ -50,24 +50,24 @@ Model the full timeseries from year_plot_extrap instead of year_plot_extrap - IA
     sum(!is.na(TRK_short$year_plot_extrap)) # 41 observations. 
 
 # try with and without corCAR1, then examine the residuals. 
-mod_d15N_TRK <- gamm(d15N ~ s(year_plot_extrap, k = 10), 
+mod_d15N_TRK <- gam(d15N ~ s(year_plot_extrap, k = 10), 
                      family = gaussian(link = "identity"), 
                      data = TRK_short,
                      method = "REML")
 
-summary(mod_d15N_TRK$lme)
+summary(mod_d15N_TRK)
 
-resid_values_d15N_TRK <- residuals(mod_d15N_TRK$lme, type = "normalized")
+resid_values_d15N_TRK <- residuals(mod_d15N_TRK, type = "response")
 acf(resid_values_d15N_TRK) # looks good!
 
 ## summary object for use in document
-d15NSumm_TRK <- summary(mod_d15N_TRK$gam)
+d15NSumm_TRK <- summary(mod_d15N_TRK)
 d15NSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_d15N_TRK$gam)
+gam.check(mod_d15N_TRK)
 par(mfrow = c(1, 1)) 
 
 
@@ -81,7 +81,7 @@ d15NYear_TRK <- with(TRK_short,
                      data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
 
 d15NYear_TRK <- cbind(d15NYear_TRK,
-                      data.frame(predict(mod_d15N_TRK$gam, d15NYear_TRK,
+                      data.frame(predict(mod_d15N_TRK, d15NYear_TRK,
                                          type="response", se.fit = TRUE)))
 
 ### this calculates on the link scale 
@@ -207,23 +207,23 @@ Use TRK_short to be able to plot all the data vs. time, but model only the inter
 
 # check later how weights, corCAR1 compare. 
     
-mod_d13C_TRK <- gamm(d13C ~ s(year_plot_extrap, k = 15), 
+mod_d13C_TRK <- gam(d13C ~ s(year_plot_extrap, k = 15), 
                      family = gaussian(link = "identity"), 
                      data = TRK_short,
                      method = "REML")
 
-summary(mod_d13C_TRK$lme) # using REML - good.
+summary(mod_d13C_TRK) # using REML - good.
 
-resid_values_d13C_TRK <- residuals(mod_d13C_TRK$lme, type = "normalized")
+resid_values_d13C_TRK <- residuals(mod_d13C_TRK, type = "response")
 acf(resid_values_d13C_TRK) # has neg lag
 
 ## summary object for use in document
-d13CSumm_TRK <- summary(mod_d13C_TRK$gam)
+d13CSumm_TRK <- summary(mod_d13C_TRK)
 d13CSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_d13C_TRK$gam)
+gam.check(mod_d13C_TRK)
 par(mfrow = c(1, 1)) 
 
 
@@ -235,7 +235,7 @@ d13CYear_TRK <- with(TRK_short,
                      data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
 
 d13CYear_TRK <- cbind(d13CYear_TRK,
-                      data.frame(predict(mod_d13C_TRK$gam, d13CYear_TRK,
+                      data.frame(predict(mod_d13C_TRK, d13CYear_TRK,
                                          type="response", se.fit = TRUE)))
 
 ### this calculates on the link scale 
@@ -366,24 +366,24 @@ ggsave("figures/TRK_d13C.png",
 # check later how weights, corCAR1 compare. 
     
 # drop the "ex" for simplicity now that we know the dataset shouldn't affect the outcomes. 
-mod_perC_TRK <- gamm(percent.C ~ s(year_plot_extrap, k = 10), 
+mod_perC_TRK <- gam(percent.C ~ s(year_plot_extrap, k = 10), 
                      family=Gamma(link="log"),  
                      data = TRK_short,
                      # REML only works for gaussian data
                      method = "ML")
 
-summary(mod_perC_TRK$lme) # using ML because of the Gamma family designation
+summary(mod_perC_TRK) # using ML because of the Gamma family designation
 
-resid_values_perC_TRK <- residuals(mod_perC_TRK$lme, type = "normalized")
+resid_values_perC_TRK <- residuals(mod_perC_TRK, type = "response")
 acf(resid_values_perC_TRK) # acf looks good
 
 ## summary object for use in document
-perCSumm_TRK <- summary(mod_perC_TRK$gam)
+perCSumm_TRK <- summary(mod_perC_TRK)
 perCSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_perC_TRK$gam)
+gam.check(mod_perC_TRK)
 par(mfrow = c(1, 1)) 
 
 ### now transform response variable (in this case percent.C): 
@@ -404,7 +404,7 @@ perCYear_TRK <- with(TRK_short,
 # predict fit (response variable) and se for perCYear_TRK on the link scale
 # if you do type = "response" se might still be on the link scale
 perCYear_TRK <- cbind(perCYear_TRK,
-                      data.frame(predict(mod_perC_TRK$gam, perCYear_TRK,
+                      data.frame(predict(mod_perC_TRK, perCYear_TRK,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -580,25 +580,25 @@ ggplot(TRK_short) +
 # check later how weights, corCAR1 compare. 
     
 # drop the "ex" for simplicity now that we know the dataset shouldn't affect the outcomes. 
-mod_perN_TRK <- gamm(percent.N ~ s(year_plot_extrap, k = 10), 
+mod_perN_TRK <- gam(percent.N ~ s(year_plot_extrap, k = 10), 
                      family=Gamma(link="log"),  
                      data = TRK_short,
                      # REML only works for gaussian data
                      method = "ML")
 
-summary(mod_perN_TRK$lme) # using ML because of the Gamma family designation
+summary(mod_perN_TRK) # using ML because of the Gamma family designation
 
-resid_values_perN_TRK <- residuals(mod_perN_TRK$lme, type = "normalized")
+resid_values_perN_TRK <- residuals(mod_perN_TRK, type = "response")
 acf(resid_values_perN_TRK) 
 # negative response at lag 1
 
 ## summary object for use in document
-perNSumm_TRK <- summary(mod_perN_TRK$gam)
+perNSumm_TRK <- summary(mod_perN_TRK)
 perNSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_perN_TRK$gam)
+gam.check(mod_perN_TRK)
 par(mfrow = c(1, 1)) 
 
 ### now transform response variable (in this case percent.N): 
@@ -619,7 +619,7 @@ perNYear_TRK <- with(TRK_short,
 # predict fit (response variable) and se for perNYear_TRK on the link scale
 # if you do type = "response" se might still be on the link scale
 perNYear_TRK <- cbind(perNYear_TRK,
-                      data.frame(predict(mod_perN_TRK$gam, perNYear_TRK,
+                      data.frame(predict(mod_perN_TRK, perNYear_TRK,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -797,18 +797,26 @@ ggplot(TRK_short) +
   hist(log(TRK_short$C.N))
   # data is left skewed, log transform makes it worse? in this case it looks a little better?
     
-mod_CN_TRK <- gamm(C.N ~ s(year_plot_extrap, k = 10), 
-                     family = gaussian(link = "identity"), 
-                     data = TRK_short,
-                   #  correlation = corCAR1(form = ~ year_plot_extrap),
-                     method = "REML")
+# mod_CN_TRK <- gamm(C.N ~ s(year_plot_extrap, k = 10), 
+#                      family = gaussian(link = "identity"), 
+#                      data = TRK_short,
+#                    #  correlation = corCAR1(form = ~ year_plot_extrap),
+#                      method = "REML")
 
-AIC(mod_CN_TRK$lme) 
-summary(mod_CN_TRK$lme)
+# IAO - version 2 with Gamma because data are left-skewed, all positive
+mod_CN_TRK <- gam(C.N ~ s(year_plot_extrap, k = 20),
+                     family=Gamma(link="log"),  
+                     data = TRK_short,
+                     # REML only works for gaussian data
+                     method = "ML")
+summary(mod_CN_TRK)$dev.expl  # deviance explained
+
+AIC(mod_CN_TRK)
+summary(mod_CN_TRK)
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_CN_TRK$gam)
+gam.check(mod_CN_TRK)
 par(mfrow = c(1, 1)) 
 
 # p value too low if you change anything (add car 1 etc.)
