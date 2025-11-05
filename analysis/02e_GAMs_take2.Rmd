@@ -552,7 +552,7 @@ ggplot(TRK_short) +
             color = "black") +
   # secondary y-axis
   scale_y_continuous(
-    name = "Total Carbon (%)",
+    name = "Total C (%)",
     sec.axis = sec_axis(~ . / 1000, name = "Carbon MAR")
   ) +
 #  geom_line(data = pred2,
@@ -730,7 +730,7 @@ TRK_percN <- ggplot(TRK_short) +
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
-  ylab("Total Nitrogen (%)") +
+  ylab("Total N (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Turkey Creek Lake")
 TRK_percN
@@ -772,7 +772,7 @@ ggplot(TRK_short) +
                      name ="Statistic") +
    # secondary y-axis
   scale_y_continuous(
-    name = "Total Nitrogen (%)",
+    name = "Total N (%)",
     sec.axis = sec_axis(~ . / 1000, name = "Nitrogen MAR")
   ) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
@@ -797,7 +797,7 @@ ggplot(TRK_short) +
   hist(log(TRK_short$C.N))
   # data is left skewed, log transform makes it worse? in this case it looks a little better?
     
-# mod_CN_TRK <- gamm(C.N ~ s(year_plot_extrap, k = 10), 
+# mod_CN_TRK <- gam(C.N ~ s(year_plot_extrap, k = 10), 
 #                      family = gaussian(link = "identity"), 
 #                      data = TRK_short,
 #                    #  correlation = corCAR1(form = ~ year_plot_extrap),
@@ -822,12 +822,12 @@ par(mfrow = c(1, 1))
 
 # p value too low if you change anything (add car 1 etc.)
 
-    resid_values_CN_TRK <- residuals(mod_CN_TRK$lme, type = "response")
+    resid_values_CN_TRK <- residuals(mod_CN_TRK, type = "response")
     acf(resid_values_CN_TRK) 
     # residuals significant, def structured, corCAR1 helps a little but sample size is too small to use it.
     
 ## summary object for use in document
-CNSumm_TRK <- summary(mod_CN_TRK$gam)
+CNSumm_TRK <- summary(mod_CN_TRK)
 CNSumm_TRK #Gives you the P values, degrees of freedom...
 
 
@@ -844,7 +844,7 @@ CNYear_TRK <- with(TRK_short,
 
 # predict fit (response variable) and se for perCYear_TRK on the response scale
 CNYear_TRK <- cbind(CNYear_TRK,
-                      data.frame(predict(mod_CN_TRK$gam, CNYear_TRK,
+                      data.frame(predict(mod_CN_TRK, CNYear_TRK,
                                          type="response", se.fit = TRUE)))
 
 # calculate 95% CIs, on the response scale 
@@ -932,7 +932,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(TRK_short) +
+TRK_CN <- ggplot(TRK_short) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -960,6 +960,7 @@ ggplot(TRK_short) +
   ylab("C.N ratio") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Turkey Creek Lake")
+TRK_CN
 
 ggsave("figures/TRK_CN.png",
        dpi=600,
@@ -2483,7 +2484,7 @@ LFM_percC <- ggplot(LFM_short_extrap) +
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
-  ylab("Total Carbon (%)") +
+  ylab("Total C (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Lower Fourmile Lake")
 LFM_percC
@@ -2525,7 +2526,7 @@ ggplot(LFM_short_extrap) +
                      name ="Statistic") +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   scale_y_continuous(
-    name = "Total Carbon (%)",
+    name = "Total C (%)",
     sec.axis = sec_axis(~ . / 1000 - 1/250, name = "Carbon MAR")
   ) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
@@ -2694,7 +2695,7 @@ LFM_percN <- ggplot(LFM_short_extrap) +
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
-  ylab("Total Nitrogen (%)") +
+  ylab("Total N (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Lower Fourmile Lake")
 LFM_percN
@@ -2736,7 +2737,7 @@ ggplot(LFM_short_extrap) +
                      name ="Statistic") +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   scale_y_continuous(
-    name = "Total Nitrogen (%)",
+    name = "Total N (%)",
     sec.axis = sec_axis(~ . / 2000, name = "Nitrogen MAR")) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Lower Fourmile Lake")
@@ -4310,7 +4311,7 @@ UFM_percC <- ggplot(UFM_short_extrap) +
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
-  ylab("Total Carbon (%)") +
+  ylab("Total C (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
 UFM_percC
@@ -4348,7 +4349,7 @@ ggplot(UFM_short_extrap) +
                      name ="Statistic") +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   scale_y_continuous(
-    name = "Total Carbon (%)",
+    name = "Total C (%)",
     sec.axis = sec_axis(~ . / 5000, name = "Carbon MAR")) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
@@ -4514,7 +4515,7 @@ UFM_percN <- ggplot(UFM_short_extrap) +
   scale_color_manual(values = c("sig. inc." = "#CC9933",
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
-  ylab("Total Nitrogen (%)") +
+  ylab("Total N (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
 UFM_percN
@@ -4555,7 +4556,7 @@ ggplot(UFM_short_extrap) +
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
   scale_y_continuous(
-    name = "Total Nitrogen (%)",
+    name = "Total N (%)",
     sec.axis = sec_axis(~ . / 10000, name = "Nitrogen MAR")
   ) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
@@ -5652,8 +5653,58 @@ ggsave("figures/UFM_PI.png",
 
 # Compile figures
 ## Figure 2? 3? SIA
-
+Want to arrange the plot so you have 5 rows (%C, %N, C:N, d15N, d13C) 
+then 3 columns (LFM, TRK, UFM)
+Use the patchwork R package
 ```{r}
 
+#Row 1 
+( LFM_percC + theme(axis.title.x=element_blank())) +
+            (UFM_percC + theme(axis.title.y=element_blank(),
+                               axis.title.x=element_blank()))  + 
+            (TRK_percC + theme(axis.title.y=element_blank(),
+                               axis.title.x=element_blank())) + 
+
+#Row 2
+( LFM_percN + theme(axis.title.x=element_blank(),
+                    plot.title = element_blank())) + 
+  (UFM_percN + theme(axis.title.y=element_blank(),
+                               axis.title.x=element_blank(),
+                               plot.title = element_blank())) + 
+              (TRK_percN + theme(axis.title.y=element_blank(),
+                               axis.title.x=element_blank(),
+                               plot.title = element_blank())) + 
+#Row 3
+  ( LFM_CN + theme(axis.title.x=element_blank(),
+                    plot.title = element_blank())) + (UFM_CN + theme(axis.title.y=element_blank(),
+                                                                     plot.title = element_blank(),
+                                                                     axis.title.x=element_blank()))  +  (TRK_CN + theme(axis.title.y=element_blank(),
+                                                                                                                        plot.title = element_blank(),
+                                                                                                                        axis.title.x=element_blank()))  + 
+  
+#Row 4  
+ ( LFM_d13C + theme(axis.title.x=element_blank(),
+                    plot.title = element_blank())) + (UFM_d13C + theme(axis.title.y=element_blank(),
+                                                                       plot.title = element_blank(),
+                                                                       axis.title.x=element_blank())) + (TRK_d13C + theme(axis.title.y=element_blank(),
+                                                                                                                          plot.title = element_blank(),
+                                                                                                                          axis.title.x=element_blank())) + 
+
+#Row 5
+   ( LFM_d15N + theme(axis.title.x=element_blank(),
+                    plot.title = element_blank())) + (UFM_d15N + theme(axis.title.y=element_blank(),
+                                                                       plot.title = element_blank()))  +  (TRK_d15N + theme(axis.title.y=element_blank(),
+                                                                                                                            plot.title = element_blank(),
+                                                                                                                            axis.title.x=element_blank())) +
+
+    plot_layout(ncol = 3, nrow=5) +
+  plot_layout(guides = 'collect') & # a single legend
+ theme(legend.position = "bottom")
+
+ggsave("figures/FigureX_carbon_nitrogen.png",
+       dpi=600,
+       height=6,
+       width=8,
+       units="in")
 ```
 
