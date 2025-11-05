@@ -705,7 +705,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(TRK_short) +
+TRK_percN <- ggplot(TRK_short) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -733,6 +733,7 @@ ggplot(TRK_short) +
   ylab("Total Nitrogen (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Turkey Creek Lake")
+TRK_percN
 
 ggsave("figures/TRK_perN.png",
        dpi=600,
