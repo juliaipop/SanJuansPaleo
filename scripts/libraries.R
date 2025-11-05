@@ -36,7 +36,7 @@ pacman::p_load("tidyverse",#incldues dplyr, tidyr, tibble, ggplot2, stringr, etc
                "scam",
                "grid",# for unit.pmax(), unit.list()
                "schoenberg",
-               "patchwork" #arrange plots)
+               "patchwork") #arrange plots
 
 
 # loading cowplot overrides the ggplot default theme: to set it back, run
