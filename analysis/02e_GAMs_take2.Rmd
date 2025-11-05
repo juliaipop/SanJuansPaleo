@@ -1136,6 +1136,7 @@ TRK_total_algae <- ggplot(TRK_short) +
   ylab(expression("pheophytin a ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Turkey Creek Lake")
+TRK_total_algae
 
 ggsave("figures/TRK_pheo_a.png",
        dpi=600,
@@ -2678,7 +2679,7 @@ LFM_percN <- ggplot(LFM_short_extrap) +
     alpha = 0.1,
     fill = "blue",
     inherit.aes = FALSE) + 
-  geom_point(aes(year_plot_extrap, percent.N)) +
+  geom_point(aes(year_plot_extrap, percent.N), size=0.5) +
   geom_ribbon(data = pred,
               aes(x = year_plot_extrap, ymin = lower, ymax = upper),
               alpha = 0.2) +
@@ -5659,21 +5660,27 @@ Use the patchwork R package
 ```{r}
 
 #Row 1 
-( LFM_percC + theme(axis.title.x=element_blank())) +
+( LFM_percC + theme(axis.title.x=element_blank(),
+                    axis.text.x=element_blank())) +
             (UFM_percC + theme(axis.title.y=element_blank(),
-                               axis.title.x=element_blank()))  + 
+                               axis.title.x=element_blank(),
+                               axis.text.x=element_blank()))  + 
             (TRK_percC + theme(axis.title.y=element_blank(),
-                               axis.title.x=element_blank())) + 
+                               axis.title.x=element_blank(),
+                               axis.text.x=element_blank())) + 
 
 #Row 2
 ( LFM_percN + theme(axis.title.x=element_blank(),
-                    plot.title = element_blank())) + 
+                    plot.title = element_blank(),
+                    axis.text.x=element_blank())) + 
   (UFM_percN + theme(axis.title.y=element_blank(),
                                axis.title.x=element_blank(),
-                               plot.title = element_blank())) + 
+                               plot.title = element_blank(),
+                     axis.text.x=element_blank())) + 
               (TRK_percN + theme(axis.title.y=element_blank(),
                                axis.title.x=element_blank(),
-                               plot.title = element_blank())) + 
+                               plot.title = element_blank(),
+                               axis.text.x=element_blank())) + 
 #Row 3
   ( LFM_CN + theme(axis.title.x=element_blank(),
                     plot.title = element_blank())) + 
@@ -5704,13 +5711,17 @@ Use the patchwork R package
                    axis.title.x=element_blank())) +
 
 plot_layout(ncol = 3, nrow=5) +
-plot_layout(guides = 'collect') & # a single legend
-theme(legend.position = "bottom")
+plot_layout(guides = 'collect') +  # a single legend 
+  plot_annotation(tag_levels = 'a') & # https://patchwork.data-imaginist.com/articles/guides/annotation.html
+
+theme(legend.position = "bottom") &
+  scale_x_continuous(breaks=seq(1860,2020,by=40),
+                     limits=c(1860,2020)) 
 
 ggsave("figures/FigureX_carbon_nitrogen.png",
        dpi=600,
-       height=6,
-       width=8,
+       height=8,
+       width=12,
        units="in")
 ```
 
