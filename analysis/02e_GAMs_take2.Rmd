@@ -5676,30 +5676,36 @@ Use the patchwork R package
                                plot.title = element_blank())) + 
 #Row 3
   ( LFM_CN + theme(axis.title.x=element_blank(),
-                    plot.title = element_blank())) + (UFM_CN + theme(axis.title.y=element_blank(),
-                                                                     plot.title = element_blank(),
-                                                                     axis.title.x=element_blank()))  +  (TRK_CN + theme(axis.title.y=element_blank(),
-                                                                                                                        plot.title = element_blank(),
-                                                                                                                        axis.title.x=element_blank()))  + 
+                    plot.title = element_blank())) + 
+  (UFM_CN + theme(axis.title.y=element_blank(),
+                  plot.title = element_blank(),
+                  axis.title.x=element_blank()))  + 
+  (TRK_CN + theme(axis.title.y=element_blank(),
+                 plot.title = element_blank(),
+                 axis.title.x=element_blank()))  + 
   
 #Row 4  
  ( LFM_d13C + theme(axis.title.x=element_blank(),
-                    plot.title = element_blank())) + (UFM_d13C + theme(axis.title.y=element_blank(),
-                                                                       plot.title = element_blank(),
-                                                                       axis.title.x=element_blank())) + (TRK_d13C + theme(axis.title.y=element_blank(),
-                                                                                                                          plot.title = element_blank(),
-                                                                                                                          axis.title.x=element_blank())) + 
+                    plot.title = element_blank())) + 
+  (UFM_d13C + theme(axis.title.y=element_blank(),
+                    plot.title = element_blank(),
+                    axis.title.x=element_blank())) +
+  (TRK_d13C + theme(axis.title.y=element_blank(),
+                    plot.title = element_blank(),
+                    axis.title.x=element_blank())) + 
 
 #Row 5
    ( LFM_d15N + theme(axis.title.x=element_blank(),
-                    plot.title = element_blank())) + (UFM_d15N + theme(axis.title.y=element_blank(),
-                                                                       plot.title = element_blank()))  +  (TRK_d15N + theme(axis.title.y=element_blank(),
-                                                                                                                            plot.title = element_blank(),
-                                                                                                                            axis.title.x=element_blank())) +
+                    plot.title = element_blank())) +
+  (UFM_d15N + theme(axis.title.y=element_blank(),
+                    plot.title = element_blank()))  +
+  (TRK_d15N + theme(axis.title.y=element_blank(),
+                   plot.title = element_blank(),
+                   axis.title.x=element_blank())) +
 
-    plot_layout(ncol = 3, nrow=5) +
-  plot_layout(guides = 'collect') & # a single legend
- theme(legend.position = "bottom")
+plot_layout(ncol = 3, nrow=5) +
+plot_layout(guides = 'collect') & # a single legend
+theme(legend.position = "bottom")
 
 ggsave("figures/FigureX_carbon_nitrogen.png",
        dpi=600,
