@@ -50,24 +50,24 @@ Model the full timeseries from year_plot_extrap instead of year_plot_extrap - IA
     sum(!is.na(TRK_short$year_plot_extrap)) # 41 observations. 
 
 # try with and without corCAR1, then examine the residuals. 
-mod_d15N_TRK <- gamm(d15N ~ s(year_plot_extrap, k = 10), 
+mod_d15N_TRK <- gam(d15N ~ s(year_plot_extrap, k = 10), 
                      family = gaussian(link = "identity"), 
                      data = TRK_short,
                      method = "REML")
 
-summary(mod_d15N_TRK$lme)
+summary(mod_d15N_TRK)
 
-resid_values_d15N_TRK <- residuals(mod_d15N_TRK$lme, type = "normalized")
+resid_values_d15N_TRK <- residuals(mod_d15N_TRK, type = "response")
 acf(resid_values_d15N_TRK) # looks good!
 
 ## summary object for use in document
-d15NSumm_TRK <- summary(mod_d15N_TRK$gam)
+d15NSumm_TRK <- summary(mod_d15N_TRK)
 d15NSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_d15N_TRK$gam)
+gam.check(mod_d15N_TRK)
 par(mfrow = c(1, 1)) 
 
 
@@ -81,7 +81,7 @@ d15NYear_TRK <- with(TRK_short,
                      data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
 
 d15NYear_TRK <- cbind(d15NYear_TRK,
-                      data.frame(predict(mod_d15N_TRK$gam, d15NYear_TRK,
+                      data.frame(predict(mod_d15N_TRK, d15NYear_TRK,
                                          type="response", se.fit = TRUE)))
 
 ### this calculates on the link scale 
@@ -162,6 +162,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
+TRK_d15N <- 
 ggplot(TRK_short) +
     #Add a box to show the reader the time period for interpretation
     geom_rect(
@@ -190,6 +191,7 @@ ggplot(TRK_short) +
   ylab(expression(paste(delta^{15}, "N (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Turkey Creek Lake")
+TRK_d15N #Saves the plot as an object -- need to do this this way for arranging plots with patchwork() later
 
 ggsave("figures/TRK_d15N.png",
        dpi=600,
@@ -205,23 +207,23 @@ Use TRK_short to be able to plot all the data vs. time, but model only the inter
 
 # check later how weights, corCAR1 compare. 
     
-mod_d13C_TRK <- gamm(d13C ~ s(year_plot_extrap, k = 10), 
+mod_d13C_TRK <- gam(d13C ~ s(year_plot_extrap, k = 15), 
                      family = gaussian(link = "identity"), 
                      data = TRK_short,
                      method = "REML")
 
-summary(mod_d13C_TRK$lme) # using REML - good.
+summary(mod_d13C_TRK) # using REML - good.
 
-resid_values_d13C_TRK <- residuals(mod_d13C_TRK$lme, type = "normalized")
+resid_values_d13C_TRK <- residuals(mod_d13C_TRK, type = "response")
 acf(resid_values_d13C_TRK) # has neg lag
 
 ## summary object for use in document
-d13CSumm_TRK <- summary(mod_d13C_TRK$gam)
+d13CSumm_TRK <- summary(mod_d13C_TRK)
 d13CSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_d13C_TRK$gam)
+gam.check(mod_d13C_TRK)
 par(mfrow = c(1, 1)) 
 
 
@@ -233,7 +235,7 @@ d13CYear_TRK <- with(TRK_short,
                      data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
 
 d13CYear_TRK <- cbind(d13CYear_TRK,
-                      data.frame(predict(mod_d13C_TRK$gam, d13CYear_TRK,
+                      data.frame(predict(mod_d13C_TRK, d13CYear_TRK,
                                          type="response", se.fit = TRUE)))
 
 ### this calculates on the link scale 
@@ -315,7 +317,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(TRK_short) +
+TRK_d13C <- ggplot(TRK_short) +
     #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -343,6 +345,7 @@ ggplot(TRK_short) +
   ylab(expression(paste(delta^{13}, "C (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Turkey Creek Lake")
+TRK_d13C
 
 ggsave("figures/TRK_d13C.png",
        dpi=600,
@@ -363,24 +366,24 @@ ggsave("figures/TRK_d13C.png",
 # check later how weights, corCAR1 compare. 
     
 # drop the "ex" for simplicity now that we know the dataset shouldn't affect the outcomes. 
-mod_perC_TRK <- gamm(percent.C ~ s(year_plot_extrap, k = 10), 
+mod_perC_TRK <- gam(percent.C ~ s(year_plot_extrap, k = 10), 
                      family=Gamma(link="log"),  
                      data = TRK_short,
                      # REML only works for gaussian data
                      method = "ML")
 
-summary(mod_perC_TRK$lme) # using ML because of the Gamma family designation
+summary(mod_perC_TRK) # using ML because of the Gamma family designation
 
-resid_values_perC_TRK <- residuals(mod_perC_TRK$lme, type = "normalized")
+resid_values_perC_TRK <- residuals(mod_perC_TRK, type = "response")
 acf(resid_values_perC_TRK) # acf looks good
 
 ## summary object for use in document
-perCSumm_TRK <- summary(mod_perC_TRK$gam)
+perCSumm_TRK <- summary(mod_perC_TRK)
 perCSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_perC_TRK$gam)
+gam.check(mod_perC_TRK)
 par(mfrow = c(1, 1)) 
 
 ### now transform response variable (in this case percent.C): 
@@ -401,7 +404,7 @@ perCYear_TRK <- with(TRK_short,
 # predict fit (response variable) and se for perCYear_TRK on the link scale
 # if you do type = "response" se might still be on the link scale
 perCYear_TRK <- cbind(perCYear_TRK,
-                      data.frame(predict(mod_perC_TRK$gam, perCYear_TRK,
+                      data.frame(predict(mod_perC_TRK, perCYear_TRK,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -489,7 +492,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(TRK_short) +
+TRK_percC <- ggplot(TRK_short) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -517,6 +520,7 @@ ggplot(TRK_short) +
   ylab("Total Carbon (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Turkey Creek Lake")
+TRK_percC
 
 ggsave("figures/TRK_perC.png",
        dpi=600,
@@ -548,7 +552,7 @@ ggplot(TRK_short) +
             color = "black") +
   # secondary y-axis
   scale_y_continuous(
-    name = "Total Carbon (%)",
+    name = "Total C (%)",
     sec.axis = sec_axis(~ . / 1000, name = "Carbon MAR")
   ) +
 #  geom_line(data = pred2,
@@ -576,25 +580,25 @@ ggplot(TRK_short) +
 # check later how weights, corCAR1 compare. 
     
 # drop the "ex" for simplicity now that we know the dataset shouldn't affect the outcomes. 
-mod_perN_TRK <- gamm(percent.N ~ s(year_plot_extrap, k = 10), 
+mod_perN_TRK <- gam(percent.N ~ s(year_plot_extrap, k = 10), 
                      family=Gamma(link="log"),  
                      data = TRK_short,
                      # REML only works for gaussian data
                      method = "ML")
 
-summary(mod_perN_TRK$lme) # using ML because of the Gamma family designation
+summary(mod_perN_TRK) # using ML because of the Gamma family designation
 
-resid_values_perN_TRK <- residuals(mod_perN_TRK$lme, type = "normalized")
+resid_values_perN_TRK <- residuals(mod_perN_TRK, type = "response")
 acf(resid_values_perN_TRK) 
 # negative response at lag 1
 
 ## summary object for use in document
-perNSumm_TRK <- summary(mod_perN_TRK$gam)
+perNSumm_TRK <- summary(mod_perN_TRK)
 perNSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_perN_TRK$gam)
+gam.check(mod_perN_TRK)
 par(mfrow = c(1, 1)) 
 
 ### now transform response variable (in this case percent.N): 
@@ -615,7 +619,7 @@ perNYear_TRK <- with(TRK_short,
 # predict fit (response variable) and se for perNYear_TRK on the link scale
 # if you do type = "response" se might still be on the link scale
 perNYear_TRK <- cbind(perNYear_TRK,
-                      data.frame(predict(mod_perN_TRK$gam, perNYear_TRK,
+                      data.frame(predict(mod_perN_TRK, perNYear_TRK,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -701,7 +705,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(TRK_short) +
+TRK_percN <- ggplot(TRK_short) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -726,9 +730,10 @@ ggplot(TRK_short) +
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
-  ylab("Total Nitrogen (%)") +
+  ylab("Total N (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Turkey Creek Lake")
+TRK_percN
 
 ggsave("figures/TRK_perN.png",
        dpi=600,
@@ -767,7 +772,7 @@ ggplot(TRK_short) +
                      name ="Statistic") +
    # secondary y-axis
   scale_y_continuous(
-    name = "Total Nitrogen (%)",
+    name = "Total N (%)",
     sec.axis = sec_axis(~ . / 1000, name = "Nitrogen MAR")
   ) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
@@ -792,28 +797,37 @@ ggplot(TRK_short) +
   hist(log(TRK_short$C.N))
   # data is left skewed, log transform makes it worse? in this case it looks a little better?
     
-mod_CN_TRK <- gamm(C.N ~ s(year_plot_extrap, k = 10), 
-                     family = gaussian(link = "identity"), 
-                     data = TRK_short,
-                   #  correlation = corCAR1(form = ~ year_plot_extrap),
-                     method = "REML")
+# mod_CN_TRK <- gam(C.N ~ s(year_plot_extrap, k = 10), 
+#                      family = gaussian(link = "identity"), 
+#                      data = TRK_short,
+#                    #  correlation = corCAR1(form = ~ year_plot_extrap),
+#                      method = "REML")
 
-AIC(mod_CN_TRK$lme) 
-summary(mod_CN_TRK$lme)
+# IAO - version 2 with Gamma because data are left-skewed, all positive
+mod_CN_TRK <- gam(C.N ~ s(year_plot_extrap, k = 20),
+                     family=Gamma(link="log"),  
+                     data = TRK_short,
+                     # REML only works for gaussian data
+                     method = "ML")
+
+summary(mod_CN_TRK)$dev.expl  # deviance explained
+
+AIC(mod_CN_TRK)
+summary(mod_CN_TRK)
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_CN_TRK$gam)
+gam.check(mod_CN_TRK)
 par(mfrow = c(1, 1)) 
 
 # p value too low if you change anything (add car 1 etc.)
 
-    resid_values_CN_TRK <- residuals(mod_CN_TRK$lme, type = "normalized")
+    resid_values_CN_TRK <- residuals(mod_CN_TRK, type = "response")
     acf(resid_values_CN_TRK) 
     # residuals significant, def structured, corCAR1 helps a little but sample size is too small to use it.
     
 ## summary object for use in document
-CNSumm_TRK <- summary(mod_CN_TRK$gam)
+CNSumm_TRK <- summary(mod_CN_TRK)
 CNSumm_TRK #Gives you the P values, degrees of freedom...
 
 
@@ -830,7 +844,7 @@ CNYear_TRK <- with(TRK_short,
 
 # predict fit (response variable) and se for perCYear_TRK on the response scale
 CNYear_TRK <- cbind(CNYear_TRK,
-                      data.frame(predict(mod_CN_TRK$gam, CNYear_TRK,
+                      data.frame(predict(mod_CN_TRK, CNYear_TRK,
                                          type="response", se.fit = TRUE)))
 
 # calculate 95% CIs, on the response scale 
@@ -918,7 +932,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(TRK_short) +
+TRK_CN <- ggplot(TRK_short) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -946,6 +960,7 @@ ggplot(TRK_short) +
   ylab("C.N ratio") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Turkey Creek Lake")
+TRK_CN
 
 ggsave("figures/TRK_CN.png",
        dpi=600,
@@ -964,25 +979,25 @@ ggsave("figures/TRK_CN.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_pheoa_TRK <- gamm(pheo_a_nmol_gTC ~ s(year_plot_extrap, k = 10),
+mod_pheoa_TRK <- gam(pheo_a_nmol_gTC ~ s(year_plot_extrap, k = 10),
                      family=Gamma(link="log"),  
                      data = TRK_short,
                      # REML only works for gaussian data
                      method = "ML")
 
 
-summary(mod_pheoa_TRK$lme) # using ML because of the Gamma family designation
+summary(mod_pheoa_TRK) # using ML because of the Gamma family designation
 
-resid_values_pheoa_TRK <- residuals(mod_pheoa_TRK$lme, type = "normalized")
-acf(resid_values_pheoa_TRK) # looks good!
+resid_values_pheoa_TRK <- residuals(mod_pheoa_TRK, type = "response")
+acf(resid_values_pheoa_TRK) 
 
 ## summary object for use in document
-pheoaSumm_TRK <- summary(mod_pheoa_TRK$gam)
+pheoaSumm_TRK <- summary(mod_pheoa_TRK)
 pheoaSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_pheoa_TRK$gam)
+gam.check(mod_pheoa_TRK)
 par(mfrow = c(1, 1)) 
 
 ### now transform response variable:
@@ -991,6 +1006,7 @@ fam # this is a list of 13
 ilink <- fam$linkinv
 ilink 
 
+plot(mod_pheoa_TRK)
 ### NOW PLOT! ###
 N <- 300    # number of points at which to evaluate the splines
 
@@ -1003,7 +1019,7 @@ pheoaYear_TRK <- with(TRK_short,
 # predict fit (response variable) and se for perCYear_TRK on the link scale
 # if you do type = "response" se might still be on the link scale
 pheoaYear_TRK <- cbind(pheoaYear_TRK,
-                      data.frame(predict(mod_pheoa_TRK$gam, pheoaYear_TRK,
+                      data.frame(predict(mod_pheoa_TRK, pheoaYear_TRK,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -1092,7 +1108,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(TRK_short) +
+TRK_total_algae <- ggplot(TRK_short) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -1136,25 +1152,25 @@ ggsave("figures/TRK_pheo_a.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_greens_TRK <- gamm(greens ~ s(year_plot_extrap, k = 10),
+mod_greens_TRK <- gam(greens ~ s(year_plot_extrap, k = 10),
                      family=Gamma(link="log"),  
                      data = TRK_short,
                      # REML only works for gaussian data
                      method = "ML")
 
 
-summary(mod_greens_TRK$lme) # using ML because of the Gamma family designation
+summary(mod_greens_TRK) # using ML because of the Gamma family designation
 
-resid_values_greens_TRK <- residuals(mod_greens_TRK$lme, type = "normalized")
+resid_values_greens_TRK <- residuals(mod_greens_TRK, type = "response")
 acf(resid_values_greens_TRK) # looks good!
 
 ## summary object for use in document
-greensSumm_TRK <- summary(mod_greens_TRK$gam)
+greensSumm_TRK <- summary(mod_greens_TRK)
 greensSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_greens_TRK$gam)
+gam.check(mod_greens_TRK)
 par(mfrow = c(1, 1)) 
 
 
@@ -1176,7 +1192,7 @@ greensYear_TRK <- with(TRK_short,
 # predict fit (response variable) and se for perCYear_TRK on the link scale
 # if you do type = "response" se might still be on the link scale
 greensYear_TRK <- cbind(greensYear_TRK,
-                      data.frame(predict(mod_greens_TRK$gam, greensYear_TRK,
+                      data.frame(predict(mod_greens_TRK, greensYear_TRK,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -1265,7 +1281,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(TRK_short) +
+TRK_greens <- ggplot(TRK_short) +
    #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -1293,6 +1309,7 @@ ggplot(TRK_short) +
   ylab(expression("pheo b & lutein ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Turkey Creek Lake")
+TRK_greens
 
 ggsave("figures/TRK_greens.png",
        dpi=600,
@@ -1310,24 +1327,24 @@ ggsave("figures/TRK_greens.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_diato_TRK <- gamm(diato_nmol_gTC ~ s(year_plot_extrap, k = 10),
+mod_diato_TRK <- gam(diato_nmol_gTC ~ s(year_plot_extrap, k = 20),
                      family=Gamma(link="log"),  
                      data = TRK_short,
                      # REML only works for gaussian data
                      method = "ML")
 
-summary(mod_diato_TRK$lme) # using ML because of the Gamma family designation
+summary(mod_diato_TRK) # using ML because of the Gamma family designation
 
-resid_values_diato_TRK <- residuals(mod_diato_TRK$lme, type = "normalized")
+resid_values_diato_TRK <- residuals(mod_diato_TRK, type = "response")
 acf(resid_values_diato_TRK) # same negative acf right at lag 1, not huge though
 
 ## summary object for use in document
-diatoSumm_TRK <- summary(mod_diato_TRK$gam)
+diatoSumm_TRK <- summary(mod_diato_TRK)
 diatoSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_diato_TRK$gam)
+gam.check(mod_diato_TRK)
 par(mfrow = c(1, 1)) 
 
       # not great... k=index less than 1, though p-value is fine
@@ -1350,7 +1367,7 @@ diatoYear_TRK <- with(TRK_short,
 # predict fit (response variable) and se for perCYear_TRK on the link scale
 # if you do type = "response" se might still be on the link scale
 diatoYear_TRK <- cbind(diatoYear_TRK,
-                      data.frame(predict(mod_diato_TRK$gam, diatoYear_TRK,
+                      data.frame(predict(mod_diato_TRK, diatoYear_TRK,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -1439,7 +1456,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(TRK_short) +
+TRK_diatoms<-ggplot(TRK_short) +
    #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -1467,6 +1484,7 @@ ggplot(TRK_short) +
   ylab(expression("diatoxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Turkey Creek Lake")
+TRK_diatoms
 
 ggsave("figures/TRK_diato.png",
        dpi=600,
@@ -1484,24 +1502,31 @@ ggsave("figures/TRK_diato.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_allo_TRK <- gamm(allo_nmol_gTC ~ s(year_plot_extrap, k = 10),
-                     family=Gamma(link="log"),  
+# mod_allo_TRK <- gam(allo_nmol_gTC ~ s(year_plot_extrap, k = 20),
+#                      family=Gamma(link="log"),  
+#                      data = TRK_short,
+#                      # REML only works for gaussian data
+#                      method = "ML")
+
+#Gaussian model fit looked better. There were really large error bars
+  # with the Gamma distribution
+mod_allo_TRK <- gam(allo_nmol_gTC ~ s(year_plot_extrap, k = 15), 
+                     family = gaussian(link = "identity"), 
                      data = TRK_short,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
-summary(mod_allo_TRK$lme) # using ML because of the Gamma family designation
+summary(mod_allo_TRK) # using ML because of the Gamma family designation
 
-resid_values_allo_TRK <- residuals(mod_allo_TRK$lme, type = "normalized")
+resid_values_allo_TRK <- residuals(mod_allo_TRK, type = "response")
 acf(resid_values_allo_TRK) # looks good!
 
 ## summary object for use in document
-alloSumm_TRK <- summary(mod_allo_TRK$gam)
+alloSumm_TRK <- summary(mod_allo_TRK)
 alloSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_allo_TRK$gam)
+gam.check(mod_allo_TRK)
 par(mfrow = c(1, 1)) 
 
       # not great...? k=index = 1, though p-value is fine
@@ -1524,7 +1549,7 @@ alloYear_TRK <- with(TRK_short,
 # predict fit (response variable) and se for perCYear_TRK on the link scale
 # if you do type = "response" se might still be on the link scale
 alloYear_TRK <- cbind(alloYear_TRK,
-                      data.frame(predict(mod_allo_TRK$gam, alloYear_TRK,
+                      data.frame(predict(mod_allo_TRK, alloYear_TRK,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -1613,7 +1638,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(TRK_short) +
+TRK_allo <- ggplot(TRK_short) +
    #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -1641,6 +1666,7 @@ ggplot(TRK_short) +
   ylab(expression("alloxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Turkey Creek Lake")
+TRK_allo 
 
 ggsave("figures/TRK_allo.png",
        dpi=600,
@@ -1695,24 +1721,24 @@ ggplot(TRK_short) +
 
     # check later how weights, corCAR1 compare. 
     
-mod_cyanos_TRK <- gamm(cyanos ~ s(year_plot_extrap, k = 10),
+mod_cyanos_TRK <- gam(cyanos ~ s(year_plot_extrap, k = 20),
                      family=Gamma(link="log"),  
                      data = TRK_short,
                      # REML only works for gaussian data
                      method = "ML")
 
-summary(mod_cyanos_TRK$lme) # using ML because of the Gamma family designation
+summary(mod_cyanos_TRK) # using ML because of the Gamma family designation
 
-resid_values_cyanos_TRK <- residuals(mod_cyanos_TRK$lme, type = "normalized")
+resid_values_cyanos_TRK <- residuals(mod_cyanos_TRK, type = "response")
 acf(resid_values_cyanos_TRK) # looks good
 
 ## summary object for use in document
-cyanosSumm_TRK <- summary(mod_cyanos_TRK$gam)
+cyanosSumm_TRK <- summary(mod_cyanos_TRK)
 cyanosSumm_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_cyanos_TRK$gam)
+gam.check(mod_cyanos_TRK)
 par(mfrow = c(1, 1)) 
 
 ### now transform response variable:
@@ -1733,7 +1759,7 @@ cyanosYear_TRK <- with(TRK_short,
 # predict fit (response variable) and se for perCYear_TRK on the link scale
 # if you do type = "response" se might still be on the link scale
 cyanosYear_TRK <- cbind(cyanosYear_TRK,
-                      data.frame(predict(mod_cyanos_TRK$gam, cyanosYear_TRK,
+                      data.frame(predict(mod_cyanos_TRK, cyanosYear_TRK,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -1822,7 +1848,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(TRK_short) +
+TRK_cyanos <- ggplot(TRK_short) +
    #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -1850,6 +1876,7 @@ ggplot(TRK_short) +
   ylab(expression("echinenone & canthaxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Turkey Creek Lake")
+TRK_cyanos
 
 ggsave("figures/TRK_cyanos.png",
        dpi=600,
@@ -1966,21 +1993,21 @@ LFM_short_extrap <- LFM_short_extrap %>%
 # Weights didn't help at all above. Model here without... 
     
 # try with and without corCAR1, then examine the residuals. 
-mod_d15N_LFM <- gamm(d15N ~ s(year_plot_extrap, k = 10), 
+mod_d15N_LFM <- gam(d15N ~ s(year_plot_extrap, k = 10), 
                      family = gaussian(link = "identity"), 
                      data = LFM_short_extrap,
                      method = "REML")
 
-mod_d15N_LFM_CAR1_ex <- gamm(d15N ~ s(year_plot_extrap, k = 10), 
+mod_d15N_LFM_CAR1_ex <- gam(d15N ~ s(year_plot_extrap, k = 10), 
                      family = gaussian(link = "identity"), 
                      data = LFM_short_extrap,
                      correlation = corCAR1(form = ~ year_plot_extrap),
                      method = "REML")
 
-summary(mod_d15N_LFM_CAR1_ex$lme) # no longer overriding reml! that's good.
+summary(mod_d15N_LFM_CAR1_ex) # no longer overriding reml! that's good.
 
-resid_values_ex <- residuals(mod_d15N_LFM$lme, type = "normalized")       # no CAR(1)
-resid_values_CAR1_ex <- residuals(mod_d15N_LFM_CAR1_ex$lme, type = "normalized")   # with CAR(1)
+resid_values_ex <- residuals(mod_d15N_LFM, type = "response")       # no CAR(1)
+resid_values_CAR1_ex <- residuals(mod_d15N_LFM_CAR1_ex, type = "response")   # with CAR(1)
 all.equal(resid_values_ex, resid_values_CAR1_ex)  # Check if they are identical
 # same! so CAR1 isn't helping -> drop
 
@@ -1988,23 +2015,23 @@ acf(resid_values_ex)
 acf(resid_values_CAR1_ex)
 
 # examine again using AIC:
-AIC(mod_d15N_LFM$lme)   # without CAR(1): -0.57
-# AIC(mod_d15N_LFM_CAR1$lme) # with CAR(1) from before: -4.84 (don't compare, was with ML)
-AIC(mod_d15N_LFM_CAR1_ex$lme) # with CAR(1) now: 1.42
+AIC(mod_d15N_LFM)   # without CAR(1): -0.57
+# AIC(mod_d15N_LFM_CAR1) # with CAR(1) from before: -4.84 (don't compare, was with ML)
+AIC(mod_d15N_LFM_CAR1_ex) # with CAR(1) now: 1.42
 # lower AIC = better? better with CAR(1) still. 
 # AIC=2k−2ln(L), where k = # parameters, L = likelihood.
 
     ### DECISION: move forward with mod_d15N_LFM (no weights, no CAR1) ###
 
 ## summary object for use in document
-d15NSumm_LFM_ex <- summary(mod_d15N_LFM$gam)
+d15NSumm_LFM_ex <- summary(mod_d15N_LFM)
 d15NSumm_LFM_ex #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 
 
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_d15N_LFM$gam)
+gam.check(mod_d15N_LFM)
 par(mfrow = c(1, 1)) 
 
 
@@ -2019,7 +2046,7 @@ d15NYear_LFM_ex <- with(LFM_short_extrap,
                      data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
 
 d15NYear_LFM_ex <- cbind(d15NYear_LFM_ex,
-                      data.frame(predict(mod_d15N_LFM$gam, d15NYear_LFM_ex,
+                      data.frame(predict(mod_d15N_LFM, d15NYear_LFM_ex,
                                          type="response", se.fit = TRUE)))
 
 ### this calculates on the link scale 
@@ -2100,7 +2127,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(LFM_short_extrap) +
+LFM_d15N <- ggplot(LFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -2127,6 +2154,7 @@ ggplot(LFM_short_extrap) +
   ylab(expression(paste(delta^{15}, "N (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Lower Fourmile Lake")
+LFM_d15N
 
 ggsave("figures/LFM_d15N.png",
        dpi=600,
@@ -2140,26 +2168,31 @@ ggsave("figures/LFM_d15N.png",
 Use LFM_short_extrap to be able to plot all the data vs. time, but model only the interpolated dates. 
 ```{r}
 # check later how weights, corCAR1 compare. 
-    
+sum(!is.na(LFM_short_extrap$year_plot_extrap)) # 43 observations. 
+
+# use year_CE_plot instead?
+sum(!is.na(LFM_short_extrap$year_CE_plot)) # 18 observations. 
+
+
 # drop the "ex" for simplicity now that we know the dataset shouldn't affect the outcomes. 
-mod_d13C_LFM <- gamm(d13C ~ s(year_plot_extrap, k = 10), 
+mod_d13C_LFM <- gam(d13C ~ s(year_CE_plot, k = 10), 
                      family = gaussian(link = "identity"), 
                      data = LFM_short_extrap,
                      method = "REML")
 
-summary(mod_d13C_LFM$lme) # using REML - good.
+summary(mod_d13C_LFM) # using REML - good.
 
-resid_values_d13C_LFM <- residuals(mod_d13C_LFM$lme, type = "normalized")
+resid_values_d13C_LFM <- residuals(mod_d13C_LFM, type = "response")
 acf(resid_values_d13C_LFM) # no lag, looks good without...
 
 ## summary object for use in document
-d13CSumm_LFM <- summary(mod_d13C_LFM$gam)
+d13CSumm_LFM <- summary(mod_d13C_LFM)
 d13CSumm_LFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_d13C_LFM$gam)
+gam.check(mod_d13C_LFM)
 par(mfrow = c(1, 1)) 
 
 
@@ -2168,10 +2201,10 @@ N <- 300    # number of points at which to evaluate the splines
 
 # Second, if you're only concerned about the response, include "response" in type of predict()???
 d13CYear_LFM <- with(LFM_short_extrap, 
-                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
+                     data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
 d13CYear_LFM <- cbind(d13CYear_LFM,
-                      data.frame(predict(mod_d13C_LFM$gam, d13CYear_LFM,
+                      data.frame(predict(mod_d13C_LFM, d13CYear_LFM,
                                          type="response", se.fit = TRUE)))
 
 ### this calculates on the link scale 
@@ -2179,14 +2212,14 @@ d13CYear_LFM <- transform(d13CYear_LFM, upper = fit + (2 * se.fit), lower = fit 
 d13CYear_LFM$lake_ID <- 'LFM'
 
 ## Plot fitted trends
-ggplot(d13CYear_LFM, aes(x = year_plot_extrap, y = fit)) +
+ggplot(d13CYear_LFM, aes(x = year_CE_plot, y = fit)) +
   geom_ribbon(aes(ymin = (lower),
-                  ymax = (upper), x = year_plot_extrap),
+                  ymax = (upper), x = year_CE_plot),
               alpha = 0.2, inherit.aes = FALSE, fill = "black") +
-  geom_point(data = LFM_short_extrap, mapping = aes(x = year_plot_extrap, y = d13C), inherit.aes = FALSE) +
+  geom_point(data = LFM_short_extrap, mapping = aes(x = year_CE_plot, y = d13C), inherit.aes = FALSE) +
   geom_line() 
 
-# year_plot_extrap = year_plot_extrap where dates are interpolated. Can use either for plotting points.
+# year_CE_plot = year_CE_plot where dates are interpolated. Can use either for plotting points.
 
 #First derivatives using gratia package instead of the 
 #functions "helper_functions.R" (that Cale sent)
@@ -2197,7 +2230,7 @@ fd_inc
 
 #Add years for plotting
 years <- with(LFM_short_extrap,
-                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
+                     data.frame(year_CE_plot = seq(min(year_CE_plot, na.rm=TRUE), max(year_CE_plot, na.rm=TRUE), length.out = 200)))
 
 fd_inc <- cbind(fd_inc,years)
 
@@ -2205,7 +2238,7 @@ fd_inc <- cbind(fd_inc,years)
 fd_inc %>%
   select(-term) %>%
   pivot_longer(lower:upper) %>%
-  ggplot(aes(x=year_plot_extrap,y=value,linetype=name))+
+  ggplot(aes(x=year_CE_plot,y=value,linetype=name))+
   geom_line()+
     scale_linetype_manual(values = c(
     "lower" = "dashed", #lower 95% confidence interval
@@ -2233,9 +2266,9 @@ fd_inc_timing <- fd_inc %>%
 
 pred <- left_join(d13CYear_LFM,
                   fd_inc_timing %>% 
-                    select(year_plot_extrap, change_type), #select only 2 columns since
+                    select(year_CE_plot, change_type), #select only 2 columns since
                   #lower and upper have two different meanings in these 2 dataframes
-                  by="year_plot_extrap") 
+                  by="year_CE_plot") 
   # mutate(fit = ifelse(change_type == "sig. dec.", fit, NA))
 
 # Add a segment ID for plotting, so there there are multiple
@@ -2252,7 +2285,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(LFM_short_extrap) +
+LFM_d13C <- ggplot(LFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -2260,26 +2293,27 @@ ggplot(LFM_short_extrap) +
     alpha = 0.1,
     fill = "blue",
     inherit.aes = FALSE) + 
-  geom_point(aes(year_plot_extrap, d13C)) +
+  geom_point(aes(year_CE_plot, d13C)) +
   geom_ribbon(data = pred,
-              aes(x = year_plot_extrap, ymin = lower, ymax = upper),
+              aes(x = year_CE_plot, ymin = lower, ymax = upper),
               alpha = 0.2) +
   geom_line(data = pred,
-            aes(x = year_plot_extrap, y = fit),
+            aes(x = year_CE_plot, y = fit),
             linewidth = 1,
             color = "black") +
   geom_line(data = pred2,
-            aes(x = year_plot_extrap, y = fit,
+            aes(x = year_CE_plot, y = fit,
                 color = change_type,
                 group = seg_id),
             linewidth = 1) +
   scale_color_manual(values = c("sig. inc." = "#CC9933",
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
- #  scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  # scale_x_continuous(breaks=seq(1860,2025,by=25))+
   ylab(expression(paste(delta^{13}, "C (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Lower Fourmile Lake")
+LFM_d13C
 
 ggsave("figures/LFM_d13C.png",
        dpi=600,
@@ -2298,25 +2332,25 @@ ggsave("figures/LFM_d13C.png",
 # check later how weights, corCAR1 compare. 
     
 # drop the "ex" for simplicity now that we know the dataset shouldn't affect the outcomes. 
-mod_perC_LFM <- gamm(percent.C ~ s(year_plot_extrap, k = 10), 
+mod_perC_LFM <- gam(percent.C ~ s(year_plot_extrap, k = 10), 
                      family=Gamma(link="log"),  
                      data = LFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
-summary(mod_perC_LFM$lme) # using ML because of the Gamma family designation
+summary(mod_perC_LFM) # using ML because of the Gamma family designation
 
-resid_values_perC_LFM <- residuals(mod_perC_LFM$lme, type = "normalized")
+resid_values_perC_LFM <- residuals(mod_perC_LFM, type = "response")
 acf(resid_values_perC_LFM) 
 
 ## summary object for use in document
-perCSumm_LFM <- summary(mod_perC_LFM$gam)
+perCSumm_LFM <- summary(mod_perC_LFM)
 perCSumm_LFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_perC_LFM$gam)
+gam.check(mod_perC_LFM)
 par(mfrow = c(1, 1)) 
 
 ### now transform response variable (in this case percent.C): 
@@ -2337,7 +2371,7 @@ perCYear_LFM <- with(LFM_short_extrap,
 # predict fit (response variable) and se for perCYear_LFM on the link scale
 # if you do type = "response" se might still be on the link scale
 perCYear_LFM <- cbind(perCYear_LFM,
-                      data.frame(predict(mod_perC_LFM$gam, perCYear_LFM,
+                      data.frame(predict(mod_perC_LFM, perCYear_LFM,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -2425,7 +2459,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(LFM_short_extrap) +
+LFM_percC <- ggplot(LFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -2450,9 +2484,10 @@ ggplot(LFM_short_extrap) +
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
-  ylab("Total Carbon (%)") +
+  ylab("Total C (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Lower Fourmile Lake")
+LFM_percC
 
 ggsave("figures/LFM_perC.png",
        dpi=600,
@@ -2491,7 +2526,7 @@ ggplot(LFM_short_extrap) +
                      name ="Statistic") +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   scale_y_continuous(
-    name = "Total Carbon (%)",
+    name = "Total C (%)",
     sec.axis = sec_axis(~ . / 1000 - 1/250, name = "Carbon MAR")
   ) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
@@ -2509,26 +2544,26 @@ ggplot(LFM_short_extrap) +
 # check later how weights, corCAR1 compare. 
     
 # drop the "ex" for simplicity now that we know the dataset shouldn't affect the outcomes. 
-mod_perN_LFM <- gamm(percent.N ~ s(year_plot_extrap, k = 10), 
+mod_perN_LFM <- gam(percent.N ~ s(year_plot_extrap, k = 10), 
                      family=Gamma(link="log"),  
                      data = LFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
-summary(mod_perN_LFM$lme) # using ML because of the Gamma family designation
+summary(mod_perN_LFM) # using ML because of the Gamma family designation
 
-resid_values_perN_LFM <- residuals(mod_perN_LFM$lme, type = "normalized")
+resid_values_perN_LFM <- residuals(mod_perN_LFM, type = "response")
 acf(resid_values_perN_LFM) 
 # negative response at lag 1
 
 ## summary object for use in document
-perNSumm_LFM <- summary(mod_perN_LFM$gam)
+perNSumm_LFM <- summary(mod_perN_LFM)
 perNSumm_LFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_perN_LFM$gam)
+gam.check(mod_perN_LFM)
 par(mfrow = c(1, 1)) 
 
 ### now transform response variable (in this case percent.N): 
@@ -2549,7 +2584,7 @@ perNYear_LFM <- with(LFM_short_extrap,
 # predict fit (response variable) and se for perNYear_LFM on the link scale
 # if you do type = "response" se might still be on the link scale
 perNYear_LFM <- cbind(perNYear_LFM,
-                      data.frame(predict(mod_perN_LFM$gam, perNYear_LFM,
+                      data.frame(predict(mod_perN_LFM, perNYear_LFM,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -2635,7 +2670,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(LFM_short_extrap) +
+LFM_percN <- ggplot(LFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -2660,9 +2695,10 @@ ggplot(LFM_short_extrap) +
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
-  ylab("Total Nitrogen (%)") +
+  ylab("Total N (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Lower Fourmile Lake")
+LFM_percN
 
 ggsave("figures/LFM_perN.png",
        dpi=600,
@@ -2701,7 +2737,7 @@ ggplot(LFM_short_extrap) +
                      name ="Statistic") +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   scale_y_continuous(
-    name = "Total Nitrogen (%)",
+    name = "Total N (%)",
     sec.axis = sec_axis(~ . / 2000, name = "Nitrogen MAR")) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Lower Fourmile Lake")
@@ -2719,29 +2755,29 @@ ggplot(LFM_short_extrap) +
   hist(log(LFM_short_extrap$C.N))
   # data is left skewed, log transform makes it worse
     
-mod_CN_LFM <- gamm(C.N ~ s(year_plot_extrap, k = 10), 
+mod_CN_LFM <- gam(C.N ~ s(year_plot_extrap, k = 10), 
                      family = gaussian(link = "identity"), 
                      data = LFM_short_extrap,
                    #  correlation = corCAR1(form = ~ year_plot_extrap),
                      method = "REML")
 
-AIC(mod_CN_LFM$lme) 
-summary(mod_CN_LFM$lme)
+AIC(mod_CN_LFM) 
+summary(mod_CN_LFM)
 
 ### Check diagnostics. You might need to adjust model
 
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_CN_LFM$gam)
+gam.check(mod_CN_LFM)
 par(mfrow = c(1, 1)) 
 
 # p value too low if you change anything (add car 1 etc.)
 
-    resid_values_CN_LFM <- residuals(mod_CN_LFM$lme, type = "normalized")
+    resid_values_CN_LFM <- residuals(mod_CN_LFM, type = "response")
     acf(resid_values_CN_LFM) 
     # residuals significant, def structured, corCAR1 helps a little bit but sample size is too small to use it.
     
 ## summary object for use in document
-CNSumm_LFM <- summary(mod_CN_LFM$gam)
+CNSumm_LFM <- summary(mod_CN_LFM)
 CNSumm_LFM #Gives you the P values, degrees of freedom...
 
 
@@ -2758,7 +2794,7 @@ CNYear_LFM <- with(LFM_short_extrap,
 
 # predict fit (response variable) and se for perCYear_LFM on the response scale
 CNYear_LFM <- cbind(CNYear_LFM,
-                      data.frame(predict(mod_CN_LFM$gam, CNYear_LFM,
+                      data.frame(predict(mod_CN_LFM, CNYear_LFM,
                                          type="response", se.fit = TRUE)))
 
 # calculate 95% CIs, on the response scale 
@@ -2809,6 +2845,9 @@ fd_inc %>%
 # Anywhere the confidence intervals DONT overlap zero is a statistically
 # significant acceleration or deceleration in the trend
 
+plot(mod_CN_LFM, rug=TRUE, shade=TRUE)
+
+
 
 # When do they occur? You can check with an if/else type statement
 fd_inc_timing <- fd_inc %>%
@@ -2844,7 +2883,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(LFM_short_extrap) +
+LFM_CN <- ggplot(LFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -2872,6 +2911,7 @@ ggplot(LFM_short_extrap) +
   ylab("C:N ratio") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Lower Fourmile Lake")
+LFM_CN
 
 ggsave("figures/LFM_CN.png",
        dpi=600,
@@ -2888,25 +2928,25 @@ ggsave("figures/LFM_CN.png",
   hist(LFM_short_extrap$pheo_a_nmol_gTC)
   hist(log(LFM_short_extrap$pheo_a_nmol_gTC))
     
-mod_pheoa_LFM <- gamm(pheo_a_nmol_gTC ~ s(year_plot_extrap, k = 10),
+mod_pheoa_LFM <- gam(pheo_a_nmol_gTC ~ s(year_plot_extrap, k = 10),
                      family=Gamma(link="log"),  
                      data = LFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
 
-summary(mod_pheoa_LFM$lme) # using ML because of the Gamma family designation
+summary(mod_pheoa_LFM) # using ML because of the Gamma family designation
 
-resid_values_pheoa_LFM <- residuals(mod_pheoa_LFM$lme, type = "normalized")
+resid_values_pheoa_LFM <- residuals(mod_pheoa_LFM, type = "response")
 acf(resid_values_pheoa_LFM) # looks good!
 
 ## summary object for use in document
-pheoaSumm_LFM <- summary(mod_pheoa_LFM$gam)
+pheoaSumm_LFM <- summary(mod_pheoa_LFM)
 pheoaSumm_LFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_pheoa_LFM$gam)
+gam.check(mod_pheoa_LFM)
 par(mfrow = c(1, 1)) 
 
 ### now transform response variable:
@@ -2927,7 +2967,7 @@ pheoaYear_LFM <- with(LFM_short_extrap,
 # predict fit (response variable) and se for perCYear_LFM on the link scale
 # if you do type = "response" se might still be on the link scale
 pheoaYear_LFM <- cbind(pheoaYear_LFM,
-                      data.frame(predict(mod_pheoa_LFM$gam, pheoaYear_LFM,
+                      data.frame(predict(mod_pheoa_LFM, pheoaYear_LFM,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -3015,7 +3055,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(LFM_short_extrap) +
+LFM_total_algae <- ggplot(LFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -3043,6 +3083,7 @@ ggplot(LFM_short_extrap) +
   ylab(expression("pheophytin a ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Lower Fourmile Lake")
+LFM_total_algae
 
 ggsave("figures/LFM_pheo_a.png",
        dpi=600,
@@ -3059,26 +3100,26 @@ ggsave("figures/LFM_pheo_a.png",
 
 # check later how weights, corCAR1 compare. 
     
-mod_greens_LFM <- gamm(greens ~ s(year_plot_extrap, k = 10),
+mod_greens_LFM <- gam(greens ~ s(year_plot_extrap, k = 10),
                      family=Gamma(link="log"),  
                      data = LFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
 
-summary(mod_greens_LFM$lme) # using ML because of the Gamma family designation
+summary(mod_greens_LFM) # using ML because of the Gamma family designation
 
-resid_values_greens_LFM <- residuals(mod_greens_LFM$lme, type = "normalized")
+resid_values_greens_LFM <- residuals(mod_greens_LFM, type = "response")
 acf(resid_values_greens_LFM) # looks good!
 
 ## summary object for use in document
-greensSumm_LFM <- summary(mod_greens_LFM$gam)
+greensSumm_LFM <- summary(mod_greens_LFM)
 greensSumm_LFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_greens_LFM$gam)
+gam.check(mod_greens_LFM)
 par(mfrow = c(1, 1)) 
 
 ### now transform response variable:
@@ -3099,7 +3140,7 @@ greensYear_LFM <- with(LFM_short_extrap,
 # predict fit (response variable) and se for perCYear_LFM on the link scale
 # if you do type = "response" se might still be on the link scale
 greensYear_LFM <- cbind(greensYear_LFM,
-                      data.frame(predict(mod_greens_LFM$gam, greensYear_LFM,
+                      data.frame(predict(mod_greens_LFM, greensYear_LFM,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -3187,7 +3228,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(LFM_short_extrap) +
+LFM_greens <- ggplot(LFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -3215,6 +3256,7 @@ ggplot(LFM_short_extrap) +
   ylab(expression("pheo b & lutein ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Lower Fourmile Lake")
+LFM_greens
 
 ggsave("figures/LFM_greens.png",
        dpi=600,
@@ -3231,25 +3273,25 @@ ggsave("figures/LFM_greens.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_diato_LFM <- gamm(diato_nmol_gTC ~ s(year_plot_extrap, k = 10),
+mod_diato_LFM <- gam(diato_nmol_gTC ~ s(year_plot_extrap, k = 10),
                      family=Gamma(link="log"),  
                      data = LFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
-summary(mod_diato_LFM$lme) # using ML because of the Gamma family designation
+summary(mod_diato_LFM) # using ML because of the Gamma family designation
 
-resid_values_diato_LFM <- residuals(mod_diato_LFM$lme, type = "normalized")
+resid_values_diato_LFM <- residuals(mod_diato_LFM, type = "response")
 acf(resid_values_diato_LFM) # looks good
 
 ## summary object for use in document
-diatoSumm_LFM <- summary(mod_diato_LFM$gam)
+diatoSumm_LFM <- summary(mod_diato_LFM)
 diatoSumm_LFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_diato_LFM$gam)
+gam.check(mod_diato_LFM)
 par(mfrow = c(1, 1)) 
 
       # not great... k=index less than 1, though p-value is fine
@@ -3272,7 +3314,7 @@ diatoYear_LFM <- with(LFM_short_extrap,
 # predict fit (response variable) and se for perCYear_LFM on the link scale
 # if you do type = "response" se might still be on the link scale
 diatoYear_LFM <- cbind(diatoYear_LFM,
-                      data.frame(predict(mod_diato_LFM$gam, diatoYear_LFM,
+                      data.frame(predict(mod_diato_LFM, diatoYear_LFM,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -3360,7 +3402,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(LFM_short_extrap) +
+LFM_diatoms <- ggplot(LFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -3388,6 +3430,7 @@ ggplot(LFM_short_extrap) +
   ylab(expression("diatoxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Lower Fourmile Lake")
+LFM_diatoms
 
 ggsave("figures/LFM_diato.png",
        dpi=600,
@@ -3404,24 +3447,24 @@ ggsave("figures/LFM_diato.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_allo_LFM <- gamm(allo_nmol_gTC ~ s(year_plot_extrap, k = 10),
+mod_allo_LFM <- gam(allo_nmol_gTC ~ s(year_plot_extrap, k = 10),
                      family=Gamma(link="log"),  
                      data = LFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
-summary(mod_allo_LFM$lme) # using ML because of the Gamma family designation
+summary(mod_allo_LFM) # using ML because of the Gamma family designation
 
-resid_values_allo_LFM <- residuals(mod_allo_LFM$lme, type = "normalized")
+resid_values_allo_LFM <- residuals(mod_allo_LFM, type = "response")
 acf(resid_values_allo_LFM) # looks good!
 
 ## summary object for use in document
-alloSumm_LFM <- summary(mod_allo_LFM$gam)
+alloSumm_LFM <- summary(mod_allo_LFM)
 alloSumm_LFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_allo_LFM$gam)
+gam.check(mod_allo_LFM)
 par(mfrow = c(1, 1)) 
 
       # not great...? k=index = 1, though p-value is fine
@@ -3444,7 +3487,7 @@ alloYear_LFM <- with(LFM_short_extrap,
 # predict fit (response variable) and se for perCYear_LFM on the link scale
 # if you do type = "response" se might still be on the link scale
 alloYear_LFM <- cbind(alloYear_LFM,
-                      data.frame(predict(mod_allo_LFM$gam, alloYear_LFM,
+                      data.frame(predict(mod_allo_LFM, alloYear_LFM,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -3576,25 +3619,25 @@ ggsave("figures/LFM_allo.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_cyanos_LFM <- gamm(cyanos ~ s(year_plot_extrap, k = 10),
+mod_cyanos_LFM <- gam(cyanos ~ s(year_plot_extrap, k = 10),
                      family=Gamma(link="log"),  
                      data = LFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
-summary(mod_cyanos_LFM$lme) # using ML because of the Gamma family designation
+summary(mod_cyanos_LFM) # using ML because of the Gamma family designation
 
-resid_values_cyanos_LFM <- residuals(mod_cyanos_LFM$lme, type = "normalized")
+resid_values_cyanos_LFM <- residuals(mod_cyanos_LFM, type = "response")
 acf(resid_values_cyanos_LFM) # looks good
 
 ## summary object for use in document
-cyanosSumm_LFM <- summary(mod_cyanos_LFM$gam)
+cyanosSumm_LFM <- summary(mod_cyanos_LFM)
 cyanosSumm_LFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_cyanos_LFM$gam)
+gam.check(mod_cyanos_LFM)
 par(mfrow = c(1, 1)) 
 
 ### now transform response variable:
@@ -3615,7 +3658,7 @@ cyanosYear_LFM <- with(LFM_short_extrap,
 # predict fit (response variable) and se for perCYear_LFM on the link scale
 # if you do type = "response" se might still be on the link scale
 cyanosYear_LFM <- cbind(cyanosYear_LFM,
-                      data.frame(predict(mod_cyanos_LFM$gam, cyanosYear_LFM,
+                      data.frame(predict(mod_cyanos_LFM, cyanosYear_LFM,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -3703,7 +3746,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(LFM_short_extrap) +
+LFM_cyanos <- ggplot(LFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -3731,6 +3774,7 @@ ggplot(LFM_short_extrap) +
   ylab(expression("echinenone & canthaxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Lower Fourmile Lake")
+LFM_cyanos
 
 ggsave("figures/LFM_cyanos.png",
        dpi=600,
@@ -3809,22 +3853,22 @@ UFM_short_extrap <- UFM_short_extrap %>%
     sum(!is.na(UFM_short_extrap$year_plot_extrap)) # 43 observations
 
 # try with and without corCAR1, then examine the residuals. 
-mod_d15N_UFM <- gamm(d15N ~ s(year_plot_extrap, k = 10), 
+mod_d15N_UFM <- gam(d15N ~ s(year_plot_extrap, k = 5), 
                      family = gaussian(link = "identity"), 
                      data = UFM_short_extrap,
                      method = "REML")
 
-summary(mod_d15N_UFM$lme)
+summary(mod_d15N_UFM)
 
-resid_values_d15N_UFM <- residuals(mod_d15N_UFM$lme, type = "normalized")
+resid_values_d15N_UFM <- residuals(mod_d15N_UFM, type = "response")
 acf(resid_values_d15N_UFM) # looks good!
 
 ## summary object for use in document
-d15NSumm_UFM <- summary(mod_d15N_UFM$gam)
+d15NSumm_UFM <- summary(mod_d15N_UFM)
 d15NSumm_UFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
-gam.check(mod_d15N_UFM$gam)
+gam.check(mod_d15N_UFM)
 
 
 
@@ -3837,7 +3881,7 @@ d15NYear_UFM <- with(UFM_short_extrap,
                      data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
 
 d15NYear_UFM <- cbind(d15NYear_UFM,
-                      data.frame(predict(mod_d15N_UFM$gam, d15NYear_UFM,
+                      data.frame(predict(mod_d15N_UFM, d15NYear_UFM,
                                          type="response", se.fit = TRUE)))
 
 ### this calculates on the link scale 
@@ -3919,7 +3963,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_d15N <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -3946,6 +3990,7 @@ ggplot(UFM_short_extrap) +
   ylab(expression(paste(delta^{15}, "N (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_d15N
 
 ggsave("figures/UFM_d15N.png",
        dpi=600,
@@ -3960,22 +4005,22 @@ Use UFM_short_extrap to be able to plot all the data vs. time, but model only th
 
 # check later how weights, corCAR1 compare. 
     
-mod_d13C_UFM <- gamm(d13C ~ s(year_plot_extrap, k = 10), 
+mod_d13C_UFM <- gam(d13C ~ s(year_plot_extrap, k = 5), 
                      family = gaussian(link = "identity"), 
                      data = UFM_short_extrap,
                      method = "REML")
 
-summary(mod_d13C_UFM$lme) # using REML - good.
+summary(mod_d13C_UFM) # using REML - good.
 
-resid_values_d13C_UFM <- residuals(mod_d13C_UFM$lme, type = "normalized")
+resid_values_d13C_UFM <- residuals(mod_d13C_UFM, type = "response")
 acf(resid_values_d13C_UFM) # has neg lag
 
 ## summary object for use in document
-d13CSumm_UFM <- summary(mod_d13C_UFM$gam)
+d13CSumm_UFM <- summary(mod_d13C_UFM)
 d13CSumm_UFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
-gam.check(mod_d13C_UFM$gam)
+gam.check(mod_d13C_UFM)
 
 
 ### NOW PLOT! ###
@@ -3986,7 +4031,7 @@ d13CYear_UFM <- with(UFM_short_extrap,
                      data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
 
 d13CYear_UFM <- cbind(d13CYear_UFM,
-                      data.frame(predict(mod_d13C_UFM$gam, d13CYear_UFM,
+                      data.frame(predict(mod_d13C_UFM, d13CYear_UFM,
                                          type="response", se.fit = TRUE)))
 
 ### this calculates on the link scale 
@@ -4068,7 +4113,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_d13C <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -4095,6 +4140,7 @@ ggplot(UFM_short_extrap) +
   ylab(expression(paste(delta^{13}, "C (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_d13C
 
 ggsave("figures/UFM_d13C.png",
        dpi=600,
@@ -4115,23 +4161,23 @@ ggsave("figures/UFM_d13C.png",
 # check later how weights, corCAR1 compare. 
     
 # drop the "ex" for simplicity now that we know the dataset shouldn't affect the outcomes. 
-mod_perC_UFM <- gamm(percent.C ~ s(year_plot_extrap, k = 10), 
+mod_perC_UFM <- gam(percent.C ~ s(year_plot_extrap, k = 5), 
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
-summary(mod_perC_UFM$lme) # using ML because of the Gamma family designation
+summary(mod_perC_UFM) # using ML because of the Gamma family designation
 
-resid_values_perC_UFM <- residuals(mod_perC_UFM$lme, type = "normalized")
+resid_values_perC_UFM <- residuals(mod_perC_UFM, type = "response")
 acf(resid_values_perC_UFM) # acf looks good
 
 ## summary object for use in document
-perCSumm_UFM <- summary(mod_perC_UFM$gam)
+perCSumm_UFM <- summary(mod_perC_UFM)
 perCSumm_UFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
-gam.check(mod_perC_UFM$gam)
+gam.check(mod_perC_UFM)
 
 ### now transform response variable (in this case percent.C): 
 fam<-family(mod_perC_UFM)
@@ -4151,7 +4197,7 @@ perCYear_UFM <- with(UFM_short_extrap,
 # predict fit (response variable) and se for perCYear_UFM on the link scale
 # if you do type = "response" se might still be on the link scale
 perCYear_UFM <- cbind(perCYear_UFM,
-                      data.frame(predict(mod_perC_UFM$gam, perCYear_UFM,
+                      data.frame(predict(mod_perC_UFM, perCYear_UFM,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -4240,7 +4286,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_percC <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -4265,9 +4311,10 @@ ggplot(UFM_short_extrap) +
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
-  ylab("Total Carbon (%)") +
+  ylab("Total C (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_percC
 
 ggsave("figures/UFM_perC.png",
        dpi=600,
@@ -4302,7 +4349,7 @@ ggplot(UFM_short_extrap) +
                      name ="Statistic") +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   scale_y_continuous(
-    name = "Total Carbon (%)",
+    name = "Total C (%)",
     sec.axis = sec_axis(~ . / 5000, name = "Carbon MAR")) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
@@ -4320,24 +4367,24 @@ ggplot(UFM_short_extrap) +
 # check later how weights, corCAR1 compare. 
     
 # drop the "ex" for simplicity now that we know the dataset shouldn't affect the outcomes. 
-mod_perN_UFM <- gamm(percent.N ~ s(year_plot_extrap, k = 10), 
+mod_perN_UFM <- gam(percent.N ~ s(year_plot_extrap, k = 5), 
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
-summary(mod_perN_UFM$lme) # using ML because of the Gamma family designation
+summary(mod_perN_UFM) # using ML because of the Gamma family designation
 
-resid_values_perN_UFM <- residuals(mod_perN_UFM$lme, type = "normalized")
+resid_values_perN_UFM <- residuals(mod_perN_UFM, type = "response")
 acf(resid_values_perN_UFM) 
 # negative response at lag 1
 
 ## summary object for use in document
-perNSumm_UFM <- summary(mod_perN_UFM$gam)
+perNSumm_UFM <- summary(mod_perN_UFM)
 perNSumm_UFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
-gam.check(mod_perN_UFM$gam)
+gam.check(mod_perN_UFM)
 
 ### now transform response variable (in this case percent.N): 
 fam<-family(mod_perN_UFM)
@@ -4357,7 +4404,7 @@ perNYear_UFM <- with(UFM_short_extrap,
 # predict fit (response variable) and se for perNYear_UFM on the link scale
 # if you do type = "response" se might still be on the link scale
 perNYear_UFM <- cbind(perNYear_UFM,
-                      data.frame(predict(mod_perN_UFM$gam, perNYear_UFM,
+                      data.frame(predict(mod_perN_UFM, perNYear_UFM,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -4444,7 +4491,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_percN <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -4468,9 +4515,10 @@ ggplot(UFM_short_extrap) +
   scale_color_manual(values = c("sig. inc." = "#CC9933",
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
-  ylab("Total Nitrogen (%)") +
+  ylab("Total N (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_percN
 
 ggsave("figures/UFM_perN.png",
        dpi=600,
@@ -4508,7 +4556,7 @@ ggplot(UFM_short_extrap) +
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
   scale_y_continuous(
-    name = "Total Nitrogen (%)",
+    name = "Total N (%)",
     sec.axis = sec_axis(~ . / 10000, name = "Nitrogen MAR")
   ) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
@@ -4531,26 +4579,26 @@ names(UFM_short_extrap)
   hist(log(UFM_short_extrap$C.N))
   # data is left skewed, log transform makes it worse? in this case it looks a little better?
     
-mod_CN_UFM <- gamm(C.N ~ s(year_plot_extrap, k = 10), 
+mod_CN_UFM <- gam(C.N ~ s(year_plot_extrap, k = 5), 
                      family = gaussian(link = "identity"), 
                      data = UFM_short_extrap,
                    #  correlation = corCAR1(form = ~ year_plot_extrap),
                      method = "REML")
 
-AIC(mod_CN_UFM$lme) 
-summary(mod_CN_UFM$lme)
+AIC(mod_CN_UFM) 
+summary(mod_CN_UFM)
 
 ### Check diagnostics. You might need to adjust model
-gam.check(mod_CN_UFM$gam)
+gam.check(mod_CN_UFM)
 
 # p value too low if you change anything (add car 1 etc.)
 
-    resid_values_CN_UFM <- residuals(mod_CN_UFM$lme, type = "normalized")
+    resid_values_CN_UFM <- residuals(mod_CN_UFM, type = "response")
     acf(resid_values_CN_UFM) 
     # residuals significant, def structured, corCAR1 helps a little but sample size is too small to use it.
     
 ## summary object for use in document
-CNSumm_UFM <- summary(mod_CN_UFM$gam)
+CNSumm_UFM <- summary(mod_CN_UFM)
 CNSumm_UFM #Gives you the P values, degrees of freedom...
 
 
@@ -4567,7 +4615,7 @@ CNYear_UFM <- with(UFM_short_extrap,
 
 # predict fit (response variable) and se for perCYear_UFM on the response scale
 CNYear_UFM <- cbind(CNYear_UFM,
-                      data.frame(predict(mod_CN_UFM$gam, CNYear_UFM,
+                      data.frame(predict(mod_CN_UFM, CNYear_UFM,
                                          type="response", se.fit = TRUE)))
 
 # calculate 95% CIs, on the response scale 
@@ -4655,7 +4703,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_CN <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -4683,6 +4731,7 @@ ggplot(UFM_short_extrap) +
   ylab("C.N ratio") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_CN
 
 ggsave("figures/UFM_CN.png",
        dpi=600,
@@ -4701,24 +4750,24 @@ ggsave("figures/UFM_CN.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_pheoa_UFM <- gamm(pheo_a_nmol_gTC ~ s(year_plot_extrap, k = 10),
+mod_pheoa_UFM <- gam(pheo_a_nmol_gTC ~ s(year_plot_extrap, k = 5),
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
 
-summary(mod_pheoa_UFM$lme) # using ML because of the Gamma family designation
+summary(mod_pheoa_UFM) # using ML because of the Gamma family designation
 
-resid_values_pheoa_UFM <- residuals(mod_pheoa_UFM$lme, type = "normalized")
+resid_values_pheoa_UFM <- residuals(mod_pheoa_UFM, type = "response")
 acf(resid_values_pheoa_UFM) # looks good!
 
 ## summary object for use in document
-pheoaSumm_UFM <- summary(mod_pheoa_UFM$gam)
+pheoaSumm_UFM <- summary(mod_pheoa_UFM)
 pheoaSumm_UFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
-gam.check(mod_pheoa_UFM$gam)
+gam.check(mod_pheoa_UFM)
 
 ### now transform response variable:
 fam<-family(mod_pheoa_UFM)
@@ -4738,7 +4787,7 @@ pheoaYear_UFM <- with(UFM_short_extrap,
 # predict fit (response variable) and se for perCYear_UFM on the link scale
 # if you do type = "response" se might still be on the link scale
 pheoaYear_UFM <- cbind(pheoaYear_UFM,
-                      data.frame(predict(mod_pheoa_UFM$gam, pheoaYear_UFM,
+                      data.frame(predict(mod_pheoa_UFM, pheoaYear_UFM,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -4827,7 +4876,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_total_algae <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -4855,6 +4904,7 @@ ggplot(UFM_short_extrap) +
   ylab(expression("pheophytin a ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_total_algae 
 
 ggsave("figures/UFM_pheo_a.png",
        dpi=600,
@@ -4871,24 +4921,24 @@ ggsave("figures/UFM_pheo_a.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_greens_UFM <- gamm(greens ~ s(year_plot_extrap, k = 10),
+mod_greens_UFM <- gam(greens ~ s(year_plot_extrap, k = 5),
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
 
-summary(mod_greens_UFM$lme) # using ML because of the Gamma family designation
+summary(mod_greens_UFM) # using ML because of the Gamma family designation
 
-resid_values_greens_UFM <- residuals(mod_greens_UFM$lme, type = "normalized")
+resid_values_greens_UFM <- residuals(mod_greens_UFM, type = "response")
 acf(resid_values_greens_UFM) # looks good!
 
 ## summary object for use in document
-greensSumm_UFM <- summary(mod_greens_UFM$gam)
+greensSumm_UFM <- summary(mod_greens_UFM)
 greensSumm_UFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
-gam.check(mod_pheoa_UFM$gam)
+gam.check(mod_pheoa_UFM)
 
 ### now transform response variable:
 fam<-family(mod_greens_UFM)
@@ -4908,7 +4958,7 @@ greensYear_UFM <- with(UFM_short_extrap,
 # predict fit (response variable) and se for perCYear_UFM on the link scale
 # if you do type = "response" se might still be on the link scale
 greensYear_UFM <- cbind(greensYear_UFM,
-                      data.frame(predict(mod_greens_UFM$gam, greensYear_UFM,
+                      data.frame(predict(mod_greens_UFM, greensYear_UFM,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -4997,7 +5047,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_greens <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -5025,6 +5075,7 @@ ggplot(UFM_short_extrap) +
   ylab(expression("pheo b & lutein ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_greens
 
 ggsave("figures/UFM_greens.png",
        dpi=600,
@@ -5042,23 +5093,23 @@ ggsave("figures/UFM_greens.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_diato_UFM <- gamm(diato_nmol_gTC ~ s(year_plot_extrap, k = 10),
+mod_diato_UFM <- gam(diato_nmol_gTC ~ s(year_plot_extrap, k = 5),
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
-summary(mod_diato_UFM$lme) # using ML because of the Gamma family designation
+summary(mod_diato_UFM) # using ML because of the Gamma family designation
 
-resid_values_diato_UFM <- residuals(mod_diato_UFM$lme, type = "normalized")
+resid_values_diato_UFM <- residuals(mod_diato_UFM, type = "response")
 acf(resid_values_diato_UFM) # same negative acf right at lag 1, not huge though
 
 ## summary object for use in document
-diatoSumm_UFM <- summary(mod_diato_UFM$gam)
+diatoSumm_UFM <- summary(mod_diato_UFM)
 diatoSumm_UFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
-gam.check(mod_diato_UFM$gam)
+gam.check(mod_diato_UFM)
 
       # not great... k=index less than 1, though p-value is fine
 
@@ -5080,7 +5131,7 @@ diatoYear_UFM <- with(UFM_short_extrap,
 # predict fit (response variable) and se for perCYear_UFM on the link scale
 # if you do type = "response" se might still be on the link scale
 diatoYear_UFM <- cbind(diatoYear_UFM,
-                      data.frame(predict(mod_diato_UFM$gam, diatoYear_UFM,
+                      data.frame(predict(mod_diato_UFM, diatoYear_UFM,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -5169,7 +5220,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_diatoms <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -5196,6 +5247,7 @@ ggplot(UFM_short_extrap) +
   ylab(expression("diatoxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_diatoms
 
 ggsave("figures/UFM_diato.png",
        dpi=600,
@@ -5213,23 +5265,23 @@ ggsave("figures/UFM_diato.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_allo_UFM <- gamm(allo_nmol_gTC ~ s(year_plot_extrap, k = 10),
+mod_allo_UFM <- gam(allo_nmol_gTC ~ s(year_plot_extrap, k = 5),
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
-summary(mod_allo_UFM$lme) # using ML because of the Gamma family designation
+summary(mod_allo_UFM) # using ML because of the Gamma family designation
 
-resid_values_allo_UFM <- residuals(mod_allo_UFM$lme, type = "normalized")
+resid_values_allo_UFM <- residuals(mod_allo_UFM, type = "response")
 acf(resid_values_allo_UFM) # looks good!
 
 ## summary object for use in document
-alloSumm_UFM <- summary(mod_allo_UFM$gam)
+alloSumm_UFM <- summary(mod_allo_UFM)
 alloSumm_UFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
-gam.check(mod_allo_UFM$gam)
+gam.check(mod_allo_UFM)
 
       # not great...? k=index = 1, though p-value is fine
 
@@ -5251,7 +5303,7 @@ alloYear_UFM <- with(UFM_short_extrap,
 # predict fit (response variable) and se for perCYear_UFM on the link scale
 # if you do type = "response" se might still be on the link scale
 alloYear_UFM <- cbind(alloYear_UFM,
-                      data.frame(predict(mod_allo_UFM$gam, alloYear_UFM,
+                      data.frame(predict(mod_allo_UFM, alloYear_UFM,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -5340,7 +5392,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_allo <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -5368,6 +5420,7 @@ ggplot(UFM_short_extrap) +
   ylab(expression("alloxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_allo
 
 ggsave("figures/UFM_allo.png",
        dpi=600,
@@ -5384,23 +5437,23 @@ ggsave("figures/UFM_allo.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_cyanos_UFM <- gamm(cyanos ~ s(year_plot_extrap, k = 10),
+mod_cyanos_UFM <- gam(cyanos ~ s(year_plot_extrap, k = 5),
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
                      # REML only works for gaussian data
                      method = "ML")
 
-summary(mod_cyanos_UFM$lme) # using ML because of the Gamma family designation
+summary(mod_cyanos_UFM) # using ML because of the Gamma family designation
 
-resid_values_cyanos_UFM <- residuals(mod_cyanos_UFM$lme, type = "normalized")
+resid_values_cyanos_UFM <- residuals(mod_cyanos_UFM, type = "response")
 acf(resid_values_cyanos_UFM) # looks good
 
 ## summary object for use in document
-cyanosSumm_UFM <- summary(mod_cyanos_UFM$gam)
+cyanosSumm_UFM <- summary(mod_cyanos_UFM)
 cyanosSumm_UFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
-gam.check(mod_cyanos_UFM$gam)
+gam.check(mod_cyanos_UFM)
 
 ### now transform response variable:
 fam<-family(mod_cyanos_UFM)
@@ -5420,7 +5473,7 @@ cyanosYear_UFM <- with(UFM_short_extrap,
 # predict fit (response variable) and se for perCYear_UFM on the link scale
 # if you do type = "response" se might still be on the link scale
 cyanosYear_UFM <- cbind(cyanosYear_UFM,
-                      data.frame(predict(mod_cyanos_UFM$gam, cyanosYear_UFM,
+                      data.frame(predict(mod_cyanos_UFM, cyanosYear_UFM,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
@@ -5509,7 +5562,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_cyanos <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -5537,6 +5590,7 @@ ggplot(UFM_short_extrap) +
   ylab(expression("echinenone & canthaxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_cyanos
 
 ggsave("figures/UFM_cyanos.png",
        dpi=600,
@@ -5596,3 +5650,67 @@ ggsave("figures/UFM_PI.png",
        width=8,
        units="in")
 ```
+
+# Compile figures
+## Figure 2? 3? SIA
+Want to arrange the plot so you have 5 rows (%C, %N, C:N, d15N, d13C) 
+then 3 columns (LFM, TRK, UFM)
+Use the patchwork R package
+```{r}
+
+#Row 1 
+( LFM_percC + theme(axis.title.x=element_blank())) +
+            (UFM_percC + theme(axis.title.y=element_blank(),
+                               axis.title.x=element_blank()))  + 
+            (TRK_percC + theme(axis.title.y=element_blank(),
+                               axis.title.x=element_blank())) + 
+
+#Row 2
+( LFM_percN + theme(axis.title.x=element_blank(),
+                    plot.title = element_blank())) + 
+  (UFM_percN + theme(axis.title.y=element_blank(),
+                               axis.title.x=element_blank(),
+                               plot.title = element_blank())) + 
+              (TRK_percN + theme(axis.title.y=element_blank(),
+                               axis.title.x=element_blank(),
+                               plot.title = element_blank())) + 
+#Row 3
+  ( LFM_CN + theme(axis.title.x=element_blank(),
+                    plot.title = element_blank())) + 
+  (UFM_CN + theme(axis.title.y=element_blank(),
+                  plot.title = element_blank(),
+                  axis.title.x=element_blank()))  + 
+  (TRK_CN + theme(axis.title.y=element_blank(),
+                 plot.title = element_blank(),
+                 axis.title.x=element_blank()))  + 
+  
+#Row 4  
+ ( LFM_d13C + theme(axis.title.x=element_blank(),
+                    plot.title = element_blank())) + 
+  (UFM_d13C + theme(axis.title.y=element_blank(),
+                    plot.title = element_blank(),
+                    axis.title.x=element_blank())) +
+  (TRK_d13C + theme(axis.title.y=element_blank(),
+                    plot.title = element_blank(),
+                    axis.title.x=element_blank())) + 
+
+#Row 5
+   ( LFM_d15N + theme(axis.title.x=element_blank(),
+                    plot.title = element_blank())) +
+  (UFM_d15N + theme(axis.title.y=element_blank(),
+                    plot.title = element_blank()))  +
+  (TRK_d15N + theme(axis.title.y=element_blank(),
+                   plot.title = element_blank(),
+                   axis.title.x=element_blank())) +
+
+plot_layout(ncol = 3, nrow=5) +
+plot_layout(guides = 'collect') & # a single legend
+theme(legend.position = "bottom")
+
+ggsave("figures/FigureX_carbon_nitrogen.png",
+       dpi=600,
+       height=6,
+       width=8,
+       units="in")
+```
+
