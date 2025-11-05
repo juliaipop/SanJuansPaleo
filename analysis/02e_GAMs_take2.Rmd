@@ -3852,7 +3852,7 @@ UFM_short_extrap <- UFM_short_extrap %>%
     sum(!is.na(UFM_short_extrap$year_plot_extrap)) # 43 observations
 
 # try with and without corCAR1, then examine the residuals. 
-mod_d15N_UFM <- gam(d15N ~ s(year_plot_extrap, k = 10), 
+mod_d15N_UFM <- gam(d15N ~ s(year_plot_extrap, k = 5), 
                      family = gaussian(link = "identity"), 
                      data = UFM_short_extrap,
                      method = "REML")
@@ -3962,7 +3962,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_d15N <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -3989,6 +3989,7 @@ ggplot(UFM_short_extrap) +
   ylab(expression(paste(delta^{15}, "N (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_d15N
 
 ggsave("figures/UFM_d15N.png",
        dpi=600,
@@ -4003,7 +4004,7 @@ Use UFM_short_extrap to be able to plot all the data vs. time, but model only th
 
 # check later how weights, corCAR1 compare. 
     
-mod_d13C_UFM <- gam(d13C ~ s(year_plot_extrap, k = 10), 
+mod_d13C_UFM <- gam(d13C ~ s(year_plot_extrap, k = 5), 
                      family = gaussian(link = "identity"), 
                      data = UFM_short_extrap,
                      method = "REML")
@@ -4111,7 +4112,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_d13C <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -4138,6 +4139,7 @@ ggplot(UFM_short_extrap) +
   ylab(expression(paste(delta^{13}, "C (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_d13C
 
 ggsave("figures/UFM_d13C.png",
        dpi=600,
@@ -4158,7 +4160,7 @@ ggsave("figures/UFM_d13C.png",
 # check later how weights, corCAR1 compare. 
     
 # drop the "ex" for simplicity now that we know the dataset shouldn't affect the outcomes. 
-mod_perC_UFM <- gam(percent.C ~ s(year_plot_extrap, k = 10), 
+mod_perC_UFM <- gam(percent.C ~ s(year_plot_extrap, k = 5), 
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
                      # REML only works for gaussian data
@@ -4283,7 +4285,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_percC <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -4311,6 +4313,7 @@ ggplot(UFM_short_extrap) +
   ylab("Total Carbon (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_percC
 
 ggsave("figures/UFM_perC.png",
        dpi=600,
@@ -4363,7 +4366,7 @@ ggplot(UFM_short_extrap) +
 # check later how weights, corCAR1 compare. 
     
 # drop the "ex" for simplicity now that we know the dataset shouldn't affect the outcomes. 
-mod_perN_UFM <- gam(percent.N ~ s(year_plot_extrap, k = 10), 
+mod_perN_UFM <- gam(percent.N ~ s(year_plot_extrap, k = 5), 
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
                      # REML only works for gaussian data
@@ -4487,7 +4490,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_percN <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -4514,6 +4517,7 @@ ggplot(UFM_short_extrap) +
   ylab("Total Nitrogen (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_percN
 
 ggsave("figures/UFM_perN.png",
        dpi=600,
@@ -4574,7 +4578,7 @@ names(UFM_short_extrap)
   hist(log(UFM_short_extrap$C.N))
   # data is left skewed, log transform makes it worse? in this case it looks a little better?
     
-mod_CN_UFM <- gam(C.N ~ s(year_plot_extrap, k = 10), 
+mod_CN_UFM <- gam(C.N ~ s(year_plot_extrap, k = 5), 
                      family = gaussian(link = "identity"), 
                      data = UFM_short_extrap,
                    #  correlation = corCAR1(form = ~ year_plot_extrap),
@@ -4698,7 +4702,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_CN <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -4726,6 +4730,7 @@ ggplot(UFM_short_extrap) +
   ylab("C.N ratio") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_CN
 
 ggsave("figures/UFM_CN.png",
        dpi=600,
@@ -4744,7 +4749,7 @@ ggsave("figures/UFM_CN.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_pheoa_UFM <- gam(pheo_a_nmol_gTC ~ s(year_plot_extrap, k = 10),
+mod_pheoa_UFM <- gam(pheo_a_nmol_gTC ~ s(year_plot_extrap, k = 5),
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
                      # REML only works for gaussian data
@@ -4870,7 +4875,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_total_algae <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -4898,6 +4903,7 @@ ggplot(UFM_short_extrap) +
   ylab(expression("pheophytin a ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_total_algae 
 
 ggsave("figures/UFM_pheo_a.png",
        dpi=600,
@@ -4914,7 +4920,7 @@ ggsave("figures/UFM_pheo_a.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_greens_UFM <- gam(greens ~ s(year_plot_extrap, k = 10),
+mod_greens_UFM <- gam(greens ~ s(year_plot_extrap, k = 5),
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
                      # REML only works for gaussian data
@@ -5040,7 +5046,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_greens <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -5068,6 +5074,7 @@ ggplot(UFM_short_extrap) +
   ylab(expression("pheo b & lutein ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_greens
 
 ggsave("figures/UFM_greens.png",
        dpi=600,
@@ -5085,7 +5092,7 @@ ggsave("figures/UFM_greens.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_diato_UFM <- gam(diato_nmol_gTC ~ s(year_plot_extrap, k = 10),
+mod_diato_UFM <- gam(diato_nmol_gTC ~ s(year_plot_extrap, k = 5),
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
                      # REML only works for gaussian data
@@ -5212,7 +5219,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_diatoms <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -5239,6 +5246,7 @@ ggplot(UFM_short_extrap) +
   ylab(expression("diatoxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_diatoms
 
 ggsave("figures/UFM_diato.png",
        dpi=600,
@@ -5256,7 +5264,7 @@ ggsave("figures/UFM_diato.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_allo_UFM <- gam(allo_nmol_gTC ~ s(year_plot_extrap, k = 10),
+mod_allo_UFM <- gam(allo_nmol_gTC ~ s(year_plot_extrap, k = 5),
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
                      # REML only works for gaussian data
@@ -5383,7 +5391,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_allo <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -5411,6 +5419,7 @@ ggplot(UFM_short_extrap) +
   ylab(expression("alloxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_allo
 
 ggsave("figures/UFM_allo.png",
        dpi=600,
@@ -5427,7 +5436,7 @@ ggsave("figures/UFM_allo.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_cyanos_UFM <- gam(cyanos ~ s(year_plot_extrap, k = 10),
+mod_cyanos_UFM <- gam(cyanos ~ s(year_plot_extrap, k = 5),
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
                      # REML only works for gaussian data
@@ -5552,7 +5561,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap) +
+UFM_cyanos <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -5580,6 +5589,7 @@ ggplot(UFM_short_extrap) +
   ylab(expression("echinenone & canthaxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("Upper Fourmile Lake")
+UFM_cyanos
 
 ggsave("figures/UFM_cyanos.png",
        dpi=600,
@@ -5639,3 +5649,11 @@ ggsave("figures/UFM_PI.png",
        width=8,
        units="in")
 ```
+
+# Compile figures
+## Figure 2? 3? SIA
+
+```{r}
+
+```
+
