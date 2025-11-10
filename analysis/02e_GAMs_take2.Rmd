@@ -24,7 +24,6 @@ source("scripts/libraries.R")
 source("scripts/GAM_functions.R")
 ```
 
-
 ## Pull in data
 ```{r}
 UFM_short_extrap <- read.csv("output/UFM_short_extrap.csv") %>%
@@ -1170,7 +1169,7 @@ pheoaSumm_fil_TRK #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_pheoa_TRK$gam)
+gam.check(mod_pheoa_fil_TRK$gam)
 par(mfrow = c(1, 1)) 
 
 ### now transform response variable:
@@ -2164,98 +2163,94 @@ LFM_short_extrap <- LFM_short_extrap %>%
 
 # Weights didn't help at all above. Model here without... 
     
-# try with and without corCAR1, then examine the residuals. 
-<<<<<<< HEAD
-mod_d15N_LFM <- gam(d15N ~ s(year_plot_extrap, k = 10), 
-=======
-mod_d15N_LFM_ex <- gamm(d15N ~ s(year_plot_extrap, k = 10), 
->>>>>>> b3e7b4b (no big changes)
-                     family = gaussian(link = "identity"), 
-                     data = LFM_short_extrap,
-                     method = "REML")
+# New edits 11/10: 
+  # using gam instead of gamm to get the variance explained, but gamm doesn't 
+  # run models with the correlation structure... 
 
-mod_d15N_LFM_CAR1_ex <- gam(d15N ~ s(year_plot_extrap, k = 10), 
+  # so, just double check again how gamm functions w and without the correlation 
+  # structure on the new data: 
+
+mod_d15N_LFM <- gamm(d15N ~ s(year_plot_extrap, k = 10),
+                    family = gaussian(link = "identity"), 
+                    data = LFM_short_extrap,
+                    method = "REML")
+
+
+mod_d15N_LFM_CAR1 <- gamm(d15N ~ s(year_plot_extrap, k = 10), 
                      family = gaussian(link = "identity"), 
                      data = LFM_short_extrap,
                      correlation = corCAR1(form = ~ year_plot_extrap),
                      method = "REML")
 
-<<<<<<< HEAD
-summary(mod_d15N_LFM_CAR1_ex) # no longer overriding reml! that's good.
+summary(mod_d15N_LFM_CAR1$gam)
+summary(mod_d15N_LFM_CAR1$lme) # using REML, corellation structure phi = 0.29
 
-resid_values_ex <- residuals(mod_d15N_LFM, type = "response")       # no CAR(1)
-resid_values_CAR1_ex <- residuals(mod_d15N_LFM_CAR1_ex, type = "response")   # with CAR(1)
-=======
-summary(mod_d15N_LFM_ex$lme) 
+summary(mod_d15N_LFM$gam) 
+summary(mod_d15N_LFM$lme) 
 
-resid_values_ex <- residuals(mod_d15N_LFM_ex$lme, type = "normalized")       # no CAR(1)
-resid_values_CAR1_ex <- residuals(mod_d15N_LFM_CAR1_ex$lme, type = "normalized")   # with CAR(1)
->>>>>>> b3e7b4b (no big changes)
-all.equal(resid_values_ex, resid_values_CAR1_ex)  # Check if they are identical
-# same! so CAR1 isn't helping -> drop
+# need $lme to get acf to work
+resid_values <- residuals(mod_d15N_LFM$lme, type = "normalized")       # no CAR(1)
+resid_values_CAR1 <- residuals(mod_d15N_LFM_CAR1$lme, type = "normalized")   # with CAR(1)
 
-acf(resid_values_ex)
-acf(resid_values_CAR1_ex)
+acf(resid_values)
+acf(resid_values_CAR1) # residuals are the same with and without CAR1
 
 # examine again using AIC:
-<<<<<<< HEAD
-AIC(mod_d15N_LFM)   # without CAR(1): -0.57
-# AIC(mod_d15N_LFM_CAR1) # with CAR(1) from before: -4.84 (don't compare, was with ML)
-AIC(mod_d15N_LFM_CAR1_ex) # with CAR(1) now: 1.42
-=======
-AIC(mod_d15N_LFM_ex$lme)   # without CAR(1): -0.57
-# AIC(mod_d15N_LFM_CAR1$lme) # with CAR(1) from before: -4.84 (don't compare, was with ML)
-AIC(mod_d15N_LFM_CAR1_ex$lme) # with CAR(1) now: 1.42
->>>>>>> b3e7b4b (no big changes)
-# lower AIC = better? better with CAR(1) still. 
+AIC(mod_d15N_LFM$lme)   # without CAR(1): -0.57
+AIC(mod_d15N_LFM_CAR1$lme) # with CAR(1): 1.42
+
+# lower AIC = better? better without CAR(1).
 # AIC=2k−2ln(L), where k = # parameters, L = likelihood.
 
     ### DECISION: move forward with mod_d15N_LFM (no weights, no CAR1) ###
 
-## summary object for use in document
-<<<<<<< HEAD
-d15NSumm_LFM_ex <- summary(mod_d15N_LFM)
-=======
-d15NSumm_LFM_ex <- summary(mod_d15N_LFM_ex$gam)
->>>>>>> b3e7b4b (no big changes)
-d15NSumm_LFM_ex #Gives you the P values, degrees of freedom...
+### Check diagnostics. You might need to adjust model
+
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
+gam.check(mod_d15N_LFM$gam)
+gam.check(mod_d15N_LFM_CAR1$gam)
+par(mfrow = c(1, 1)) # both madels are identical 
+
+
+# now run/plot as a gam
+mod_d15N_LFM <- gam(d15N ~ s(year_plot_extrap, k = 10),
+                    family = gaussian(link = "identity"), 
+                    data = LFM_short_extrap,
+                    method = "REML")
+
+summary(mod_d15N_LFM)
+
+# type = response calculates residuals on the identity scale
+# if I wanted to see whether the transformation function was appropriate I could  
+# analyze residuals on the link scale. here this doesn't matter because we are 
+# working on the identity scale anyway but leave the code in for when we do transoformations. 
+resid_values <- residuals(mod_d15N_LFM, type = "response")  
+acf(resid_values) # slight neg autocorellation at lag 1
 
 ### Check diagnostics. You might need to adjust model
 
-
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-<<<<<<< HEAD
 gam.check(mod_d15N_LFM)
-=======
-gam.check(mod_d15N_LFM_ex$gam)
->>>>>>> b3e7b4b (no big changes)
 par(mfrow = c(1, 1)) 
-
-
-
-
 
 ### NOW PLOT! ###
 N <- 300    # number of points at which to evaluate the splines
 
-# Second, if you're only concerned about the response, include "response" in type of predict()???
-d15NYear_LFM_ex <- with(LFM_short_extrap, 
+# Second, if you're only concerned about the response (and not the resp on the link scale),
+# include "response" in type of predict()
+d15NYear_LFM <- with(LFM_short_extrap, 
                      data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
 
-d15NYear_LFM_ex <- cbind(d15NYear_LFM_ex,
-<<<<<<< HEAD
-                      data.frame(predict(mod_d15N_LFM, d15NYear_LFM_ex,
-=======
-                      data.frame(predict(mod_d15N_LFM_ex$gam, d15NYear_LFM_ex,
->>>>>>> b3e7b4b (no big changes)
+d15NYear_LFM <- cbind(d15NYear_LFM,
+                      data.frame(predict(mod_d15N_LFM, d15NYear_LFM,
                                          type="response", se.fit = TRUE)))
 
 ### this calculates on the link scale 
-d15NYear_LFM_ex <- transform(d15NYear_LFM_ex, upper = fit + (2 * se.fit), lower = fit - (2 * se.fit))
-d15NYear_LFM_ex$lake_ID <- 'LFM'
+d15NYear_LFM <- transform(d15NYear_LFM, upper = fit + (2 * se.fit), lower = fit - (2 * se.fit))
+d15NYear_LFM$lake_ID <- 'LFM'
 
 ## Plot fitted trends
-ggplot(d15NYear_LFM_ex, aes(x = year_plot_extrap, y = fit)) +
+ggplot(d15NYear_LFM, aes(x = year_plot_extrap, y = fit)) +
   geom_ribbon(aes(ymin = (lower),
                   ymax = (upper), x = year_plot_extrap),
               alpha = 0.2, inherit.aes = FALSE, fill = "black") +
@@ -2268,7 +2263,7 @@ ggplot(d15NYear_LFM_ex, aes(x = year_plot_extrap, y = fit)) +
 #functions "helper_functions.R" (that Cale sent)
 ############
 ############
-fd_inc = confint(fderiv(mod_d15N_LFM_ex))
+fd_inc = confint(fderiv(mod_d15N_LFM))
 fd_inc
 
 #Add years for plotting
@@ -2307,7 +2302,7 @@ fd_inc_timing <- fd_inc %>%
 # For graphing, we want to join the predicted/fitted data with the 
 # information with significant periods of change. Let's call it 'pred'
 
-pred <- left_join(d15NYear_LFM_ex,
+pred <- left_join(d15NYear_LFM,
                   fd_inc_timing %>% 
                     select(year_plot_extrap, change_type), #select only 2 columns since
                   #lower and upper have two different meanings in these 2 dataframes
@@ -5139,11 +5134,8 @@ greensSumm_UFM <- summary(mod_greens_UFM)
 greensSumm_UFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
-<<<<<<< HEAD
 gam.check(mod_pheoa_UFM)
-=======
-gam.check(mod_greens_UFM$gam)
->>>>>>> b3e7b4b (no big changes)
+
 
 ### now transform response variable:
 fam<-family(mod_greens_UFM)
