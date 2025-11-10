@@ -367,10 +367,9 @@ ggsave("figures/TRK_d13C.png",
 mod_perC_TRK <- gam(percent.C ~ s(year_plot_extrap, k = 10), 
                      family=Gamma(link="log"),  
                      data = TRK_short,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
-summary(mod_perC_TRK) # using ML because of the Gamma family designation
+summary(mod_perC_TRK) 
 
 resid_values_perC_TRK <- residuals(mod_perC_TRK, type = "response")
 acf(resid_values_perC_TRK) # acf looks good
@@ -581,10 +580,9 @@ ggplot(TRK_short) +
 mod_perN_TRK <- gam(percent.N ~ s(year_plot_extrap, k = 10), 
                      family=Gamma(link="log"),  
                      data = TRK_short,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
-summary(mod_perN_TRK) # using ML because of the Gamma family designation
+summary(mod_perN_TRK) 
 
 resid_values_perN_TRK <- residuals(mod_perN_TRK, type = "response")
 acf(resid_values_perN_TRK) 
@@ -805,8 +803,7 @@ ggplot(TRK_short) +
 mod_CN_TRK <- gam(C.N ~ s(year_plot_extrap, k = 20),
                      family=Gamma(link="log"),  
                      data = TRK_short,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
 summary(mod_CN_TRK)$dev.expl  # deviance explained
 
@@ -981,11 +978,10 @@ ggsave("figures/TRK_CN.png",
 mod_pheoa_TRK <- gam(pheo_a_nmol_gTC ~ s(year_plot_extrap, k = 10),
                      family=Gamma(link="log"),  
                      data = TRK_short,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
 
-summary(mod_pheoa_TRK) # using ML because of the Gamma family designation
+summary(mod_pheoa_TRK) 
 
 resid_values_pheoa_TRK <- residuals(mod_pheoa_TRK, type = "response")
 acf(resid_values_pheoa_TRK) 
@@ -1154,11 +1150,10 @@ TRK_short_fil <- TRK_short %>%
 mod_pheoa_fil_TRK <- gamm(pheo_a_nmol_gTC ~ s(year_plot_extrap, k = 10),
                      family=Gamma(link="log"),  
                      data = TRK_short_fil,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
 
-summary(mod_pheoa_fil_TRK$lme) # using ML because of the Gamma family designation
+summary(mod_pheoa_fil_TRK$lme) 
 
 resid_values_pheoa_fil_TRK <- residuals(mod_pheoa_fil_TRK$lme, type = "normalized")
 acf(resid_values_pheoa_fil_TRK) # looks good!
@@ -1326,11 +1321,10 @@ ggsave("figures/TRK_pheo_a.png",
 mod_greens_TRK <- gam(greens ~ s(year_plot_extrap, k = 10),
                      family=Gamma(link="log"),  
                      data = TRK_short,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
 
-summary(mod_greens_TRK) # using ML because of the Gamma family designation
+summary(mod_greens_TRK) 
 
 resid_values_greens_TRK <- residuals(mod_greens_TRK, type = "response")
 acf(resid_values_greens_TRK) # looks good!
@@ -1501,10 +1495,9 @@ ggsave("figures/TRK_greens.png",
 mod_diato_TRK <- gam(diato_nmol_gTC ~ s(year_plot_extrap, k = 20),
                      family=Gamma(link="log"),  
                      data = TRK_short,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
-summary(mod_diato_TRK) # using ML because of the Gamma family designation
+summary(mod_diato_TRK)
 
 resid_values_diato_TRK <- residuals(mod_diato_TRK, type = "response")
 acf(resid_values_diato_TRK) # same negative acf right at lag 1, not huge though
@@ -1677,7 +1670,7 @@ ggsave("figures/TRK_diato.png",
 #                      family=Gamma(link="log"),  
 #                      data = TRK_short,
 #                      # REML only works for gaussian data
-#                      method = "ML")
+#                      method = "REML")
 
 #Gaussian model fit looked better. There were really large error bars
   # with the Gamma distribution
@@ -1686,7 +1679,7 @@ mod_allo_TRK <- gam(allo_nmol_gTC ~ s(year_plot_extrap, k = 15),
                      data = TRK_short,
                      method = "REML")
 
-summary(mod_allo_TRK) # using ML because of the Gamma family designation
+summary(mod_allo_TRK) 
 
 resid_values_allo_TRK <- residuals(mod_allo_TRK, type = "response")
 acf(resid_values_allo_TRK) # looks good!
@@ -1895,10 +1888,9 @@ ggplot(TRK_short) +
 mod_cyanos_TRK <- gam(cyanos ~ s(year_plot_extrap, k = 20),
                      family=Gamma(link="log"),  
                      data = TRK_short,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
-summary(mod_cyanos_TRK) # using ML because of the Gamma family designation
+summary(mod_cyanos_TRK) 
 
 resid_values_cyanos_TRK <- residuals(mod_cyanos_TRK, type = "response")
 acf(resid_values_cyanos_TRK) # looks good
@@ -2531,10 +2523,9 @@ ggsave("figures/LFM_d13C.png",
 mod_perC_LFM <- gam(percent.C ~ s(year_plot_extrap, k = 10), 
                      family=Gamma(link="log"),  
                      data = LFM_short_extrap,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
-summary(mod_perC_LFM) # using ML because of the Gamma family designation
+summary(mod_perC_LFM) 
 
 resid_values_perC_LFM <- residuals(mod_perC_LFM, type = "response")
 acf(resid_values_perC_LFM) 
@@ -2743,10 +2734,9 @@ ggplot(LFM_short_extrap) +
 mod_perN_LFM <- gam(percent.N ~ s(year_plot_extrap, k = 10), 
                      family=Gamma(link="log"),  
                      data = LFM_short_extrap,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
-summary(mod_perN_LFM) # using ML because of the Gamma family designation
+summary(mod_perN_LFM) 
 
 resid_values_perN_LFM <- residuals(mod_perN_LFM, type = "response")
 acf(resid_values_perN_LFM) 
@@ -3127,11 +3117,10 @@ ggsave("figures/LFM_CN.png",
 mod_pheoa_LFM <- gam(pheo_a_nmol_gTC ~ s(year_plot_extrap, k = 10),
                      family=Gamma(link="log"),  
                      data = LFM_short_extrap,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
 
-summary(mod_pheoa_LFM) # using ML because of the Gamma family designation
+summary(mod_pheoa_LFM) 
 
 resid_values_pheoa_LFM <- residuals(mod_pheoa_LFM, type = "response")
 acf(resid_values_pheoa_LFM) # looks good!
@@ -3299,11 +3288,10 @@ ggsave("figures/LFM_pheo_a.png",
 mod_greens_LFM <- gam(greens ~ s(year_plot_extrap, k = 10),
                      family=Gamma(link="log"),  
                      data = LFM_short_extrap,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
 
-summary(mod_greens_LFM) # using ML because of the Gamma family designation
+summary(mod_greens_LFM) 
 
 resid_values_greens_LFM <- residuals(mod_greens_LFM, type = "response")
 acf(resid_values_greens_LFM) # looks good!
@@ -3472,10 +3460,9 @@ ggsave("figures/LFM_greens.png",
 mod_diato_LFM <- gam(diato_nmol_gTC ~ s(year_plot_extrap, k = 10),
                      family=Gamma(link="log"),  
                      data = LFM_short_extrap,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
-summary(mod_diato_LFM) # using ML because of the Gamma family designation
+summary(mod_diato_LFM) 
 
 resid_values_diato_LFM <- residuals(mod_diato_LFM, type = "response")
 acf(resid_values_diato_LFM) # looks good
@@ -3646,10 +3633,9 @@ ggsave("figures/LFM_diato.png",
 mod_allo_LFM <- gam(allo_nmol_gTC ~ s(year_plot_extrap, k = 10),
                      family=Gamma(link="log"),  
                      data = LFM_short_extrap,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
-summary(mod_allo_LFM) # using ML because of the Gamma family designation
+summary(mod_allo_LFM) 
 
 resid_values_allo_LFM <- residuals(mod_allo_LFM, type = "response")
 acf(resid_values_allo_LFM) # looks good!
@@ -3818,10 +3804,9 @@ ggsave("figures/LFM_allo.png",
 mod_cyanos_LFM <- gam(cyanos ~ s(year_plot_extrap, k = 10),
                      family=Gamma(link="log"),  
                      data = LFM_short_extrap,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
-summary(mod_cyanos_LFM) # using ML because of the Gamma family designation
+summary(mod_cyanos_LFM) 
 
 resid_values_cyanos_LFM <- residuals(mod_cyanos_LFM, type = "response")
 acf(resid_values_cyanos_LFM) # looks good
@@ -4360,10 +4345,9 @@ ggsave("figures/UFM_d13C.png",
 mod_perC_UFM <- gam(percent.C ~ s(year_plot_extrap, k = 5), 
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
-summary(mod_perC_UFM) # using ML because of the Gamma family designation
+summary(mod_perC_UFM) 
 
 resid_values_perC_UFM <- residuals(mod_perC_UFM, type = "response")
 acf(resid_values_perC_UFM) # acf looks good
@@ -4566,10 +4550,9 @@ ggplot(UFM_short_extrap) +
 mod_perN_UFM <- gam(percent.N ~ s(year_plot_extrap, k = 5), 
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
-summary(mod_perN_UFM) # using ML because of the Gamma family designation
+summary(mod_perN_UFM) 
 
 resid_values_perN_UFM <- residuals(mod_perN_UFM, type = "response")
 acf(resid_values_perN_UFM) 
@@ -4949,11 +4932,10 @@ ggsave("figures/UFM_CN.png",
 mod_pheoa_UFM <- gam(pheo_a_nmol_gTC ~ s(year_plot_extrap, k = 5),
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
 
-summary(mod_pheoa_UFM) # using ML because of the Gamma family designation
+summary(mod_pheoa_UFM) 
 
 resid_values_pheoa_UFM <- residuals(mod_pheoa_UFM, type = "response")
 acf(resid_values_pheoa_UFM) # looks good!
@@ -5120,11 +5102,10 @@ ggsave("figures/UFM_pheo_a.png",
 mod_greens_UFM <- gam(greens ~ s(year_plot_extrap, k = 5),
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
 
-summary(mod_greens_UFM) # using ML because of the Gamma family designation
+summary(mod_greens_UFM) 
 
 resid_values_greens_UFM <- residuals(mod_greens_UFM, type = "response")
 acf(resid_values_greens_UFM) # looks good!
@@ -5293,10 +5274,9 @@ ggsave("figures/UFM_greens.png",
 mod_diato_UFM <- gam(diato_nmol_gTC ~ s(year_plot_extrap, k = 5),
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
-summary(mod_diato_UFM) # using ML because of the Gamma family designation
+summary(mod_diato_UFM) 
 
 resid_values_diato_UFM <- residuals(mod_diato_UFM, type = "response")
 acf(resid_values_diato_UFM) # same negative acf right at lag 1, not huge though
@@ -5465,10 +5445,9 @@ ggsave("figures/UFM_diato.png",
 mod_allo_UFM <- gam(allo_nmol_gTC ~ s(year_plot_extrap, k = 5),
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
-summary(mod_allo_UFM) # using ML because of the Gamma family designation
+summary(mod_allo_UFM) 
 
 resid_values_allo_UFM <- residuals(mod_allo_UFM, type = "response")
 acf(resid_values_allo_UFM) # looks good!
@@ -5637,10 +5616,9 @@ ggsave("figures/UFM_allo.png",
 mod_cyanos_UFM <- gam(cyanos ~ s(year_plot_extrap, k = 5),
                      family=Gamma(link="log"),  
                      data = UFM_short_extrap,
-                     # REML only works for gaussian data
-                     method = "ML")
+                     method = "REML")
 
-summary(mod_cyanos_UFM) # using ML because of the Gamma family designation
+summary(mod_cyanos_UFM) 
 
 resid_values_cyanos_UFM <- residuals(mod_cyanos_UFM, type = "response")
 acf(resid_values_cyanos_UFM) # looks good
