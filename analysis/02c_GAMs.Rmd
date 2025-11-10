@@ -155,7 +155,7 @@ acf(resid_values_CAR1_ex)
 
 # examine again using AIC:
 AIC(mod_d15N_LFM_ex$lme)   # without CAR(1): -0.57
-AIC(mod_d15N_LFM_CAR1$lme) # with CAR(1) from before: -4.84 (don't compare, was with ML)
+# AIC(mod_d15N_LFM_CAR1$lme) # with CAR(1) from before: -4.84 (don't compare, was with ML)
 AIC(mod_d15N_LFM_CAR1_ex$lme) # with CAR(1) now: 1.42
 # lower AIC = better? better with CAR(1) still. 
 # AIC=2k−2ln(L), where k = # parameters, L = likelihood.
