@@ -169,7 +169,6 @@ ggplot(TRK_short) +
     alpha = 0.1,
     fill = "blue",
     inherit.aes = FALSE) + 
-  geom_point(aes(year_plot_extrap, d15N)) +
   geom_ribbon(data = pred,
               aes(x = year_plot_extrap, ymin = lower, ymax = upper),
               alpha = 0.2) +
@@ -188,7 +187,8 @@ ggplot(TRK_short) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression(paste(delta^{15}, "N (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake")
+  geom_point(aes(year_plot_extrap, d15N)) +
+  ggtitle("TRK")
 TRK_d15N #Saves the plot as an object -- need to do this this way for arranging plots with patchwork() later
 
 ggsave("figures/TRK_d15N.png",
@@ -342,7 +342,7 @@ TRK_d13C <- ggplot(TRK_short) +
   scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression(paste(delta^{13}, "C (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake")
+  ggtitle("TRK")
 TRK_d13C
 
 ggsave("figures/TRK_d13C.png",
@@ -361,8 +361,20 @@ ggsave("figures/TRK_d13C.png",
   hist(TRK_short$percent.C)
   hist(log(TRK_short$percent.C))
   
-# check later how weights, corCAR1 compare. 
-    
+# run the model without transformation and see how model checks look
+  mod_perC_TRK_ID <- gam(percent.C ~ s(year_plot_extrap, k = 10), 
+                     family= gaussian(link = "identity"),  
+                     data = TRK_short,
+                     method = "REML")
+  summary(mod_perC_TRK_ID)
+
+  par(mfrow = c(2, 2))   # Set up a 2x2 grid
+  gam.check(mod_perC_TRK_ID)
+  par(mfrow = c(1, 1)) 
+  
+# compared to the gam.chcek below this is definitely worse.
+  
+# check later how weights, corCAR1 compare.
 # drop the "ex" for simplicity now that we know the dataset shouldn't affect the outcomes. 
 mod_perC_TRK <- gam(percent.C ~ s(year_plot_extrap, k = 10), 
                      family=Gamma(link="log"),  
@@ -370,6 +382,7 @@ mod_perC_TRK <- gam(percent.C ~ s(year_plot_extrap, k = 10),
                      method = "REML")
 
 summary(mod_perC_TRK) 
+gam.check(mod_perC_TRK)
 
 resid_values_perC_TRK <- residuals(mod_perC_TRK, type = "response")
 acf(resid_values_perC_TRK) # acf looks good
@@ -489,7 +502,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-TRK_percC <- ggplot(TRK_short) +
+TRK_perC <- ggplot(TRK_short) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -516,8 +529,8 @@ TRK_percC <- ggplot(TRK_short) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab("Total Carbon (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake")
-TRK_percC
+  ggtitle("TRK")
+TRK_perC
 
 ggsave("figures/TRK_perC.png",
        dpi=600,
@@ -562,7 +575,7 @@ ggplot(TRK_short) +
                      name ="Statistic") +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake")
+  ggtitle("TRK")
 
 ```
 
@@ -572,7 +585,6 @@ ggplot(TRK_short) +
 
   hist(TRK_short$percent.N)
   hist(log(TRK_short$percent.N))
-
 
 # check later how weights, corCAR1 compare. 
     
@@ -701,7 +713,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-TRK_percN <- ggplot(TRK_short) +
+TRK_perN <- ggplot(TRK_short) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -728,8 +740,8 @@ TRK_percN <- ggplot(TRK_short) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab("Total N (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake")
-TRK_percN
+  ggtitle("TRK")
+TRK_perN
 
 ggsave("figures/TRK_perN.png",
        dpi=600,
@@ -773,7 +785,7 @@ ggplot(TRK_short) +
   ) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake")
+  ggtitle("TRK")
 
 
 ```
@@ -799,6 +811,15 @@ ggplot(TRK_short) +
 #                    #  correlation = corCAR1(form = ~ year_plot_extrap),
 #                      method = "REML")
 
+# See model output with raw data
+mod_CN_TRK_ID <- gam(C.N ~ s(year_plot_extrap, k = 20),
+                     family=gaussian(link="identity"),  
+                     data = TRK_short,
+                     method = "REML")
+summary(mod_CN_TRK_ID)
+gam.check(mod_CN_TRK_ID)
+# this is def worse than Bella's version below...
+  
 # IAO - version 2 with Gamma because data are left-skewed, all positive
 mod_CN_TRK <- gam(C.N ~ s(year_plot_extrap, k = 20),
                      family=Gamma(link="log"),  
@@ -954,7 +975,7 @@ TRK_CN <- ggplot(TRK_short) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab("C.N ratio") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake")
+  ggtitle("TRK")
 TRK_CN
 
 ggsave("figures/TRK_CN.png",
@@ -988,7 +1009,7 @@ acf(resid_values_pheoa_TRK)
 
 ## summary object for use in document
 pheoaSumm_TRK <- summary(mod_pheoa_TRK)
-pheoaSumm_TRK #Gives you the P values, degrees of freedom...
+pheoaSumm_TRK # Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
@@ -1103,7 +1124,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-TRK_total_algae <- ggplot(TRK_short) +
+TRK_pheo_a <- ggplot(TRK_short) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -1130,8 +1151,8 @@ TRK_total_algae <- ggplot(TRK_short) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression("pheophytin a ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake")
-TRK_total_algae
+  ggtitle("TRK")
+TRK_pheo_a
 
 ggsave("figures/TRK_pheo_a.png",
        dpi=600,
@@ -1301,7 +1322,7 @@ ggplot(TRK_short_fil) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression("pheophytin a ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake")
+  ggtitle("TRK")
 
 ggsave("figures/TRK_pheo_a.png",
        dpi=600,
@@ -1309,6 +1330,34 @@ ggsave("figures/TRK_pheo_a.png",
        width=8,
        units="in")
 ```
+
+###Greens - see if cor structure helps
+```{r}
+mod_greens_TRK <- gamm(greens ~ s(year_plot_extrap, k = 10),
+                     family=Gamma(link="log"),  
+                     data = TRK_short,
+                     method = "REML")
+
+mod_greens_TRK_cor <- gamm(greens ~ s(year_plot_extrap, k = 10),
+                     family=Gamma(link="log"),  
+                     data = TRK_short,
+                     correlation = corCAR1(form = ~ year_plot_extrap),
+                     method = "REML")
+                  
+AIC(mod_greens_TRK$lme, mod_greens_TRK_cor$lme)
+
+resid_greens_TRK <- residuals(mod_greens_TRK$lme, type = "normalized")
+resid_greens_TRK_cor <- residuals(mod_greens_TRK_cor$lme, type = "normalized")
+
+
+acf(resid_greens_TRK) 
+acf(resid_greens_TRK_cor)
+
+# slight positive correlation at lag 7 - not something corCAR1 is meant to handle, 
+# and either way neither corstructure helps resolve this. 
+# move forward without. 
+```
+
 
 ###Greens
 ```{r}
@@ -1473,7 +1522,7 @@ TRK_greens <- ggplot(TRK_short) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression("pheo b & lutein ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake")
+  ggtitle("TRK")
 TRK_greens
 
 ggsave("figures/TRK_greens.png",
@@ -1620,7 +1669,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-TRK_diatoms<-ggplot(TRK_short) +
+TRK_diato <-ggplot(TRK_short) +
    #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -1647,8 +1696,8 @@ TRK_diatoms<-ggplot(TRK_short) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression("diatoxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake")
-TRK_diatoms
+  ggtitle("TRK")
+TRK_diato
 
 ggsave("figures/TRK_diato.png",
        dpi=600,
@@ -1672,7 +1721,7 @@ ggsave("figures/TRK_diato.png",
 #                      # REML only works for gaussian data
 #                      method = "REML")
 
-#Gaussian model fit looked better. There were really large error bars
+# Gaussian model fit looked better. There were really large error bars
   # with the Gamma distribution
 mod_allo_TRK <- gam(allo_nmol_gTC ~ s(year_plot_extrap, k = 15), 
                      family = gaussian(link = "identity"), 
@@ -1829,7 +1878,7 @@ TRK_allo <- ggplot(TRK_short) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression("alloxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake")
+  ggtitle("TRK")
 TRK_allo 
 
 ggsave("figures/TRK_allo.png",
@@ -1874,8 +1923,9 @@ ggplot(TRK_short) +
     sec.axis = sec_axis(~ . / 1000, name = "Alloxanthin flux")
   ) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake")
+  ggtitle("TRK")
 ```
+
 ###Cyanos
 ```{r}
 
@@ -2038,7 +2088,7 @@ TRK_cyanos <- ggplot(TRK_short) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression("echinenone & canthaxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake")
+  ggtitle("TRK")
 TRK_cyanos
 
 ggsave("figures/TRK_cyanos.png",
@@ -2083,7 +2133,7 @@ ggplot(TRK_short) +
     sec.axis = sec_axis(~ . / 100, name = "Echinenone flux")
   ) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake")
+  ggtitle("TRK")
 ```
 
 ###Preservation index
@@ -2096,7 +2146,7 @@ TRK_short_PI <- TRK_short %>% drop_na(year_plot_extrap, PI)
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(TRK_short_PI) +
+TRK_PI <- ggplot(TRK_short_PI) +
    #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -2128,7 +2178,8 @@ ggplot(TRK_short_PI) +
   geom_hline(yintercept = 1, linetype = "dashed", color = "red", linewidth = 0.7) +
   ylab(expression("Preservation Index")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Turkey Creek Lake")
+  ggtitle("TRK")
+TRK_PI
 
 ggsave("figures/TRK_PI.png",
        dpi=600,
@@ -2323,7 +2374,6 @@ LFM_d15N <- ggplot(LFM_short_extrap) +
     alpha = 0.1,
     fill = "blue",
     inherit.aes = FALSE) + 
-  geom_point(aes(year_plot_extrap, d15N)) +
   geom_ribbon(data = pred,
               aes(x = year_plot_extrap, ymin = lower, ymax = upper),
               alpha = 0.2) +
@@ -2341,7 +2391,8 @@ LFM_d15N <- ggplot(LFM_short_extrap) +
                      name ="Statistic") +
   ylab(expression(paste(delta^{15}, "N (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Lower Fourmile Lake")
+  geom_point(aes(year_plot_extrap, d15N)) +
+  ggtitle("LFM")
 LFM_d15N
 
 ggsave("figures/LFM_d15N.png",
@@ -2356,7 +2407,7 @@ ggsave("figures/LFM_d15N.png",
 Use LFM_short_extrap to be able to plot all the data vs. time, but model only the interpolated dates. 
 ```{r}
 # check later how weights, corCAR1 compare. 
-sum(!is.na(LFM_short_extrap$year_plot_extrap)) # 43 observations. 
+sum(!is.na(LFM_short_extrap$year_plot_extrap)) # 18 observations. 
 
 # use year_CE_plot instead?
 sum(!is.na(LFM_short_extrap$year_CE_plot)) # 18 observations. 
@@ -2481,7 +2532,6 @@ LFM_d13C <- ggplot(LFM_short_extrap) +
     alpha = 0.1,
     fill = "blue",
     inherit.aes = FALSE) + 
-  geom_point(aes(year_CE_plot, d13C)) +
   geom_ribbon(data = pred,
               aes(x = year_CE_plot, ymin = lower, ymax = upper),
               alpha = 0.2) +
@@ -2500,7 +2550,8 @@ LFM_d13C <- ggplot(LFM_short_extrap) +
   # scale_x_continuous(breaks=seq(1860,2025,by=25))+
   ylab(expression(paste(delta^{13}, "C (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Lower Fourmile Lake")
+  geom_point(aes(year_CE_plot, d13C)) +
+  ggtitle("LFM")
 LFM_d13C
 
 ggsave("figures/LFM_d13C.png",
@@ -2646,7 +2697,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-LFM_percC <- ggplot(LFM_short_extrap) +
+LFM_perC <- ggplot(LFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -2654,7 +2705,6 @@ LFM_percC <- ggplot(LFM_short_extrap) +
     alpha = 0.1,
     fill = "blue",
     inherit.aes = FALSE) + 
-  geom_point(aes(year_plot_extrap, percent.C)) +
   geom_ribbon(data = pred,
               aes(x = year_plot_extrap, ymin = lower, ymax = upper),
               alpha = 0.2) +
@@ -2673,8 +2723,9 @@ LFM_percC <- ggplot(LFM_short_extrap) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab("Total C (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Lower Fourmile Lake")
-LFM_percC
+  geom_point(aes(year_plot_extrap, percent.C)) +
+  ggtitle("LFM")
+LFM_perC
 
 ggsave("figures/LFM_perC.png",
        dpi=600,
@@ -2717,7 +2768,7 @@ ggplot(LFM_short_extrap) +
     sec.axis = sec_axis(~ . / 1000 - 1/250, name = "Carbon MAR")
   ) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Lower Fourmile Lake")
+  ggtitle("LFM")
 
 ```
 
@@ -2856,7 +2907,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-LFM_percN <- ggplot(LFM_short_extrap) +
+LFM_perN <- ggplot(LFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -2864,7 +2915,6 @@ LFM_percN <- ggplot(LFM_short_extrap) +
     alpha = 0.1,
     fill = "blue",
     inherit.aes = FALSE) + 
-  geom_point(aes(year_plot_extrap, percent.N), size=0.5) +
   geom_ribbon(data = pred,
               aes(x = year_plot_extrap, ymin = lower, ymax = upper),
               alpha = 0.2) +
@@ -2883,8 +2933,9 @@ LFM_percN <- ggplot(LFM_short_extrap) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab("Total N (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Lower Fourmile Lake")
-LFM_percN
+  geom_point(aes(year_plot_extrap, percent.N), size=0.5) +
+  ggtitle("LFM")
+LFM_perN
 
 ggsave("figures/LFM_perN.png",
        dpi=600,
@@ -2926,7 +2977,7 @@ ggplot(LFM_short_extrap) +
     name = "Total N (%)",
     sec.axis = sec_axis(~ . / 2000, name = "Nitrogen MAR")) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Lower Fourmile Lake")
+  ggtitle("LFM")
 
 ```
 
@@ -2947,8 +2998,23 @@ mod_CN_LFM <- gam(C.N ~ s(year_plot_extrap, k = 10),
                    #  correlation = corCAR1(form = ~ year_plot_extrap),
                      method = "REML")
 
+mod_CN_LFM_gamma <- gam(C.N ~ s(year_plot_extrap, k = 10), 
+                     family = Gamma(link = "log"), 
+                     data = LFM_short_extrap,
+                   #  correlation = corCAR1(form = ~ year_plot_extrap),
+                     method = "REML")
+
 AIC(mod_CN_LFM) 
+
 summary(mod_CN_LFM)
+summary(mod_CN_LFM_gamma)
+
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
+gam.check(mod_CN_LFM)
+gam.check(mod_CN_LFM_gamma)
+par(mfrow = c(1, 1)) 
+
+# better without link function
 
 ### Check diagnostics. You might need to adjust model
 
@@ -3077,7 +3143,6 @@ LFM_CN <- ggplot(LFM_short_extrap) +
     alpha = 0.1,
     fill = "blue",
     inherit.aes = FALSE) + 
-  geom_point(aes(year_plot_extrap, C.N)) +
   geom_ribbon(data = pred,
               aes(x = year_plot_extrap, ymin = lower, ymax = upper),
               alpha = 0.2) +
@@ -3096,7 +3161,8 @@ LFM_CN <- ggplot(LFM_short_extrap) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab("C:N ratio") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Lower Fourmile Lake")
+  geom_point(aes(year_plot_extrap, C.N)) +
+  ggtitle("LFM")
 LFM_CN
 
 ggsave("figures/LFM_CN.png",
@@ -3240,7 +3306,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-LFM_total_algae <- ggplot(LFM_short_extrap) +
+LFM_pheo_a <- ggplot(LFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -3248,7 +3314,6 @@ LFM_total_algae <- ggplot(LFM_short_extrap) +
     alpha = 0.1,
     fill = "blue",
     inherit.aes = FALSE) + 
-  geom_point(aes(year_plot_extrap, pheo_a_nmol_gTC)) +
   geom_ribbon(data = pred,
               aes(x = year_plot_extrap, ymin = lower, ymax = upper),
               alpha = 0.2) +
@@ -3267,8 +3332,9 @@ LFM_total_algae <- ggplot(LFM_short_extrap) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression("pheophytin a ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Lower Fourmile Lake")
-LFM_total_algae
+  geom_point(aes(year_plot_extrap, pheo_a_nmol_gTC)) +
+  ggtitle("LFM")
+LFM_pheo_a
 
 ggsave("figures/LFM_pheo_a.png",
        dpi=600,
@@ -3439,7 +3505,8 @@ LFM_greens <- ggplot(LFM_short_extrap) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression("pheo b & lutein ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Lower Fourmile Lake")
+  geom_point(aes(year_plot_extrap, greens)) +
+  ggtitle("LFM")
 LFM_greens
 
 ggsave("figures/LFM_greens.png",
@@ -3585,7 +3652,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-LFM_diatoms <- ggplot(LFM_short_extrap) +
+LFM_diato <- ggplot(LFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -3593,7 +3660,6 @@ LFM_diatoms <- ggplot(LFM_short_extrap) +
     alpha = 0.1,
     fill = "blue",
     inherit.aes = FALSE) + 
-  geom_point(aes(year_plot_extrap, diato_nmol_gTC)) +
   geom_ribbon(data = pred,
               aes(x = year_plot_extrap, ymin = lower, ymax = upper),
               alpha = 0.2) +
@@ -3612,8 +3678,9 @@ LFM_diatoms <- ggplot(LFM_short_extrap) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression("diatoxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Lower Fourmile Lake")
-LFM_diatoms
+  geom_point(aes(year_plot_extrap, diato_nmol_gTC)) +
+  ggtitle("LFM")
+LFM_diato
 
 ggsave("figures/LFM_diato.png",
        dpi=600,
@@ -3757,7 +3824,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(LFM_short_extrap) +
+LFM_allo <- ggplot(LFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -3765,7 +3832,6 @@ ggplot(LFM_short_extrap) +
     alpha = 0.1,
     fill = "blue",
     inherit.aes = FALSE) + 
-  geom_point(aes(year_plot_extrap, allo_nmol_gTC)) +
   geom_ribbon(data = pred,
               aes(x = year_plot_extrap, ymin = lower, ymax = upper),
               alpha = 0.2) +
@@ -3784,7 +3850,9 @@ ggplot(LFM_short_extrap) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression("alloxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Lower Fourmile Lake")
+  geom_point(aes(year_plot_extrap, allo_nmol_gTC)) +
+  ggtitle("LFM")
+LFM_allo
 
 ggsave("figures/LFM_allo.png",
        dpi=600,
@@ -3954,7 +4022,8 @@ LFM_cyanos <- ggplot(LFM_short_extrap) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression("echinenone & canthaxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Lower Fourmile Lake")
+  geom_point(aes(year_plot_extrap, cyanos)) +
+  ggtitle("LFM")
 LFM_cyanos
 
 ggsave("figures/LFM_cyanos.png",
@@ -3972,9 +4041,9 @@ LFM_short_extrap_PI <- LFM_short_extrap %>% drop_na(year_plot_extrap, PI)
 # Now make a pretty graph that shows the raw data, fitted trend,
 # trend as well as periods of statistically significant increase/decrease!
 #Highlight area with most reliable dates
-highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
+highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(LFM_short_extrap_PI) +
+LFM_PI <- ggplot(LFM_short_extrap_PI) +
    #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -4006,7 +4075,8 @@ ggplot(LFM_short_extrap_PI) +
   geom_hline(yintercept = 1, linetype = "dashed", color = "red", linewidth = 0.7) +
   ylab(expression("Preservation Index")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Lower Fourmile Lake")
+  ggtitle("LFM")
+LFM_PI
 
 ggsave("figures/LFM_PI.png",
        dpi=600,
@@ -4039,6 +4109,12 @@ mod_d15N_UFM <- gam(d15N ~ s(year_plot_extrap, k = 5),
                      data = UFM_short_extrap,
                      method = "REML")
 
+mod_d15N_UFM_log <- gam(d15N ~ s(year_plot_extrap, k = 5), 
+                     family = Gamma(link = "log"), 
+                     data = UFM_short_extrap,
+                     method = "REML")
+
+
 summary(mod_d15N_UFM)
 
 resid_values_d15N_UFM <- residuals(mod_d15N_UFM, type = "response")
@@ -4049,7 +4125,10 @@ d15NSumm_UFM <- summary(mod_d15N_UFM)
 d15NSumm_UFM #Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_d15N_UFM)
+gam.check(mod_d15N_UFM_log)
+par(mfrow = c(1, 1)) 
 
 
 
@@ -4142,7 +4221,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 # trend as well as periods of statistically significant increase/decrease!
 
 #Highlight area with most reliable dates
-highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
+highlight_data <- tibble(xmin = 1929, xmax = 2025, ymin = -Inf, ymax = Inf)
 
 UFM_d15N <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
@@ -4170,7 +4249,7 @@ UFM_d15N <- ggplot(UFM_short_extrap) +
                      name ="Statistic") +
   ylab(expression(paste(delta^{15}, "N (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Upper Fourmile Lake")
+  ggtitle("UFM")
 UFM_d15N
 
 ggsave("figures/UFM_d15N.png",
@@ -4320,7 +4399,7 @@ UFM_d13C <- ggplot(UFM_short_extrap) +
                      name ="Statistic") +
   ylab(expression(paste(delta^{13}, "C (", "\u2030", ")"))) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Upper Fourmile Lake")
+  ggtitle("UFM")
 UFM_d13C
 
 ggsave("figures/UFM_d13C.png",
@@ -4466,7 +4545,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-UFM_percC <- ggplot(UFM_short_extrap) +
+UFM_perC <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -4493,15 +4572,14 @@ UFM_percC <- ggplot(UFM_short_extrap) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab("Total C (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Upper Fourmile Lake")
-UFM_percC
+  ggtitle("UFM")
+UFM_perC
 
 ggsave("figures/UFM_perC.png",
        dpi=600,
        height=5,
        width=8,
        units="in")
-
 
 ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
@@ -4532,7 +4610,7 @@ ggplot(UFM_short_extrap) +
     name = "Total C (%)",
     sec.axis = sec_axis(~ . / 5000, name = "Carbon MAR")) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Upper Fourmile Lake")
+  ggtitle("UFM")
   
 ```
 
@@ -4670,7 +4748,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-UFM_percN <- ggplot(UFM_short_extrap) +
+UFM_perN <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -4696,8 +4774,8 @@ UFM_percN <- ggplot(UFM_short_extrap) +
                      name ="Statistic") +
   ylab("Total N (%)") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Upper Fourmile Lake")
-UFM_percN
+  ggtitle("UFM")
+UFM_perN
 
 ggsave("figures/UFM_perN.png",
        dpi=600,
@@ -4739,7 +4817,7 @@ ggplot(UFM_short_extrap) +
     sec.axis = sec_axis(~ . / 10000, name = "Nitrogen MAR")
   ) +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Upper Fourmile Lake")
+  ggtitle("UFM")
 
 ```
 
@@ -4909,7 +4987,7 @@ UFM_CN <- ggplot(UFM_short_extrap) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab("C.N ratio") +
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Upper Fourmile Lake")
+  ggtitle("UFM")
 UFM_CN
 
 ggsave("figures/UFM_CN.png",
@@ -5054,7 +5132,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-UFM_total_algae <- ggplot(UFM_short_extrap) +
+UFM_pheo_a <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -5081,8 +5159,8 @@ UFM_total_algae <- ggplot(UFM_short_extrap) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression("pheophytin a ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Upper Fourmile Lake")
-UFM_total_algae 
+  ggtitle("UFM")
+UFM_pheo_a
 
 ggsave("figures/UFM_pheo_a.png",
        dpi=600,
@@ -5252,7 +5330,7 @@ UFM_greens <- ggplot(UFM_short_extrap) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression("pheo b & lutein ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Upper Fourmile Lake")
+  ggtitle("UFM")
 UFM_greens
 
 ggsave("figures/UFM_greens.png",
@@ -5397,7 +5475,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-UFM_diatoms <- ggplot(UFM_short_extrap) +
+UFM_diato <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -5423,8 +5501,8 @@ UFM_diatoms <- ggplot(UFM_short_extrap) +
                      name ="Statistic") +
   ylab(expression("diatoxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Upper Fourmile Lake")
-UFM_diatoms
+  ggtitle("UFM")
+UFM_diato
 
 ggsave("figures/UFM_diato.png",
        dpi=600,
@@ -5595,7 +5673,7 @@ UFM_allo <- ggplot(UFM_short_extrap) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression("alloxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Upper Fourmile Lake")
+  ggtitle("UFM")
 UFM_allo
 
 ggsave("figures/UFM_allo.png",
@@ -5764,7 +5842,7 @@ UFM_cyanos <- ggplot(UFM_short_extrap) +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
   ylab(expression("echinenone & canthaxanthin ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Upper Fourmile Lake")
+  ggtitle("UFM")
 UFM_cyanos
 
 ggsave("figures/UFM_cyanos.png",
@@ -5783,9 +5861,9 @@ UFM_short_extrap_PI <- UFM_short_extrap %>% drop_na(year_plot_extrap, PI)
 # Now make a pretty graph that shows the raw data, fitted trend,
 # trend as well as periods of statistically significant increase/decrease!
 #Highlight area with most reliable dates
-highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
+highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-ggplot(UFM_short_extrap_PI) +
+UFM_PI <- ggplot(UFM_short_extrap_PI) +
    #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -5817,7 +5895,8 @@ ggplot(UFM_short_extrap_PI) +
   geom_hline(yintercept = 1, linetype = "dashed", color = "red", linewidth = 0.7) +
   ylab(expression("Preservation Index")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
-  ggtitle("Upper Fourmile Lake")
+  ggtitle("UFM")
+UFM_PI
 
 ggsave("figures/UFM_PI.png",
        dpi=600,
@@ -5827,56 +5906,74 @@ ggsave("figures/UFM_PI.png",
 ```
 
 # Compile figures
-## Figure 2? 3? SIA
+## Figure X SIA
+
 Want to arrange the plot so you have 5 rows (%C, %N, C:N, d15N, d13C) 
 then 3 columns (LFM, TRK, UFM)
 Use the patchwork R package
 ```{r}
+update_geom_defaults("point", list(size = 0.7))
+theme_update(
+  axis.title.x = element_text(size = 14),
+  axis.title.y = element_text(size = 14),
+  axis.text.x  = element_text(size = 12),
+  axis.text.y  = element_text(size = 12),
+  plot.title = element_text(size = 16, face = "bold"),
+  legend.text  = element_text(size = 12),   # text inside legend
+  legend.title = element_text(size = 14)    # legend title
+)
 
-#Row 1 
-( LFM_percC + theme(axis.title.x=element_blank(),
+
+# Row 1 
+(LFM_perC + theme(axis.title.x=element_blank(),
                     axis.text.x=element_blank())) +
-            (UFM_percC + theme(axis.title.y=element_blank(),
+            (UFM_perC + theme(axis.title.y=element_blank(),
                                axis.title.x=element_blank(),
                                axis.text.x=element_blank()))  + 
-            (TRK_percC + theme(axis.title.y=element_blank(),
+            (TRK_perC + theme(axis.title.y=element_blank(),
                                axis.title.x=element_blank(),
                                axis.text.x=element_blank())) + 
-
-#Row 2
-( LFM_percN + theme(axis.title.x=element_blank(),
+  
+# Row 2
+(LFM_perN + theme(axis.title.x=element_blank(),
                     plot.title = element_blank(),
                     axis.text.x=element_blank())) + 
-  (UFM_percN + theme(axis.title.y=element_blank(),
+  (UFM_perN + theme(axis.title.y=element_blank(),
                                axis.title.x=element_blank(),
                                plot.title = element_blank(),
                      axis.text.x=element_blank())) + 
-              (TRK_percN + theme(axis.title.y=element_blank(),
+              (TRK_perN + theme(axis.title.y=element_blank(),
                                axis.title.x=element_blank(),
                                plot.title = element_blank(),
                                axis.text.x=element_blank())) + 
-#Row 3
-  ( LFM_CN + theme(axis.title.x=element_blank(),
-                    plot.title = element_blank())) + 
+# Row 3
+(LFM_CN + theme(axis.title.x=element_blank(),
+                    plot.title = element_blank(),
+                    axis.text.x=element_blank())) + 
   (UFM_CN + theme(axis.title.y=element_blank(),
                   plot.title = element_blank(),
-                  axis.title.x=element_blank()))  + 
+                  axis.title.x=element_blank(),
+                  axis.text.x=element_blank()))  + 
   (TRK_CN + theme(axis.title.y=element_blank(),
                  plot.title = element_blank(),
+                 axis.text.x=element_blank(), 
                  axis.title.x=element_blank()))  + 
   
 #Row 4  
- ( LFM_d13C + theme(axis.title.x=element_blank(),
-                    plot.title = element_blank())) + 
+(LFM_d13C + theme(axis.title.x=element_blank(),
+                    plot.title = element_blank(),
+                    axis.text.x=element_blank())) + 
   (UFM_d13C + theme(axis.title.y=element_blank(),
                     plot.title = element_blank(),
+                    axis.text.x=element_blank(),
                     axis.title.x=element_blank())) +
   (TRK_d13C + theme(axis.title.y=element_blank(),
                     plot.title = element_blank(),
+                    axis.text.x=element_blank(),
                     axis.title.x=element_blank())) + 
 
 #Row 5
-   ( LFM_d15N + theme(axis.title.x=element_blank(),
+(LFM_d15N + theme(axis.title.x=element_blank(),
                     plot.title = element_blank())) +
   (UFM_d15N + theme(axis.title.y=element_blank(),
                     plot.title = element_blank()))  +
@@ -5884,15 +5981,119 @@ Use the patchwork R package
                    plot.title = element_blank(),
                    axis.title.x=element_blank())) +
 
-plot_layout(ncol = 3, nrow=5) +
+plot_layout(ncol = 3, nrow=5) + 
 plot_layout(guides = 'collect') +  # a single legend 
-  plot_annotation(tag_levels = 'a') & # https://patchwork.data-imaginist.com/articles/guides/annotation.html
-
-theme(legend.position = "bottom") &
-  scale_x_continuous(breaks=seq(1860,2020,by=40),
-                     limits=c(1860,2020)) 
+# plot_annotation(tag_levels = 'a', 
+     #           tag_suffix = ")") &
+# https://patchwork.data-imaginist.com/articles/guides/annotation.html 
+theme(legend.position = "bottom",
+plot.margin = margin(t = 10, r = 10, b = 20, l = 10, unit = "pt")) & 
+  # don't know if this is actually doing anything...
+scale_x_continuous(breaks=seq(1860,2020, by=40),
+                     limits=c(1860,2025)) 
 
 ggsave("figures/FigureX_carbon_nitrogen.png",
+       dpi=600,
+       height=8,
+       width=12,
+       units="in")
+```
+
+## Figure Y Pigments
+
+Want to arrange the plot so you have 6 rows and 3 columns (LFM, UFM, TRK)
+Use the patchwork R package
+```{r}
+
+update_geom_defaults("point", list(size = 0.7))
+
+# Row 1 
+(LFM_pheo_a + theme(axis.title.x=element_blank(),
+                    axis.title.y=element_blank(),
+                    axis.text.x=element_blank())) +
+            (UFM_pheo_a + theme(axis.title.y=element_blank(),
+                               axis.title.x=element_blank(),
+                               axis.text.x=element_blank()))  + 
+            (TRK_pheo_a + theme(axis.title.y=element_blank(),
+                               axis.title.x=element_blank(),
+                               axis.text.x=element_blank())) + 
+  
+# Row 2
+(LFM_greens + theme(axis.title.x=element_blank(),
+                    axis.title.y=element_blank(),
+                    plot.title = element_blank(),
+                    axis.text.x=element_blank())) + 
+  (UFM_greens + theme(axis.title.y=element_blank(),
+                               axis.title.x=element_blank(),
+                               plot.title = element_blank(),
+                     axis.text.x=element_blank())) + 
+              (TRK_greens + theme(axis.title.y=element_blank(),
+                               axis.title.x=element_blank(),
+                               plot.title = element_blank(),
+                               axis.text.x=element_blank())) + 
+# Row 3
+(LFM_diato + theme(axis.title.x=element_blank(),
+                    axis.title.y=element_blank(),
+                    plot.title = element_blank(),
+                    axis.text.x=element_blank())) + 
+  (UFM_diato + theme(axis.title.y=element_blank(),
+                  plot.title = element_blank(),
+                  axis.title.x=element_blank(),
+                  axis.text.x=element_blank()))  + 
+  (TRK_diato + theme(axis.title.y=element_blank(),
+                 plot.title = element_blank(),
+                 axis.text.x=element_blank(), 
+                 axis.title.x=element_blank()))  + 
+  
+#Row 4  
+(LFM_allo + theme(axis.title.x=element_blank(),
+                    axis.title.y=element_blank(),
+                    plot.title = element_blank(),
+                    axis.text.x=element_blank())) + 
+  (UFM_allo + theme(axis.title.y=element_blank(),
+                    plot.title = element_blank(),
+                    axis.text.x=element_blank(),
+                    axis.title.x=element_blank())) +
+  (TRK_allo + theme(axis.title.y=element_blank(),
+                    plot.title = element_blank(),
+                    axis.text.x=element_blank(),
+                    axis.title.x=element_blank())) + 
+  
+#Row 5 
+(LFM_cyanos + theme(axis.title.x=element_blank(),
+                    axis.title.y=element_blank(),
+                    plot.title = element_blank(),
+                    axis.text.x=element_blank())) + 
+  (UFM_cyanos + theme(axis.title.y=element_blank(),
+                    plot.title = element_blank(),
+                    axis.text.x=element_blank(),
+                    axis.title.x=element_blank())) +
+  (TRK_cyanos + theme(axis.title.y=element_blank(),
+                    plot.title = element_blank(),
+                    axis.text.x=element_blank(),
+                    axis.title.x=element_blank())) + 
+
+#Row 5
+(LFM_PI + theme(axis.title.x=element_blank(),
+                    axis.title.y=element_blank(),
+                    plot.title = element_blank())) +
+  (UFM_PI + theme(axis.title.y=element_blank(),
+                    plot.title = element_blank()))  +
+  (TRK_PI + theme(axis.title.y=element_blank(),
+                   plot.title = element_blank(),
+                   axis.title.x=element_blank())) +
+
+plot_layout(ncol = 3, nrow=6) + 
+plot_layout(guides = 'collect') +  # a single legend 
+# plot_annotation(tag_levels = 'a', 
+     #           tag_suffix = ")") &
+# https://patchwork.data-imaginist.com/articles/guides/annotation.html 
+theme(legend.position = "bottom",
+plot.margin = margin(t = 10, r = 10, b = 20, l = 10, unit = "pt")) &
+scale_x_continuous(breaks=seq(1860,2020, by=40),
+                     limits=c(1860,2025)) 
+
+ggsave("figures/FigureY_pigments.png",
        dpi=600,
        height=8,
        width=12,
