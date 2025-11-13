@@ -803,8 +803,39 @@ ggplot(TRK_short) +
     
   hist(TRK_short$C.N)
   hist(log(TRK_short$C.N))
-  # data is left skewed, log transform makes it worse? in this case it looks a little better?
+  hist(-log(TRK_short$C.N))
+
+  # data is right skewed, log transform makes it worse? in this case it looks a little better?
     
+# attempt with transformation of the data first?
+  
+TRK_short$C.N_rec <- (1/TRK_short$C.N)
+  hist(1/TRK_short$C.N)
+  hist(TRK_short$C.N_rec) # same, good
+
+mod_CN_TRK_rec <- gam((1/C.N) ~ s(year_plot_extrap, k = 20),
+                      family = gaussian(link="identity"),
+                      data = TRK_short,
+                      method = "REML")
+mod_CN_TRK_rec2 <- gam(C.N_rec ~ s(year_plot_extrap, k = 20),
+                      family = gaussian(link="identity"),
+                      data = TRK_short,
+                      method = "REML")
+
+summary(mod_CN_TRK)
+summary(mod_CN_TRK_rec2)
+
+AIC(mod_CN_TRK, mod_CN_TRK_rec2) 
+# comment out before leaving!
+# both do the same thing, let's check normality assumptions
+
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
+gam.check(mod_CN_TRK)
+gam.check(mod_CN_TRK_ID)
+gam.check(mod_CN_TRK_rec)
+gam.check(mod_CN_TRK_rec2)
+par(mfrow = c(1, 1)) 
+
 # mod_CN_TRK <- gam(C.N ~ s(year_plot_extrap, k = 10), 
 #                      family = gaussian(link = "identity"), 
 #                      data = TRK_short,
@@ -3004,7 +3035,7 @@ mod_CN_LFM_gamma <- gam(C.N ~ s(year_plot_extrap, k = 10),
                    #  correlation = corCAR1(form = ~ year_plot_extrap),
                      method = "REML")
 
-AIC(mod_CN_LFM) 
+AIC(mod_CN_LFM, mod_CN_LFM_gamma)
 
 summary(mod_CN_LFM)
 summary(mod_CN_LFM_gamma)
@@ -3185,8 +3216,17 @@ mod_pheoa_LFM <- gam(pheo_a_nmol_gTC ~ s(year_plot_extrap, k = 10),
                      data = LFM_short_extrap,
                      method = "REML")
 
+mod_pheoa_LFM_gaussian <- gam(pheo_a_nmol_gTC ~ s(year_plot_extrap, k = 10),
+                     family=gaussian(link="identity"),  
+                     data = LFM_short_extrap,
+                     method = "REML")
 
 summary(mod_pheoa_LFM) 
+summary(mod_pheoa_LFM_gaussian)
+
+
+
+AIC(mod_pheoa_LFM, mod_pheoa_LFM_gaussian)
 
 resid_values_pheoa_LFM <- residuals(mod_pheoa_LFM, type = "response")
 acf(resid_values_pheoa_LFM) # looks good!
@@ -3198,6 +3238,7 @@ pheoaSumm_LFM #Gives you the P values, degrees of freedom...
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
 gam.check(mod_pheoa_LFM)
+gam.check(mod_pheoa_LFM_gaussian)
 par(mfrow = c(1, 1)) 
 
 ### now transform response variable:
@@ -5912,6 +5953,7 @@ Want to arrange the plot so you have 5 rows (%C, %N, C:N, d15N, d13C)
 then 3 columns (LFM, TRK, UFM)
 Use the patchwork R package
 ```{r}
+# change text size for all plots
 update_geom_defaults("point", list(size = 0.7))
 theme_update(
   axis.title.x = element_text(size = 14),
