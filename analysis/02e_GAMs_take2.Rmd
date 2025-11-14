@@ -2218,7 +2218,57 @@ ggsave("figures/TRK_PI.png",
        width=8,
        units="in")
 ```
+###Master Preservation Index
+```{r}
 
+TRK_short_mchl <- TRK_short %>% drop_na(year_plot_extrap, master_chl)
+
+# Now make a pretty graph that shows the raw data, fitted trend,
+# trend as well as periods of statistically significant increase/decrease!
+#Highlight area with most reliable dates
+highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
+
+TRK_master_chl <- ggplot(TRK_short_mchl) +
+   #Add a box to show the reader the time period for interpretation
+    geom_rect(
+    mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
+    data = highlight_data, 
+    alpha = 0.1,
+    fill = "blue",
+    inherit.aes = FALSE) + 
+  geom_point(aes(year_plot_extrap, master_chl)) +
+#  geom_ribbon(data = pred,
+#              aes(x = year_plot_extrap, ymin = lower, ymax = upper),
+#              alpha = 0.2) +
+#  geom_line(data = pred,
+#            aes(x = year_plot_extrap, y = fit),
+#            linewidth = 1,
+#            color = "black") +
+#  geom_line(data = pred2,
+#            aes(x = year_plot_extrap, y = fit,
+#                color = change_type,
+#                group = seg_id),
+#            linewidth = 1) +
+#  scale_color_manual(values = c("sig. inc." = "#CC9933",
+#                                "sig. dec." = "#2f6cad"),
+#                     name ="Statistic") +
+  # scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  # Added for non gam version - connect points with a line
+  geom_line(aes(x = year_plot_extrap, y = master_chl), 
+            linewidth = 0.8, color = "black") +
+  # Add dashed reference line at y = 1
+  geom_hline(yintercept = 1, linetype = "dashed", color = "red", linewidth = 0.7) +
+  ylab(expression("Master Preservation Index")) + 
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("TRK")
+TRK_master_chl
+
+ggsave("figures/TRK_masterPI.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+```
 
 # LFM
 ```{r}
@@ -4126,6 +4176,57 @@ ggsave("figures/LFM_PI.png",
        units="in")
 
 ```
+###Master Preservation Index
+```{r}
+
+LFM_short_extrap_mchl <- LFM_short_extrap %>% drop_na(year_plot_extrap, master_chl)
+
+# Now make a pretty graph that shows the raw data, fitted trend,
+# trend as well as periods of statistically significant increase/decrease!
+#Highlight area with most reliable dates
+highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
+
+LFM_master_chl <- ggplot(LFM_short_extrap_mchl) +
+   #Add a box to show the reader the time period for interpretation
+    geom_rect(
+    mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
+    data = highlight_data, 
+    alpha = 0.1,
+    fill = "blue",
+    inherit.aes = FALSE) + 
+  geom_point(aes(year_plot_extrap, master_chl)) +
+#  geom_ribbon(data = pred,
+#              aes(x = year_plot_extrap, ymin = lower, ymax = upper),
+#              alpha = 0.2) +
+#  geom_line(data = pred,
+#            aes(x = year_plot_extrap, y = fit),
+#            linewidth = 1,
+#            color = "black") +
+#  geom_line(data = pred2,
+#            aes(x = year_plot_extrap, y = fit,
+#                color = change_type,
+#                group = seg_id),
+#            linewidth = 1) +
+#  scale_color_manual(values = c("sig. inc." = "#CC9933",
+#                                "sig. dec." = "#2f6cad"),
+#                     name ="Statistic") +
+  # scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  # Added for non gam version - connect points with a line
+  geom_line(aes(x = year_plot_extrap, y = master_chl), 
+            linewidth = 0.8, color = "black") +
+  # Add dashed reference line at y = 1
+  geom_hline(yintercept = 1, linetype = "dashed", color = "red", linewidth = 0.7) +
+  ylab(expression("Master Preservation Index")) + 
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("LFM")
+LFM_master_chl
+
+ggsave("figures/LFM_masterPI.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+```
 
 # UFM
 ```{r}
@@ -5893,6 +5994,57 @@ ggsave("figures/UFM_cyanos.png",
        units="in")
 ```
 
+###Master Preservation Index
+```{r}
+
+UFM_short_extrap_mchl <- UFM_short_extrap %>% drop_na(year_plot_extrap, master_chl)
+
+# Now make a pretty graph that shows the raw data, fitted trend,
+# trend as well as periods of statistically significant increase/decrease!
+#Highlight area with most reliable dates
+highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
+
+UFM_master_chl <- ggplot(UFM_short_extrap_mchl) +
+   #Add a box to show the reader the time period for interpretation
+    geom_rect(
+    mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
+    data = highlight_data, 
+    alpha = 0.1,
+    fill = "blue",
+    inherit.aes = FALSE) + 
+  geom_point(aes(year_plot_extrap, master_chl)) +
+#  geom_ribbon(data = pred,
+#              aes(x = year_plot_extrap, ymin = lower, ymax = upper),
+#              alpha = 0.2) +
+#  geom_line(data = pred,
+#            aes(x = year_plot_extrap, y = fit),
+#            linewidth = 1,
+#            color = "black") +
+#  geom_line(data = pred2,
+#            aes(x = year_plot_extrap, y = fit,
+#                color = change_type,
+#                group = seg_id),
+#            linewidth = 1) +
+#  scale_color_manual(values = c("sig. inc." = "#CC9933",
+#                                "sig. dec." = "#2f6cad"),
+#                     name ="Statistic") +
+  # scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  # Added for non gam version - connect points with a line
+  geom_line(aes(x = year_plot_extrap, y = master_chl), 
+            linewidth = 0.8, color = "black") +
+  # Add dashed reference line at y = 1
+  geom_hline(yintercept = 1, linetype = "dashed", color = "red", linewidth = 0.7) +
+  ylab(expression("Master Preservation Index")) + 
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("UFM")
+UFM_master_chl
+
+ggsave("figures/UFM_masterPI.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+```
 
 ###Preservation index
 ```{r}
