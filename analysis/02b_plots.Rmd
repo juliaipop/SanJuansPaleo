@@ -55,6 +55,83 @@ TRK_short <- read.csv("output/TRK_short.csv") %>%
   select(-X)
 ```
 
+# ADM range table 
+```{r}
+# LFM max est age
+LFM_short_extrap %>%
+  slice_min(year_CE_plot) %>%
+  pull(year_CE_plot)
+
+# LFM max est depth
+LFM_short_extrap %>%
+  slice_min(year_CE_plot) %>%
+  pull(depth_plot)
+
+# LFM max reliably est age
+LFM_short_extrap %>%
+  filter(year_CE_plot > 1925) %>%
+    slice_min(year_CE_plot) %>%
+    pull(year_CE_plot)
+
+# LFM max reliably est depth
+LFM_short_extrap %>%
+  filter(year_CE_plot > 1925) %>%
+    slice_min(year_CE_plot) %>%
+    pull(depth_plot)
+
+# LFM min est age
+LFM_short_extrap %>%
+  slice_max(year_CE_plot) %>%
+  pull(year_CE_plot)
+
+# LFM min est depth
+LFM_short_extrap %>%
+  slice_max(year_CE_plot) %>%
+  pull(depth_plot)
+
+# UFM max est age
+UFM_short_extrap %>% 
+  slice_min(year_CE_plot) %>%
+  pull(year_CE_plot)
+
+# UFM max est depth
+UFM_short_extrap %>% 
+  slice_min(year_CE_plot) %>%
+  pull(depth_plot)
+
+# UFM min est age
+UFM_short_extrap %>% 
+  slice_max(year_CE_plot) %>%
+  pull(year_CE_plot)
+
+# UFM min est depth
+UFM_short_extrap %>% 
+  slice_max(year_CE_plot) %>%
+  pull(depth_plot)
+
+# TRK max est age
+TRK_short %>%
+  slice_min(year_CE_plot) %>%
+  pull(year_CE_plot)
+
+# TRK max est depth
+TRK_short %>%
+  slice_min(year_CE_plot) %>%
+  pull(depth_plot)
+
+# TRK min est age
+TRK_short %>%
+  slice_max(year_CE_plot) %>%
+  pull(year_CE_plot)
+
+# TRK min est depth
+TRK_short %>%
+  slice_max(year_CE_plot) %>%
+  pull(depth_plot)
+
+```
+
+
 # ADM plots
 ## UFM
 ```{r}
@@ -194,6 +271,7 @@ ggsave("figures/TRK_adm_plot.png",
 # LFM domain: 1860 - 2025
   # solid-dashed cutoff: none
   # period of confidence (rectangle): 1925
+predict(LFM_adm, depth = 9)
 
 # crop to GAM domain:
 data <- LFM_short_extrap %>% filter(year_plot_extrap > 1860)
