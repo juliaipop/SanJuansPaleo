@@ -378,6 +378,7 @@ TRK_short <- TRK_wide %>% # make a new subset df with variables of interest
          -car_y_nmol_gTC, 
          -car_z_nmol_gTC) %>%
   mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, # add new columns
+         chls = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC,
          chlb_pheob = chl_b_nmol_gTC + phaeo_b_nmol_gTC,
          all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, # no chlide, chl_c1 or chl_c2 in any core
          # all_diat = diato_nmol_gTC + diadino_nmol_gTC, NO DIADINO
@@ -414,6 +415,7 @@ UFM_short <- UFM_wide %>% # make a new subset df with variables of interest
          -car_z_nmol_gTC) %>%
   mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, # add new columns
          chlb_pheob = chl_b_nmol_gTC + phaeo_b_nmol_gTC,
+         chls = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC,
          all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, # no chlide, chl_c1 or chl_c2 in any core
          # all_diat = diato_nmol_gTC + diadino_nmol_gTC, NO DIADINO
          PI = chl_a_nmol_gTC/pheo_a_nmol_gTC, # preservation index
@@ -451,6 +453,7 @@ LFM_short <- LFM_wide %>% # make a new subset df with variables of interest
          -car_z_nmol_gTC) %>%
   mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, # add new columns
          chlb_pheob = chl_b_nmol_gTC + phaeo_b_nmol_gTC,
+         chls = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC,
          all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, # no chlide, chl_c1 or chl_c2 in any core
          # all_diat = diato_nmol_gTC + diadino_nmol_gTC, NO DIADINO
          PI = chl_a_nmol_gTC/pheo_a_nmol_gTC, # preservation index
@@ -470,7 +473,8 @@ LFM_short <- LFM_wide %>% # make a new subset df with variables of interest
 # Adding summary pigment metrics to wide df. NOTE, only calculating for gTC, & all units are in gTC
 
 TRK_wide <- TRK_wide %>%
-   mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, 
+   mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC,
+         chls = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC,
          chlb_pheob = chl_b_nmol_gTC + phaeo_b_nmol_gTC,
          all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, 
          PI = chl_a_nmol_gTC/pheo_a_nmol_gTC,
@@ -483,7 +487,8 @@ TRK_wide <- TRK_wide %>%
   relocate(chla_pheoa:last_col(), .after = car_z_nmol_gTC)
   
 UFM_wide <- UFM_wide %>%
-    mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, 
+    mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC,
+         chls = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC,
          chlb_pheob = chl_b_nmol_gTC + phaeo_b_nmol_gTC,
          all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, 
          PI = chl_a_nmol_gTC/pheo_a_nmol_gTC,
@@ -496,7 +501,8 @@ UFM_wide <- UFM_wide %>%
   relocate(chla_pheoa:last_col(), .after = car_z_nmol_gTC)
 
 LFM_wide <- LFM_wide %>%
-    mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, 
+    mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC,
+         chls = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC,
          chlb_pheob = chl_b_nmol_gTC + phaeo_b_nmol_gTC,
          all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, 
          PI = chl_a_nmol_gTC/pheo_a_nmol_gTC,

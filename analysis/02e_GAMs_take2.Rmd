@@ -822,16 +822,16 @@ mod_CN_TRK_rec2 <- gam(C.N_rec ~ s(year_plot_extrap, k = 20),
                       data = TRK_short,
                       method = "REML")
 
-summary(mod_CN_TRK)
-summary(mod_CN_TRK_rec2)
+# summary(mod_CN_TRK)
+# summary(mod_CN_TRK_rec2)
 
-AIC(mod_CN_TRK, mod_CN_TRK_rec2) 
+# AIC(mod_CN_TRK, mod_CN_TRK_rec2) 
 # comment out before leaving!
 # both do the same thing, let's check normality assumptions
 
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_CN_TRK)
-gam.check(mod_CN_TRK_ID)
+# gam.check(mod_CN_TRK)
+# gam.check(mod_CN_TRK_ID)
 gam.check(mod_CN_TRK_rec)
 gam.check(mod_CN_TRK_rec2)
 par(mfrow = c(1, 1)) 
@@ -1027,7 +1027,7 @@ ggsave("figures/TRK_CN.png",
 
     # check later how weights, corCAR1 compare. 
     
-mod_pheoa_TRK <- gam(pheo_a_nmol_gTC ~ s(year_plot_extrap, k = 10),
+mod_pheoa_TRK <- gam(pheo_a_nmol_gTC ~ s(year_plot_extrap, k = 20),
                      family=Gamma(link="log"),  
                      data = TRK_short,
                      method = "REML")
@@ -1192,70 +1192,70 @@ ggsave("figures/TRK_pheo_a.png",
        units="in")
 ```
 
-### Total chls
+### Chla + pheoa
 ```{r}
 
 # compare data distributions
-  hist(TRK_short$all_chl)
-  hist(log(TRK_short$all_chl)) # better!
+  hist(TRK_short$chla_pheoa)
+  hist(log(TRK_short$chla_pheoa)) # better!
 
     # check later how weights, corCAR1 compare. 
     
- mod_all_chl_TRK <- gam(all_chl ~ s(year_plot_extrap, k = 15),
+ mod_chla_pheoa_TRK <- gam(chla_pheoa ~ s(year_plot_extrap, k = 20),
                      family=Gamma(link="log"),  
                      data = TRK_short,
                      method = "REML")
 
 
-summary(mod_all_chl_TRK) 
+summary(mod_chla_pheoa_TRK) 
 
-resid_values_all_chl_TRK <- residuals(mod_all_chl_TRK, type = "response")
-acf(resid_values_all_chl_TRK) 
+resid_values_chla_pheoa_TRK <- residuals(mod_chla_pheoa_TRK, type = "response")
+acf(resid_values_chla_pheoa_TRK) 
 
 ## summary object for use in document
-all_chlSumm_TRK <- summary(mod_all_chl_TRK)
-all_chlSumm_TRK # Gives you the P values, degrees of freedom...
+chla_pheoaSumm_TRK <- summary(mod_chla_pheoa_TRK)
+chla_pheoaSumm_TRK # Gives you the P values, degrees of freedom...
 
 ### Check diagnostics. You might need to adjust model
 par(mfrow = c(2, 2))   # Set up a 2x2 grid
-gam.check(mod_all_chl_TRK)
+gam.check(mod_chla_pheoa_TRK)
 par(mfrow = c(1, 1)) 
 
 ### now transform response variable:
-fam<-family(mod_all_chl_TRK)
+fam<-family(mod_chla_pheoa_TRK)
 fam # this is a list of 13
 ilink <- fam$linkinv
 ilink 
 
-plot(mod_all_chl_TRK)
+plot(mod_chla_pheoa_TRK)
 ### NOW PLOT! ###
 N <- 300    # number of points at which to evaluate the splines
 
 # Make a 200 row list of possible year_plot_extrap values from min to max.
-all_chlYear_TRK <- with(TRK_short, 
+chla_pheoaYear_TRK <- with(TRK_short, 
                      data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), 
                                                    max(year_plot_extrap, na.rm=TRUE), 
                                                    length.out = 200)))
 
 # predict fit (response variable) and se for perCYear_TRK on the link scale
 # if you do type = "response" se might still be on the link scale
-all_chlYear_TRK <- cbind(all_chlYear_TRK,
-                      data.frame(predict(mod_all_chl_TRK, all_chlYear_TRK,
+chla_pheoaYear_TRK <- cbind(chla_pheoaYear_TRK,
+                      data.frame(predict(mod_chla_pheoa_TRK, chla_pheoaYear_TRK,
                                          type="link", se.fit = TRUE)))
 
 # calculate 95% CIs, then transform back to the response scale 
-all_chlYear_TRK <- transform(all_chlYear_TRK, fit   = ilink(fit),
+chla_pheoaYear_TRK <- transform(chla_pheoaYear_TRK, fit   = ilink(fit),
   upper = ilink(fit + 2 * se.fit),
   lower = ilink(fit - 2 * se.fit))
 
-all_chlYear_TRK$lake_ID <- 'TRK' # add a column called lake_ID filled with values "TRK"
+chla_pheoaYear_TRK$lake_ID <- 'TRK' # add a column called lake_ID filled with values "TRK"
 
 ## Plot fitted trends
-ggplot(all_chlYear_TRK, aes(x = year_plot_extrap, y = fit)) + # year_plot_extrap is the interp time var
+ggplot(chla_pheoaYear_TRK, aes(x = year_plot_extrap, y = fit)) + # year_plot_extrap is the interp time var
 geom_ribbon(aes(ymin = (lower),
                 ymax = (upper), x = year_plot_extrap),
             alpha = 0.2, inherit.aes = FALSE, fill = "black") +
-      geom_point(data = TRK_short, mapping = aes(x = year_plot_extrap, y = all_chl), inherit.aes = FALSE) +
+      geom_point(data = TRK_short, mapping = aes(x = year_plot_extrap, y = chla_pheoa), inherit.aes = FALSE) +
       geom_line() 
 
 # year_plot_extrap = year_plot_extrap where dates are interpolated. Can use either for plotting points.
@@ -1268,7 +1268,7 @@ geom_ribbon(aes(ymin = (lower),
 ############
 
 # all these are calculate on the link scale log(mu) because the model specifies the gamma family
-fd_inc = confint(fderiv(mod_all_chl_TRK))
+fd_inc = confint(fderiv(mod_chla_pheoa_TRK))
 fd_inc
 
 #Add years for plotting
@@ -1307,7 +1307,7 @@ fd_inc_timing <- fd_inc %>%
 # For graphing, we want to join the predicted/fitted data with the 
 # information with significant periods of change. Let's call it 'pred'
 
-pred <- left_join(all_chlYear_TRK,
+pred <- left_join(chla_pheoaYear_TRK,
                   fd_inc_timing %>% 
                     select(year_plot_extrap, change_type), #select only 2 columns since
                   # lower and upper have two different meanings in these 2 dataframes
@@ -1329,7 +1329,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 #Highlight area with most reliable dates
 highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
 
-TRK_all_chl <- ggplot(TRK_short) +
+TRK_chla_pheoa <- ggplot(TRK_short) +
   #Add a box to show the reader the time period for interpretation
     geom_rect(
     mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
@@ -1337,7 +1337,7 @@ TRK_all_chl <- ggplot(TRK_short) +
     alpha = 0.1,
     fill = "blue",
     inherit.aes = FALSE) + 
-  geom_point(aes(year_plot_extrap, all_chl)) +
+  geom_point(aes(year_plot_extrap, chla_pheoa)) +
   geom_ribbon(data = pred,
               aes(x = year_plot_extrap, ymin = lower, ymax = upper),
               alpha = 0.2) +
@@ -1354,12 +1354,186 @@ TRK_all_chl <- ggplot(TRK_short) +
                                 "sig. dec." = "#2f6cad"),
                      name ="Statistic") +
   # scale_x_continuous(breaks=seq(1880,2025,by=25))+
-  ylab(expression("total chlorophylls ("*nmol~g^-1~"total carbon"*")")) + 
+  ylab(expression("chlorophyll and pheophytin a ("*nmol~g^-1~"total carbon"*")")) + 
   xlab(expression(paste("Year (", italic("CE"), ")"))) +
   ggtitle("TRK")
-TRK_all_chl
+TRK_chla_pheoa
 
-ggsave("figures/TRK_all_chl.png",
+ggsave("figures/TRK_chla_pheoa.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+```
+
+### Total chls + ap
+```{r}
+
+# compare data distributions
+  hist(TRK_short$chls)
+  hist(log(TRK_short$chls)) # better!
+
+    # check later how weights, corCAR1 compare. 
+    
+ mod_chls_TRK <- gam(chls ~ s(year_plot_extrap, k = 20),
+                     family=Gamma(link="log"),  
+                     data = TRK_short,
+                     method = "REML")
+
+
+summary(mod_chls_TRK) 
+
+resid_values_chls_TRK <- residuals(mod_chls_TRK, type = "response")
+acf(resid_values_chls_TRK) 
+
+## summary object for use in document
+chlsSumm_TRK <- summary(mod_chls_TRK)
+chlsSumm_TRK # Gives you the P values, degrees of freedom...
+
+### Check diagnostics. You might need to adjust model
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
+gam.check(mod_chls_TRK)
+par(mfrow = c(1, 1)) 
+
+### now transform response variable:
+fam<-family(mod_chls_TRK)
+fam # this is a list of 13
+ilink <- fam$linkinv
+ilink 
+
+plot(mod_chls_TRK)
+### NOW PLOT! ###
+N <- 300    # number of points at which to evaluate the splines
+
+# Make a 200 row list of possible year_plot_extrap values from min to max.
+chlsYear_TRK <- with(TRK_short, 
+                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), 
+                                                   max(year_plot_extrap, na.rm=TRUE), 
+                                                   length.out = 200)))
+
+# predict fit (response variable) and se for perCYear_TRK on the link scale
+# if you do type = "response" se might still be on the link scale
+chlsYear_TRK <- cbind(chlsYear_TRK,
+                      data.frame(predict(mod_chls_TRK, chlsYear_TRK,
+                                         type="link", se.fit = TRUE)))
+
+# calculate 95% CIs, then transform back to the response scale 
+chlsYear_TRK <- transform(chlsYear_TRK, fit   = ilink(fit),
+  upper = ilink(fit + 2 * se.fit),
+  lower = ilink(fit - 2 * se.fit))
+
+chlsYear_TRK$lake_ID <- 'TRK' # add a column called lake_ID filled with values "TRK"
+
+## Plot fitted trends
+ggplot(chlsYear_TRK, aes(x = year_plot_extrap, y = fit)) + # year_plot_extrap is the interp time var
+geom_ribbon(aes(ymin = (lower),
+                ymax = (upper), x = year_plot_extrap),
+            alpha = 0.2, inherit.aes = FALSE, fill = "black") +
+      geom_point(data = TRK_short, mapping = aes(x = year_plot_extrap, y = chls), inherit.aes = FALSE) +
+      geom_line() 
+
+# year_plot_extrap = year_plot_extrap where dates are interpolated. Can use either for plotting points.
+
+
+
+#First derivatives using gratia package instead of the 
+#functions "helper_functions.R" (that Cale sent)
+############
+############
+
+# all these are calculate on the link scale log(mu) because the model specifies the gamma family
+fd_inc = confint(fderiv(mod_chls_TRK))
+fd_inc
+
+#Add years for plotting
+years <- with(TRK_short,
+                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
+
+fd_inc <- cbind(fd_inc,years)
+
+#Plot the first derivatives
+fd_inc %>%
+  select(-term) %>%
+  pivot_longer(lower:upper) %>%
+  ggplot(aes(x=year_plot_extrap,y=value,linetype=name))+
+  geom_line()+
+    scale_linetype_manual(values = c(
+    "lower" = "dashed", #lower 95% confidence interval
+    "upper" = "dashed", #upper 95% confidence interval
+    "est"   = "solid"
+  ))+
+  theme(legend.position="none")+
+  geom_hline(yintercept=0, color="red")
+# Anywhere the confidence intervals DONT overlap zero is a statistically
+# significant acceleration or deceleration in the trend
+
+
+# When do they occur? You can check with an if/else type statement
+fd_inc_timing <- fd_inc %>%
+  mutate(change_type = case_when(lower < 0 & upper < 0 ~ "sig. dec.",
+                                 lower > 0 & upper > 0 ~ "sig. inc.",
+                                 TRUE ~ NA))
+# View(fd_inc_timing)
+#What you can see if a brief period of decline ~1900-1934, and again from 
+#1960-present. This model, relative to Cale's seems more sensitive to that
+#slight increase pre-1900. I think Cale's weighting is probably better
+
+# For graphing, we want to join the predicted/fitted data with the 
+# information with significant periods of change. Let's call it 'pred'
+
+pred <- left_join(chlsYear_TRK,
+                  fd_inc_timing %>% 
+                    select(year_plot_extrap, change_type), #select only 2 columns since
+                  # lower and upper have two different meanings in these 2 dataframes
+                  by="year_plot_extrap") 
+  # mutate(fit = ifelse(change_type == "sig. dec.", fit, NA))
+
+# Add a segment ID for plotting, so there there are multiple
+# periods of change, ggplot doesn't connect the lines together
+pred2 <- pred %>%
+  mutate(seg_id = with(rle(ifelse(is.na(change_type), "none", change_type)),
+                       rep(seq_along(values), lengths)))
+
+# Keep only rows that are sig. inc or sig. dec
+pred2 <- pred2 %>% filter(!is.na(change_type))
+
+
+# Now make a pretty graph that shows the raw data, fitted trend,
+# trend as well as periods of statistically significant increase/decrease!
+#Highlight area with most reliable dates
+highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
+
+TRK_chls_ap <- ggplot(TRK_short) +
+  #Add a box to show the reader the time period for interpretation
+    geom_rect(
+    mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
+    data = highlight_data, 
+    alpha = 0.1,
+    fill = "blue",
+    inherit.aes = FALSE) + 
+  geom_point(aes(year_plot_extrap, chls)) +
+  geom_ribbon(data = pred,
+              aes(x = year_plot_extrap, ymin = lower, ymax = upper),
+              alpha = 0.2) +
+  geom_line(data = pred,
+            aes(x = year_plot_extrap, y = fit),
+            linewidth = 1,
+            color = "black") +
+#  geom_line(data = pred2,
+#            aes(x = year_plot_extrap, y = fit,
+#                color = change_type,
+#                group = seg_id),
+#            linewidth = 1) +
+  scale_color_manual(values = c("sig. inc." = "#CC9933",
+                                "sig. dec." = "#2f6cad"),
+                     name ="Statistic") +
+  # scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  ylab(expression("chlorophylls and pheophytin a ("*nmol~g^-1~"total carbon"*")")) + 
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("TRK")
+TRK_chls_ap
+
+ggsave("figures/TRK_chls_ap.png",
        dpi=600,
        height=5,
        width=8,
@@ -3606,6 +3780,367 @@ ggsave("figures/LFM_pheo_a.png",
        width=8,
        units="in")
 ```
+
+
+###Chla + pheoa
+```{r}
+# compare data distributions
+  hist(LFM_short_extrap$chla_pheoa)
+  hist(log(LFM_short_extrap$chla_pheoa))
+    
+mod_chla_pheoa_LFM <- gam(chla_pheoa ~ s(year_plot_extrap, k = 10),
+                     family=Gamma(link="log"),  
+                     data = LFM_short_extrap,
+                     method = "REML")
+
+mod_chla_pheoa_LFM_gaussian <- gam(chla_pheoa ~ s(year_plot_extrap, k = 10),
+                     family=gaussian(link="identity"),  
+                     data = LFM_short_extrap,
+                     method = "REML")
+
+summary(mod_chla_pheoa_LFM) 
+summary(mod_chla_pheoa_LFM_gaussian)
+
+
+
+AIC(mod_chla_pheoa_LFM, mod_chla_pheoa_LFM_gaussian)
+
+resid_values_chla_pheoa_LFM <- residuals(mod_chla_pheoa_LFM, type = "response")
+acf(resid_values_chla_pheoa_LFM) # looks good!
+
+## summary object for use in document
+chla_pheoaSumm_LFM <- summary(mod_chla_pheoa_LFM)
+chla_pheoaSumm_LFM #Gives you the P values, degrees of freedom...
+
+### Check diagnostics. You might need to adjust model
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
+gam.check(mod_chla_pheoa_LFM)
+gam.check(mod_chla_pheoa_LFM_gaussian)
+par(mfrow = c(1, 1)) 
+
+### now transform response variable:
+fam<-family(mod_chla_pheoa_LFM)
+fam # this is a list of 13
+ilink <- fam$linkinv
+ilink 
+
+### NOW PLOT! ###
+N <- 300    # number of points at which to evaluate the splines
+
+# Make a 200 row list of possible year_plot_extrap values from min to max.
+chla_pheoaYear_LFM <- with(LFM_short_extrap, 
+                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), 
+                                                   max(year_plot_extrap, na.rm=TRUE), 
+                                                   length.out = 200)))
+
+# predict fit (response variable) and se for perCYear_LFM on the link scale
+# if you do type = "response" se might still be on the link scale
+chla_pheoaYear_LFM <- cbind(chla_pheoaYear_LFM,
+                      data.frame(predict(mod_chla_pheoa_LFM, chla_pheoaYear_LFM,
+                                         type="link", se.fit = TRUE)))
+
+# calculate 95% CIs, then transform back to the response scale 
+chla_pheoaYear_LFM <- transform(chla_pheoaYear_LFM, fit   = ilink(fit),
+  upper = ilink(fit + 2 * se.fit),
+  lower = ilink(fit - 2 * se.fit))
+
+chla_pheoaYear_LFM$lake_ID <- 'LFM' # add a column called lake_ID filled with values "LFM"
+
+## Plot fitted trends
+ggplot(chla_pheoaYear_LFM, aes(x = year_plot_extrap, y = fit)) + # year_plot_extrap is the interp time var
+geom_ribbon(aes(ymin = (lower),
+                ymax = (upper), x = year_plot_extrap),
+            alpha = 0.2, inherit.aes = FALSE, fill = "black") +
+      geom_point(data = LFM_short_extrap, mapping = aes(x = year_plot_extrap, y = chla_pheoa), inherit.aes = FALSE) +
+      geom_line() 
+
+# year_plot_extrap = year_plot_extrap where dates are interpolated. Can use either for plotting points.
+
+
+
+#First derivatives using gratia package instead of the 
+#functions "helper_functions.R" (that Cale sent)
+############
+############
+
+# all these are calculate on the link scale log(mu) because the model specifies the gamma family
+fd_inc = confint(fderiv(mod_chla_pheoa_LFM))
+fd_inc
+
+#Add years for plotting
+years <- with(LFM_short_extrap,
+                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
+
+fd_inc <- cbind(fd_inc,years)
+
+#Plot the first derivatives
+fd_inc %>%
+  select(-term) %>%
+  pivot_longer(lower:upper) %>%
+  ggplot(aes(x=year_plot_extrap,y=value,linetype=name))+
+  geom_line()+
+    scale_linetype_manual(values = c(
+    "lower" = "dashed", #lower 95% confidence interval
+    "upper" = "dashed", #upper 95% confidence interval
+    "est"   = "solid"
+  ))+
+  theme(legend.position="none")+
+  geom_hline(yintercept=0, color="red")
+# Anywhere the confidence intervals DONT overlap zero is a statistically
+# significant acceleration or deceleration in the trend
+
+
+# When do they occur? You can check with an if/else type statement
+fd_inc_timing <- fd_inc %>%
+  mutate(change_type = case_when(lower < 0 & upper < 0 ~ "sig. dec.",
+                                 lower > 0 & upper > 0 ~ "sig. inc.",
+                                 TRUE ~ NA))
+# View(fd_inc_timing)
+#What you can see if a brief period of decline ~1900-1934, and again from 
+#1960-present. This model, relative to Cale's seems more sensitive to that
+#slight increase pre-1900. I think Cale's weighting is probably better
+
+# For graphing, we want to join the predicted/fitted data with the 
+# information with significant periods of change. Let's call it 'pred'
+
+pred <- left_join(chla_pheoaYear_LFM,
+                  fd_inc_timing %>% 
+                    select(year_plot_extrap, change_type), #select only 2 columns since
+                  # lower and upper have two different meanings in these 2 dataframes
+                  by="year_plot_extrap") 
+  # mutate(fit = ifelse(change_type == "sig. dec.", fit, NA))
+
+# Add a segment ID for plotting, so there there are multiple
+# periods of change, ggplot doesn't connect the lines together
+pred2 <- pred %>%
+  mutate(seg_id = with(rle(ifelse(is.na(change_type), "none", change_type)),
+                       rep(seq_along(values), lengths)))
+
+# Keep only rows that are sig. inc or sig. dec
+pred2 <- pred2 %>% filter(!is.na(change_type))
+
+# Now make a pretty graph that shows the raw data, fitted trend,
+# trend as well as periods of statistically significant increase/decrease!
+#Highlight area with most reliable dates
+highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
+
+LFM_chla_pheoa <- ggplot(LFM_short_extrap) +
+  #Add a box to show the reader the time period for interpretation
+    geom_rect(
+    mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
+    data = highlight_data, 
+    alpha = 0.1,
+    fill = "blue",
+    inherit.aes = FALSE) + 
+  geom_ribbon(data = pred,
+              aes(x = year_plot_extrap, ymin = lower, ymax = upper),
+              alpha = 0.2) +
+  geom_line(data = pred,
+            aes(x = year_plot_extrap, y = fit),
+            linewidth = 1,
+            color = "black") +
+  geom_line(data = pred2,
+            aes(x = year_plot_extrap, y = fit,
+                color = change_type,
+                group = seg_id),
+            linewidth = 1) +
+  scale_color_manual(values = c("sig. inc." = "#CC9933",
+                                "sig. dec." = "#2f6cad"),
+                     name ="Statistic") +
+  # scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  ylab(expression("chlorophyll and pheophytin a ("*nmol~g^-1~"total carbon"*")")) + 
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  geom_point(aes(year_plot_extrap, chla_pheoa)) +
+  ggtitle("LFM")
+LFM_chla_pheoa
+
+ggsave("figures/LFM_chla_pheoa.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+```
+
+
+###Total chls + ap
+```{r}
+# compare data distributions
+  hist(LFM_short_extrap$chls)
+  hist(log(LFM_short_extrap$chls))
+    
+mod_chls_LFM <- gam(chls ~ s(year_plot_extrap, k = 10),
+                     family=Gamma(link="log"),  
+                     data = LFM_short_extrap,
+                     method = "REML")
+
+mod_chls_LFM_gaussian <- gam(chls ~ s(year_plot_extrap, k = 10),
+                     family=gaussian(link="identity"),  
+                     data = LFM_short_extrap,
+                     method = "REML")
+
+summary(mod_chls_LFM) 
+summary(mod_chls_LFM_gaussian)
+
+
+
+AIC(mod_chls_LFM, mod_chls_LFM_gaussian)
+
+resid_values_chls_LFM <- residuals(mod_chls_LFM, type = "response")
+acf(resid_values_chls_LFM) # looks good!
+
+## summary object for use in document
+chlsSumm_LFM <- summary(mod_chls_LFM)
+chlsSumm_LFM #Gives you the P values, degrees of freedom...
+
+### Check diagnostics. You might need to adjust model
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
+gam.check(mod_chls_LFM)
+gam.check(mod_chls_LFM_gaussian)
+par(mfrow = c(1, 1)) 
+
+### now transform response variable:
+fam<-family(mod_chls_LFM)
+fam # this is a list of 13
+ilink <- fam$linkinv
+ilink 
+
+### NOW PLOT! ###
+N <- 300    # number of points at which to evaluate the splines
+
+# Make a 200 row list of possible year_plot_extrap values from min to max.
+chlsYear_LFM <- with(LFM_short_extrap, 
+                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), 
+                                                   max(year_plot_extrap, na.rm=TRUE), 
+                                                   length.out = 200)))
+
+# predict fit (response variable) and se for perCYear_LFM on the link scale
+# if you do type = "response" se might still be on the link scale
+chlsYear_LFM <- cbind(chlsYear_LFM,
+                      data.frame(predict(mod_chls_LFM, chlsYear_LFM,
+                                         type="link", se.fit = TRUE)))
+
+# calculate 95% CIs, then transform back to the response scale 
+chlsYear_LFM <- transform(chlsYear_LFM, fit   = ilink(fit),
+  upper = ilink(fit + 2 * se.fit),
+  lower = ilink(fit - 2 * se.fit))
+
+chlsYear_LFM$lake_ID <- 'LFM' # add a column called lake_ID filled with values "LFM"
+
+## Plot fitted trends
+ggplot(chlsYear_LFM, aes(x = year_plot_extrap, y = fit)) + # year_plot_extrap is the interp time var
+geom_ribbon(aes(ymin = (lower),
+                ymax = (upper), x = year_plot_extrap),
+            alpha = 0.2, inherit.aes = FALSE, fill = "black") +
+      geom_point(data = LFM_short_extrap, mapping = aes(x = year_plot_extrap, y = chls), inherit.aes = FALSE) +
+      geom_line() 
+
+# year_plot_extrap = year_plot_extrap where dates are interpolated. Can use either for plotting points.
+
+
+
+#First derivatives using gratia package instead of the 
+#functions "helper_functions.R" (that Cale sent)
+############
+############
+
+# all these are calculate on the link scale log(mu) because the model specifies the gamma family
+fd_inc = confint(fderiv(mod_chls_LFM))
+fd_inc
+
+#Add years for plotting
+years <- with(LFM_short_extrap,
+                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
+
+fd_inc <- cbind(fd_inc,years)
+
+#Plot the first derivatives
+fd_inc %>%
+  select(-term) %>%
+  pivot_longer(lower:upper) %>%
+  ggplot(aes(x=year_plot_extrap,y=value,linetype=name))+
+  geom_line()+
+    scale_linetype_manual(values = c(
+    "lower" = "dashed", #lower 95% confidence interval
+    "upper" = "dashed", #upper 95% confidence interval
+    "est"   = "solid"
+  ))+
+  theme(legend.position="none")+
+  geom_hline(yintercept=0, color="red")
+# Anywhere the confidence intervals DONT overlap zero is a statistically
+# significant acceleration or deceleration in the trend
+
+
+# When do they occur? You can check with an if/else type statement
+fd_inc_timing <- fd_inc %>%
+  mutate(change_type = case_when(lower < 0 & upper < 0 ~ "sig. dec.",
+                                 lower > 0 & upper > 0 ~ "sig. inc.",
+                                 TRUE ~ NA))
+# View(fd_inc_timing)
+#What you can see if a brief period of decline ~1900-1934, and again from 
+#1960-present. This model, relative to Cale's seems more sensitive to that
+#slight increase pre-1900. I think Cale's weighting is probably better
+
+# For graphing, we want to join the predicted/fitted data with the 
+# information with significant periods of change. Let's call it 'pred'
+
+pred <- left_join(chlsYear_LFM,
+                  fd_inc_timing %>% 
+                    select(year_plot_extrap, change_type), #select only 2 columns since
+                  # lower and upper have two different meanings in these 2 dataframes
+                  by="year_plot_extrap") 
+  # mutate(fit = ifelse(change_type == "sig. dec.", fit, NA))
+
+# Add a segment ID for plotting, so there there are multiple
+# periods of change, ggplot doesn't connect the lines together
+pred2 <- pred %>%
+  mutate(seg_id = with(rle(ifelse(is.na(change_type), "none", change_type)),
+                       rep(seq_along(values), lengths)))
+
+# Keep only rows that are sig. inc or sig. dec
+pred2 <- pred2 %>% filter(!is.na(change_type))
+
+# Now make a pretty graph that shows the raw data, fitted trend,
+# trend as well as periods of statistically significant increase/decrease!
+#Highlight area with most reliable dates
+highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
+
+LFM_chls <- ggplot(LFM_short_extrap) +
+  #Add a box to show the reader the time period for interpretation
+    geom_rect(
+    mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
+    data = highlight_data, 
+    alpha = 0.1,
+    fill = "blue",
+    inherit.aes = FALSE) + 
+  geom_ribbon(data = pred,
+              aes(x = year_plot_extrap, ymin = lower, ymax = upper),
+              alpha = 0.2) +
+  geom_line(data = pred,
+            aes(x = year_plot_extrap, y = fit),
+            linewidth = 1,
+            color = "black") +
+  geom_line(data = pred2,
+            aes(x = year_plot_extrap, y = fit,
+                color = change_type,
+                group = seg_id),
+            linewidth = 1) +
+  scale_color_manual(values = c("sig. inc." = "#CC9933",
+                                "sig. dec." = "#2f6cad"),
+                     name ="Statistic") +
+  # scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  ylab(expression("chlorophylls and pheophytin a ("*nmol~g^-1~"total carbon"*")")) + 
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  geom_point(aes(year_plot_extrap, chls)) +
+  ggtitle("LFM")
+LFM_chls
+
+ggsave("figures/LFM_chls.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+```
+
 ###Greens
 ```{r}
 
@@ -5484,6 +6019,177 @@ ggsave("figures/UFM_pheo_a.png",
        units="in")
 ```
 
+
+###Chla + pheoa
+```{r}
+# compare data distributions
+  hist(UFM_short_extrap$chla_pheoa)
+  hist(log(UFM_short_extrap$chla_pheoa)) # better!
+
+    # check later how weights, corCAR1 compare. 
+    
+mod_chla_pheoa_UFM <- gam(chla_pheoa ~ s(year_plot_extrap, k = 5),
+                     family=Gamma(link="log"),  
+                     data = UFM_short_extrap,
+                     method = "REML")
+
+
+summary(mod_chla_pheoa_UFM) 
+
+resid_values_chla_pheoa_UFM <- residuals(mod_chla_pheoa_UFM, type = "response")
+acf(resid_values_chla_pheoa_UFM) # looks good!
+
+## summary object for use in document
+chla_pheoaSumm_UFM <- summary(mod_chla_pheoa_UFM)
+chla_pheoaSumm_UFM #Gives you the P values, degrees of freedom...
+
+### Check diagnostics. You might need to adjust model
+gam.check(mod_chla_pheoa_UFM)
+
+### now transform response variable:
+fam<-family(mod_chla_pheoa_UFM)
+fam # this is a list of 13
+ilink <- fam$linkinv
+ilink 
+
+### NOW PLOT! ###
+N <- 300    # number of points at which to evaluate the splines
+
+# Make a 200 row list of possible year_plot_extrap values from min to max.
+chla_pheoaYear_UFM <- with(UFM_short_extrap, 
+                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), 
+                                                   max(year_plot_extrap, na.rm=TRUE), 
+                                                   length.out = 200)))
+
+# predict fit (response variable) and se for perCYear_UFM on the link scale
+# if you do type = "response" se might still be on the link scale
+chla_pheoaYear_UFM <- cbind(chla_pheoaYear_UFM,
+                      data.frame(predict(mod_chla_pheoa_UFM, chla_pheoaYear_UFM,
+                                         type="link", se.fit = TRUE)))
+
+# calculate 95% CIs, then transform back to the response scale 
+chla_pheoaYear_UFM <- transform(chla_pheoaYear_UFM, fit   = ilink(fit),
+  upper = ilink(fit + 2 * se.fit),
+  lower = ilink(fit - 2 * se.fit))
+
+chla_pheoaYear_UFM$lake_ID <- 'UFM' # add a column called lake_ID filled with values "UFM"
+
+## Plot fitted trends
+ggplot(chla_pheoaYear_UFM, aes(x = year_plot_extrap, y = fit)) + # year_plot_extrap is the interp time var
+geom_ribbon(aes(ymin = (lower),
+                ymax = (upper), x = year_plot_extrap),
+            alpha = 0.2, inherit.aes = FALSE, fill = "black") +
+      geom_point(data = UFM_short_extrap, mapping = aes(x = year_plot_extrap, y = chla_pheoa), inherit.aes = FALSE) +
+      geom_line() 
+
+# year_plot_extrap = year_plot_extrap where dates are interpolated. Can use either for plotting points.
+
+
+
+#First derivatives using gratia package instead of the 
+#functions "helper_functions.R" (that Cale sent)
+############
+############
+
+# all these are calculate on the link scale log(mu) because the model specifies the gamma family
+fd_inc = confint(fderiv(mod_chla_pheoa_UFM))
+fd_inc
+
+#Add years for plotting
+years <- with(UFM_short_extrap,
+                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
+
+fd_inc <- cbind(fd_inc,years)
+
+#Plot the first derivatives
+fd_inc %>%
+  select(-term) %>%
+  pivot_longer(lower:upper) %>%
+  ggplot(aes(x=year_plot_extrap,y=value,linetype=name))+
+  geom_line()+
+    scale_linetype_manual(values = c(
+    "lower" = "dashed", #lower 95% confidence interval
+    "upper" = "dashed", #upper 95% confidence interval
+    "est"   = "solid"
+  ))+
+  theme(legend.position="none")+
+  geom_hline(yintercept=0, color="red")
+# Anywhere the confidence intervals DONT overlap zero is a statistically
+# significant acceleration or deceleration in the trend
+
+
+# When do they occur? You can check with an if/else type statement
+fd_inc_timing <- fd_inc %>%
+  mutate(change_type = case_when(lower < 0 & upper < 0 ~ "sig. dec.",
+                                 lower > 0 & upper > 0 ~ "sig. inc.",
+                                 TRUE ~ NA))
+# View(fd_inc_timing)
+#What you can see if a brief period of decline ~1900-1934, and again from 
+#1960-present. This model, relative to Cale's seems more sensitive to that
+#slight increase pre-1900. I think Cale's weighting is probably better
+
+# For graphing, we want to join the predicted/fitted data with the 
+# information with significant periods of change. Let's call it 'pred'
+
+pred <- left_join(chla_pheoaYear_UFM,
+                  fd_inc_timing %>% 
+                    select(year_plot_extrap, change_type), #select only 2 columns since
+                  # lower and upper have two different meanings in these 2 dataframes
+                  by="year_plot_extrap") 
+  # mutate(fit = ifelse(change_type == "sig. dec.", fit, NA))
+
+# Add a segment ID for plotting, so there there are multiple
+# periods of change, ggplot doesn't connect the lines together
+pred2 <- pred %>%
+  mutate(seg_id = with(rle(ifelse(is.na(change_type), "none", change_type)),
+                       rep(seq_along(values), lengths)))
+
+# Keep only rows that are sig. inc or sig. dec
+pred2 <- pred2 %>% filter(!is.na(change_type))
+
+# Now make a pretty graph that shows the raw data, fitted trend,
+# trend as well as periods of statistically significant increase/decrease!
+
+#Highlight area with most reliable dates
+highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
+
+UFM_chla_pheoa <- ggplot(UFM_short_extrap) +
+  #Add a box to show the reader the time period for interpretation
+    geom_rect(
+    mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
+    data = highlight_data, 
+    alpha = 0.1,
+    fill = "blue",
+    inherit.aes = FALSE) + 
+  geom_point(aes(year_plot_extrap, chla_pheoa)) +
+  geom_ribbon(data = pred,
+              aes(x = year_plot_extrap, ymin = lower, ymax = upper),
+              alpha = 0.2) +
+  geom_line(data = pred,
+            aes(x = year_plot_extrap, y = fit),
+            linewidth = 1,
+            color = "black") +
+#  geom_line(data = pred2,
+#            aes(x = year_plot_extrap, y = fit,
+#                color = change_type,
+#                group = seg_id),
+#            linewidth = 1) +
+  scale_color_manual(values = c("sig. inc." = "#CC9933",
+                                "sig. dec." = "#2f6cad"),
+                     name ="Statistic") +
+  # scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  ylab(expression("chlorophyll and pheophytin a ("*nmol~g^-1~"total carbon"*")")) + 
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("UFM")
+UFM_chla_pheoa
+
+ggsave("figures/UFM_chla_pheoa.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+```
+
 ###Greens
 ```{r}
 # compare data distributions
@@ -6375,13 +7081,13 @@ Use the patchwork R package
 update_geom_defaults("point", list(size = 0.7))
 
 # Row 1 
-(LFM_pheo_a + theme(axis.title.x=element_blank(),
+(LFM_chla_pheoa + theme(axis.title.x=element_blank(),
                     axis.title.y=element_blank(),
                     axis.text.x=element_blank())) +
-            (UFM_pheo_a + theme(axis.title.y=element_blank(),
+            (UFM_chla_pheoa + theme(axis.title.y=element_blank(),
                                axis.title.x=element_blank(),
                                axis.text.x=element_blank()))  + 
-            (TRK_pheo_a + theme(axis.title.y=element_blank(),
+            (TRK_chla_pheoa + theme(axis.title.y=element_blank(),
                                axis.title.x=element_blank(),
                                axis.text.x=element_blank())) + 
   
