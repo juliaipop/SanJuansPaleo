@@ -129,6 +129,16 @@ TRK_short %>%
   slice_max(year_CE_plot) %>%
   pull(depth_plot)
 
+# UFM extrapolated age at bottom of disturbance (10.5cm)
+
+UFM_short_extrap %>% 
+  filter(depth_plot > 10.5) %>% 
+  slice_max(year_plot_extrap) %>%
+  pull(year_plot_extrap)
+
+View(select(UFM_short_extrap, c(depth_plot, year_plot_extrap, year_CE_plot)))
+View(select(LFM_short_extrap, c(depth_plot, year_plot_extrap, year_CE_plot)))
+View(select(TRK_short, c(depth_plot, year_plot_extrap, year_CE_plot, C.N)))
 ```
 
 

@@ -24,14 +24,20 @@ source("scripts/libraries.R")
 source("scripts/GAM_functions.R")
 ```
 
-## Pull in data
+## Pull in data 
 ```{r}
+# also add molar C:N
 UFM_short_extrap <- read.csv("output/UFM_short_extrap.csv") %>%
-  select(-X)
+  select(-X) %>% 
+  mutate(C.Nmolar = C.N*1.167, .after = C.N)
+
 LFM_short_extrap <- read.csv("output/LFM_short_extrap.csv") %>%
-  select(-X)
+  select(-X) %>% 
+  mutate(C.Nmolar = C.N*1.167, .after = C.N)
+
 TRK_short <- read.csv("output/TRK_short.csv") %>%
-  select(-X)
+  select(-X) %>% 
+  mutate(C.Nmolar = C.N*1.167, .after = C.N)
 ```
 
 **Go back and explore the models later to see how correlation structures and weights affect model performance**
@@ -1010,6 +1016,230 @@ TRK_CN <- ggplot(TRK_short) +
 TRK_CN
 
 ggsave("figures/TRK_CN.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+
+```
+
+##C:N molar
+```{r}
+# this column name is annoying so change it to match LFM
+  # names(TRK_short)
+  # TRK_short <- rename(TRK_short, C.Nmolar = `C:N`)
+
+# check later how weights, corCAR1 compare. 
+    
+  hist(TRK_short$C.Nmolar)
+  hist(log(TRK_short$C.Nmolar))
+  hist(-log(TRK_short$C.Nmolar))
+
+  # data is right skewed, log transform makes it worse? in this case it looks a little better?
+    
+# attempt with transformation of the data first?
+  
+TRK_short$C.Nmolar_rec <- (1/TRK_short$C.Nmolar)
+  hist(1/TRK_short$C.Nmolar)
+  hist(TRK_short$C.Nmolar_rec) # same, good
+
+mod_C.Nmolar_TRK_rec <- gam((1/C.Nmolar) ~ s(year_plot_extrap, k = 20),
+                      family = gaussian(link="identity"),
+                      data = TRK_short,
+                      method = "REML")
+mod_C.Nmolar_TRK_rec2 <- gam(C.Nmolar_rec ~ s(year_plot_extrap, k = 20),
+                      family = gaussian(link="identity"),
+                      data = TRK_short,
+                      method = "REML")
+
+# summary(mod_C.Nmolar_TRK)
+# summary(mod_C.Nmolar_TRK_rec2)
+
+# AIC(mod_C.Nmolar_TRK, mod_C.Nmolar_TRK_rec2) 
+# comment out before leaving!
+# both do the same thing, let's check normality assumptions
+
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
+# gam.check(mod_C.Nmolar_TRK)
+# gam.check(mod_C.Nmolar_TRK_ID)
+gam.check(mod_C.Nmolar_TRK_rec)
+gam.check(mod_C.Nmolar_TRK_rec2)
+par(mfrow = c(1, 1)) 
+
+# mod_C.Nmolar_TRK <- gam(C.Nmolar ~ s(year_plot_extrap, k = 10), 
+#                      family = gaussian(link = "identity"), 
+#                      data = TRK_short,
+#                    #  correlation = corCAR1(form = ~ year_plot_extrap),
+#                      method = "REML")
+
+# See model output with raw data
+mod_C.Nmolar_TRK_ID <- gam(C.Nmolar ~ s(year_plot_extrap, k = 20),
+                     family=gaussian(link="identity"),  
+                     data = TRK_short,
+                     method = "REML")
+summary(mod_C.Nmolar_TRK_ID)
+gam.check(mod_C.Nmolar_TRK_ID)
+# this is def worse than Bella's version below...
+  
+# IAO - version 2 with Gamma because data are left-skewed, all positive
+mod_C.Nmolar_TRK <- gam(C.Nmolar ~ s(year_plot_extrap, k = 20),
+                     family=Gamma(link="log"),  
+                     data = TRK_short,
+                     method = "REML")
+
+summary(mod_C.Nmolar_TRK)$dev.expl  # deviance explained
+
+AIC(mod_C.Nmolar_TRK)
+summary(mod_C.Nmolar_TRK)
+
+### Check diagnostics. You might need to adjust model
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
+gam.check(mod_C.Nmolar_TRK)
+par(mfrow = c(1, 1)) 
+
+# p value too low if you change anything (add car 1 etc.)
+
+    resid_values_C.Nmolar_TRK <- residuals(mod_C.Nmolar_TRK, type = "response")
+    acf(resid_values_C.Nmolar_TRK) 
+    # residuals significant, def structured, corCAR1 helps a little but sample size is too small to use it.
+    
+## summary object for use in document
+C.NmolarSumm_TRK <- summary(mod_C.Nmolar_TRK)
+C.NmolarSumm_TRK #Gives you the P values, degrees of freedom...
+
+
+
+
+### NOW PLOT! ###
+N <- 300    # number of points at which to evaluate the splines
+
+# Make a 200 row list of possible year_plot_extrap values from min to max.
+C.NmolarYear_TRK <- with(TRK_short, 
+                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), 
+                                                   max(year_plot_extrap, na.rm=TRUE), 
+                                                   length.out = 200)))
+
+# predict fit (response variable) and se for perCYear_TRK on the response scale
+C.NmolarYear_TRK <- cbind(C.NmolarYear_TRK,
+                      data.frame(predict(mod_C.Nmolar_TRK, C.NmolarYear_TRK,
+                                         type="response", se.fit = TRUE)))
+
+# calculate 95% CIs, on the response scale 
+
+C.NmolarYear_TRK <- transform(C.NmolarYear_TRK,
+  upper = fit + 2 * se.fit,
+  lower = fit - 2 * se.fit)
+
+C.NmolarYear_TRK$lake_ID <- 'TRK' # add a column called lake_ID filled with values "TRK"
+     
+## Plot fitted trends
+ggplot(C.NmolarYear_TRK, aes(x = year_plot_extrap, y = fit)) + # year_plot_extrap is the interp time var
+geom_ribbon(aes(ymin = (lower),
+                ymax = (upper), x = year_plot_extrap),
+            alpha = 0.2, inherit.aes = FALSE, fill = "black") +
+      geom_point(data = TRK_short, mapping = aes(x = year_plot_extrap, y = C.Nmolar), inherit.aes = FALSE) +
+      geom_line() 
+
+# year_plot_extrap = year_plot_extrap where dates are interpolated. Can use either for plotting points.
+
+#First derivatives using gratia package instead of the 
+#functions "helper_functions.R" (that Cale sent)
+############
+############
+
+# all these are calculate on the link scale log(mu) because the model specifies the gamma family
+fd_inc = confint(fderiv(mod_C.Nmolar_TRK))
+fd_inc
+
+#Add years for plotting
+years <- with(TRK_short,
+                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
+
+fd_inc <- cbind(fd_inc,years)
+
+#Plot the first derivatives
+fd_inc %>%
+  select(-term) %>%
+  pivot_longer(lower:upper) %>%
+  ggplot(aes(x=year_plot_extrap,y=value,linetype=name))+
+  geom_line()+
+    scale_linetype_manual(values = c(
+    "lower" = "dashed", #lower 95% confidence interval
+    "upper" = "dashed", #upper 95% confidence interval
+    "est"   = "solid"
+  ))+
+  theme(legend.position="none")+
+  geom_hline(yintercept=0, color="red")
+# Anywhere the confidence intervals DONT overlap zero is a statistically
+# significant acceleration or deceleration in the trend
+
+
+# When do they occur? You can check with an if/else type statement
+fd_inc_timing <- fd_inc %>%
+  mutate(change_type = case_when(lower < 0 & upper < 0 ~ "sig. dec.",
+                                 lower > 0 & upper > 0 ~ "sig. inc.",
+                                 TRUE ~ NA))
+# View(fd_inc_timing)
+#What you can see if a brief period of decline ~1900-1934, and again from 
+#1960-present. This model, relative to Cale's seems more sensitive to that
+#slight increase pre-1900. I think Cale's weighting is probably better
+
+# For graphing, we want to join the predicted/fitted data with the 
+# information with significant periods of change. Let's call it 'pred'
+
+pred <- left_join(C.NmolarYear_TRK,
+                  fd_inc_timing %>% 
+                    select(year_plot_extrap, change_type), #select only 2 columns since
+                  # lower and upper have two different meanings in these 2 dataframes
+                  by="year_plot_extrap") 
+  # mutate(fit = ifelse(change_type == "sig. dec.", fit, NA))
+
+# Add a segment ID for plotting, so there there are multiple
+# periods of change, ggplot doesn't connect the lines together
+pred2 <- pred %>%
+  mutate(seg_id = with(rle(ifelse(is.na(change_type), "none", change_type)),
+                       rep(seq_along(values), lengths)))
+
+# Keep only rows that are sig. inc or sig. dec
+pred2 <- pred2 %>% filter(!is.na(change_type))
+
+
+# Now make a pretty graph that shows the raw data, fitted trend,
+# trend as well as periods of statistically significant increase/decrease!
+#Highlight area with most reliable dates
+highlight_data <- tibble(xmin = 1982, xmax = 2025, ymin = -Inf, ymax = Inf)
+
+TRK_C.Nmolar <- ggplot(TRK_short) +
+  #Add a box to show the reader the time period for interpretation
+    geom_rect(
+    mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
+    data = highlight_data, 
+    alpha = 0.1,
+    fill = "blue",
+    inherit.aes = FALSE) + 
+  geom_point(aes(year_plot_extrap, C.Nmolar)) +
+  geom_ribbon(data = pred,
+              aes(x = year_plot_extrap, ymin = lower, ymax = upper),
+              alpha = 0.2) +
+  geom_line(data = pred,
+            aes(x = year_plot_extrap, y = fit),
+            linewidth = 1,
+            color = "black") +
+#  geom_line(data = pred2,
+#            aes(x = year_plot_extrap, y = fit,
+#                color = change_type,
+#                group = seg_id),
+#            linewidth = 1) +
+  scale_color_manual(values = c("sig. inc." = "#CC9933",
+                                "sig. dec." = "#2f6cad"),
+                     name ="Statistic") +
+  # scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  ylab("C:N molar ratio") +
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("TRK")
+TRK_C.Nmolar
+
+ggsave("figures/TRK_C.Nmolar.png",
        dpi=600,
        height=5,
        width=8,
@@ -3601,6 +3831,195 @@ ggsave("figures/LFM_CN.png",
 
 ```
 
+##C:N molar
+```{r}
+# check later how weights, corCAR1 compare. 
+    
+  hist(LFM_short_extrap$C.Nmolar)
+  hist(log(LFM_short_extrap$C.Nmolar))
+  # data is left skewed, log transform makes it worse
+    
+mod_C.Nmolar_LFM <- gam(C.Nmolar ~ s(year_plot_extrap, k = 10), 
+                     family = gaussian(link = "identity"), 
+                     data = LFM_short_extrap,
+                   #  correlation = corCAR1(form = ~ year_plot_extrap),
+                     method = "REML")
+
+mod_C.Nmolar_LFM_gamma <- gam(C.Nmolar ~ s(year_plot_extrap, k = 10), 
+                     family = Gamma(link = "log"), 
+                     data = LFM_short_extrap,
+                   #  correlation = corCAR1(form = ~ year_plot_extrap),
+                     method = "REML")
+
+AIC(mod_C.Nmolar_LFM, mod_C.Nmolar_LFM_gamma)
+
+summary(mod_C.Nmolar_LFM)
+summary(mod_C.Nmolar_LFM_gamma)
+
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
+gam.check(mod_C.Nmolar_LFM)
+gam.check(mod_C.Nmolar_LFM_gamma)
+par(mfrow = c(1, 1)) 
+
+# better without link function
+
+### Check diagnostics. You might need to adjust model
+
+par(mfrow = c(2, 2))   # Set up a 2x2 grid
+gam.check(mod_C.Nmolar_LFM)
+par(mfrow = c(1, 1)) 
+
+# p value too low if you change anything (add car 1 etc.)
+
+    resid_values_C.Nmolar_LFM <- residuals(mod_C.Nmolar_LFM, type = "response")
+    acf(resid_values_C.Nmolar_LFM) 
+    # residuals significant, def structured, corCAR1 helps a little bit but sample size is too small to use it.
+    
+## summary object for use in document
+C.NmolarSumm_LFM <- summary(mod_C.Nmolar_LFM)
+C.NmolarSumm_LFM #Gives you the P values, degrees of freedom...
+
+
+
+
+### NOW PLOT! ###
+N <- 300    # number of points at which to evaluate the splines
+
+# Make a 200 row list of possible year_plot_extrap values from min to max.
+C.NmolarYear_LFM <- with(LFM_short_extrap, 
+                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), 
+                                                   max(year_plot_extrap, na.rm=TRUE), 
+                                                   length.out = 200)))
+
+# predict fit (response variable) and se for perCYear_LFM on the response scale
+C.NmolarYear_LFM <- cbind(C.NmolarYear_LFM,
+                      data.frame(predict(mod_C.Nmolar_LFM, C.NmolarYear_LFM,
+                                         type="response", se.fit = TRUE)))
+
+# calculate 95% CIs, on the response scale 
+
+C.NmolarYear_LFM <- transform(C.NmolarYear_LFM,
+  upper = fit + 2 * se.fit,
+  lower = fit - 2 * se.fit)
+
+C.NmolarYear_LFM$lake_ID <- 'LFM' # add a column called lake_ID filled with values "LFM"
+     
+## Plot fitted trends
+ggplot(C.NmolarYear_LFM, aes(x = year_plot_extrap, y = fit)) + # year_plot_extrap is the interp time var
+geom_ribbon(aes(ymin = (lower),
+                ymax = (upper), x = year_plot_extrap),
+            alpha = 0.2, inherit.aes = FALSE, fill = "black") +
+      geom_point(data = LFM_short_extrap, mapping = aes(x = year_plot_extrap, y = C.Nmolar), inherit.aes = FALSE) +
+      geom_line() 
+
+# year_plot_extrap = year_plot_extrap where dates are interpolated. Can use either for plotting points.
+
+#First derivatives using gratia package instead of the 
+#functions "helper_functions.R" (that Cale sent)
+############
+############
+
+fd_inc = confint(fderiv(mod_C.Nmolar_LFM))
+fd_inc
+
+#Add years for plotting
+years <- with(LFM_short_extrap,
+                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
+
+fd_inc <- cbind(fd_inc,years)
+
+#Plot the first derivatives
+fd_inc %>%
+  select(-term) %>%
+  pivot_longer(lower:upper) %>%
+  ggplot(aes(x=year_plot_extrap,y=value,linetype=name))+
+  geom_line()+
+    scale_linetype_manual(values = c(
+    "lower" = "dashed", #lower 95% confidence interval
+    "upper" = "dashed", #upper 95% confidence interval
+    "est"   = "solid"
+  ))+
+  theme(legend.position="none")+
+  geom_hline(yintercept=0, color="red")
+# Anywhere the confidence intervals DONT overlap zero is a statistically
+# significant acceleration or deceleration in the trend
+
+plot(mod_C.Nmolar_LFM, rug=TRUE, shade=TRUE)
+
+
+
+# When do they occur? You can check with an if/else type statement
+fd_inc_timing <- fd_inc %>%
+  mutate(change_type = case_when(lower < 0 & upper < 0 ~ "sig. dec.",
+                                 lower > 0 & upper > 0 ~ "sig. inc.",
+                                 TRUE ~ NA))
+# View(fd_inc_timing)
+#What you can see if a brief period of decline ~1900-1934, and again from 
+#1960-present. This model, relative to Cale's seems more sensitive to that
+#slight increase pre-1900. I think Cale's weighting is probably better
+
+# For graphing, we want to join the predicted/fitted data with the 
+# information with significant periods of change. Let's call it 'pred'
+
+pred <- left_join(C.NmolarYear_LFM,
+                  fd_inc_timing %>% 
+                    select(year_plot_extrap, change_type), #select only 2 columns since
+                  # lower and upper have two different meanings in these 2 dataframes
+                  by="year_plot_extrap") 
+  # mutate(fit = ifelse(change_type == "sig. dec.", fit, NA))
+
+# Add a segment ID for plotting, so there there are multiple
+# periods of change, ggplot doesn't connect the lines together
+pred2 <- pred %>%
+  mutate(seg_id = with(rle(ifelse(is.na(change_type), "none", change_type)),
+                       rep(seq_along(values), lengths)))
+
+# Keep only rows that are sig. inc or sig. dec
+pred2 <- pred2 %>% filter(!is.na(change_type))
+
+# Now make a pretty graph that shows the raw data, fitted trend,
+# trend as well as periods of statistically significant increase/decrease!
+#Highlight area with most reliable dates
+highlight_data <- tibble(xmin = 1925, xmax = 2025, ymin = -Inf, ymax = Inf)
+
+LFM_C.Nmolar <- ggplot(LFM_short_extrap) +
+  #Add a box to show the reader the time period for interpretation
+    geom_rect(
+    mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
+    data = highlight_data, 
+    alpha = 0.1,
+    fill = "blue",
+    inherit.aes = FALSE) + 
+  geom_ribbon(data = pred,
+              aes(x = year_plot_extrap, ymin = lower, ymax = upper),
+              alpha = 0.2) +
+  geom_line(data = pred,
+            aes(x = year_plot_extrap, y = fit),
+            linewidth = 1,
+            color = "black") +
+  geom_line(data = pred2,
+            aes(x = year_plot_extrap, y = fit,
+                color = change_type,
+                group = seg_id),
+            linewidth = 1) +
+  scale_color_manual(values = c("sig. inc." = "#CC9933",
+                                "sig. dec." = "#2f6cad"),
+                     name ="Statistic") +
+  # scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  ylab("C:N molar ratio") +
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  geom_point(aes(year_plot_extrap, C.Nmolar)) +
+  ggtitle("LFM")
+LFM_C.Nmolar
+
+ggsave("figures/LFM_C.Nmolar.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+
+```
+
 ##Pigments
 ###Pheo a
 ```{r}
@@ -5071,7 +5490,7 @@ pred2 <- pred2 %>% filter(!is.na(change_type))
 # trend as well as periods of statistically significant increase/decrease!
 
 #Highlight area with most reliable dates
-highlight_data <- tibble(xmin = 1929, xmax = 2025, ymin = -Inf, ymax = Inf)
+highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
 
 UFM_d15N <- ggplot(UFM_short_extrap) +
   #Add a box to show the reader the time period for interpretation
@@ -5676,7 +6095,7 @@ ggplot(UFM_short_extrap) +
 **Note** the wierd skew on this when compiling presentation. 
 
 ```{r}
-# If the code isn't running migth have to rename C:N in UFM_short_extrap
+# If the code isn't running might have to rename C:N in UFM_short_extrap
 # UFM_short_extrap <- rename(UFM_short_extrap, C.N = `C:N`)
 names(UFM_short_extrap)
 
@@ -5841,6 +6260,183 @@ UFM_CN <- ggplot(UFM_short_extrap) +
 UFM_CN
 
 ggsave("figures/UFM_CN.png",
+       dpi=600,
+       height=5,
+       width=8,
+       units="in")
+
+```
+
+## C:N molar
+
+**Note** the wierd skew on this when compiling presentation. 
+
+```{r}
+# If the code isn't running might have to rename C:N in UFM_short_extrap
+# UFM_short_extrap <- rename(UFM_short_extrap, C.Nmolar = `C:N`)
+names(UFM_short_extrap)
+
+# check later how weights, corCAR1 compare. 
+    
+  hist(UFM_short_extrap$C.Nmolar)
+  hist(log(UFM_short_extrap$C.Nmolar))
+  # data is left skewed, log transform makes it worse? in this case it looks a little better?
+    
+mod_C.Nmolar_UFM <- gam(C.Nmolar ~ s(year_plot_extrap, k = 5), 
+                     family = gaussian(link = "identity"), 
+                     data = UFM_short_extrap,
+                   #  correlation = corCAR1(form = ~ year_plot_extrap),
+                     method = "REML")
+
+AIC(mod_C.Nmolar_UFM) 
+summary(mod_C.Nmolar_UFM)
+
+### Check diagnostics. You might need to adjust model
+gam.check(mod_C.Nmolar_UFM)
+
+# p value too low if you change anything (add car 1 etc.)
+
+    resid_values_C.Nmolar_UFM <- residuals(mod_C.Nmolar_UFM, type = "response")
+    acf(resid_values_C.Nmolar_UFM) 
+    # residuals significant, def structured, corCAR1 helps a little but sample size is too small to use it.
+    
+## summary object for use in document
+C.NmolarSumm_UFM <- summary(mod_C.Nmolar_UFM)
+C.NmolarSumm_UFM #Gives you the P values, degrees of freedom...
+
+
+
+
+### NOW PLOT! ###
+N <- 300    # number of points at which to evaluate the splines
+
+# Make a 200 row list of possible year_plot_extrap values from min to max.
+C.NmolarYear_UFM <- with(UFM_short_extrap, 
+                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), 
+                                                   max(year_plot_extrap, na.rm=TRUE), 
+                                                   length.out = 200)))
+
+# predict fit (response variable) and se for perCYear_UFM on the response scale
+C.NmolarYear_UFM <- cbind(C.NmolarYear_UFM,
+                      data.frame(predict(mod_C.Nmolar_UFM, C.NmolarYear_UFM,
+                                         type="response", se.fit = TRUE)))
+
+# calculate 95% CIs, on the response scale 
+
+C.NmolarYear_UFM <- transform(C.NmolarYear_UFM,
+  upper = fit + 2 * se.fit,
+  lower = fit - 2 * se.fit)
+
+C.NmolarYear_UFM$lake_ID <- 'UFM' # add a column called lake_ID filled with values "UFM"
+     
+## Plot fitted trends
+ggplot(C.NmolarYear_UFM, aes(x = year_plot_extrap, y = fit)) + # year_plot_extrap is the interp time var
+geom_ribbon(aes(ymin = (lower),
+                ymax = (upper), x = year_plot_extrap),
+            alpha = 0.2, inherit.aes = FALSE, fill = "black") +
+      geom_point(data = UFM_short_extrap, mapping = aes(x = year_plot_extrap, y = C.Nmolar), inherit.aes = FALSE) +
+      geom_line() 
+
+# year_plot_extrap = year_plot_extrap where dates are interpolated. Can use either for plotting points.
+
+#First derivatives using gratia package instead of the 
+#functions "helper_functions.R" (that Cale sent)
+############
+############
+
+# all these are calculate on the link scale log(mu) because the model specifies the gamma family
+fd_inc = confint(fderiv(mod_C.Nmolar_UFM))
+fd_inc
+
+#Add years for plotting
+years <- with(UFM_short_extrap,
+                     data.frame(year_plot_extrap = seq(min(year_plot_extrap, na.rm=TRUE), max(year_plot_extrap, na.rm=TRUE), length.out = 200)))
+
+fd_inc <- cbind(fd_inc,years)
+
+#Plot the first derivatives
+fd_inc %>%
+  select(-term) %>%
+  pivot_longer(lower:upper) %>%
+  ggplot(aes(x=year_plot_extrap,y=value,linetype=name))+
+  geom_line()+
+    scale_linetype_manual(values = c(
+    "lower" = "dashed", #lower 95% confidence interval
+    "upper" = "dashed", #upper 95% confidence interval
+    "est"   = "solid"
+  ))+
+  theme(legend.position="none")+
+  geom_hline(yintercept=0, color="red")
+# Anywhere the confidence intervals DONT overlap zero is a statistically
+# significant acceleration or deceleration in the trend
+
+
+# When do they occur? You can check with an if/else type statement
+fd_inc_timing <- fd_inc %>%
+  mutate(change_type = case_when(lower < 0 & upper < 0 ~ "sig. dec.",
+                                 lower > 0 & upper > 0 ~ "sig. inc.",
+                                 TRUE ~ NA))
+# View(fd_inc_timing)
+#What you can see if a brief period of decline ~1900-1934, and again from 
+#1960-present. This model, relative to Cale's seems more sensitive to that
+#slight increase pre-1900. I think Cale's weighting is probably better
+
+# For graphing, we want to join the predicted/fitted data with the 
+# information with significant periods of change. Let's call it 'pred'
+
+pred <- left_join(C.NmolarYear_UFM,
+                  fd_inc_timing %>% 
+                    select(year_plot_extrap, change_type), #select only 2 columns since
+                  # lower and upper have two different meanings in these 2 dataframes
+                  by="year_plot_extrap") 
+  # mutate(fit = ifelse(change_type == "sig. dec.", fit, NA))
+
+# Add a segment ID for plotting, so there there are multiple
+# periods of change, ggplot doesn't connect the lines together
+pred2 <- pred %>%
+  mutate(seg_id = with(rle(ifelse(is.na(change_type), "none", change_type)),
+                       rep(seq_along(values), lengths)))
+
+# Keep only rows that are sig. inc or sig. dec
+pred2 <- pred2 %>% filter(!is.na(change_type))
+
+# Now make a pretty graph that shows the raw data, fitted trend,
+# trend as well as periods of statistically significant increase/decrease!
+
+#Highlight area with most reliable dates
+highlight_data <- tibble(xmin = 1949, xmax = 2025, ymin = -Inf, ymax = Inf)
+
+UFM_C.Nmolar <- ggplot(UFM_short_extrap) +
+  #Add a box to show the reader the time period for interpretation
+    geom_rect(
+    mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), 
+    data = highlight_data, 
+    alpha = 0.1,
+    fill = "blue",
+    inherit.aes = FALSE) + 
+  geom_point(aes(year_plot_extrap, C.Nmolar)) +
+  geom_ribbon(data = pred,
+              aes(x = year_plot_extrap, ymin = lower, ymax = upper),
+              alpha = 0.2) +
+  geom_line(data = pred,
+            aes(x = year_plot_extrap, y = fit),
+            linewidth = 1,
+            color = "black") +
+#  geom_line(data = pred2,
+#            aes(x = year_plot_extrap, y = fit,
+#                color = change_type,
+#                group = seg_id),
+#            linewidth = 1) +
+  scale_color_manual(values = c("sig. inc." = "#CC9933",
+                                "sig. dec." = "#2f6cad"),
+                     name ="Statistic") +
+  # scale_x_continuous(breaks=seq(1880,2025,by=25))+
+  ylab("C:N molar ratio") +
+  xlab(expression(paste("Year (", italic("CE"), ")"))) +
+  ggtitle("UFM")
+UFM_C.Nmolar
+
+ggsave("figures/UFM_C.Nmolar.png",
        dpi=600,
        height=5,
        width=8,
@@ -7020,14 +7616,14 @@ theme_update(
                                plot.title = element_blank(),
                                axis.text.x=element_blank())) + 
 # Row 3
-(LFM_CN + theme(axis.title.x=element_blank(),
+(LFM_C.Nmolar + theme(axis.title.x=element_blank(),
                     plot.title = element_blank(),
                     axis.text.x=element_blank())) + 
-  (UFM_CN + theme(axis.title.y=element_blank(),
+  (UFM_C.Nmolar + theme(axis.title.y=element_blank(),
                   plot.title = element_blank(),
                   axis.title.x=element_blank(),
                   axis.text.x=element_blank()))  + 
-  (TRK_CN + theme(axis.title.y=element_blank(),
+  (TRK_C.Nmolar + theme(axis.title.y=element_blank(),
                  plot.title = element_blank(),
                  axis.text.x=element_blank(), 
                  axis.title.x=element_blank()))  + 
