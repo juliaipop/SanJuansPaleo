@@ -38,6 +38,8 @@ LFM_short_extrap <- read.csv("output/LFM_short_extrap.csv") %>%
 TRK_short <- read.csv("output/TRK_short.csv") %>%
   select(-X) %>% 
   mutate(C.Nmolar = C.N*1.167, .after = C.N)
+
+# View(select(TRK_short, c(depth_plot, "C.N", C.Nmolar, year_plot_extrap, duration)))
 ```
 
 **Go back and explore the models later to see how correlation structures and weights affect model performance**
