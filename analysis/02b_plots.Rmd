@@ -136,6 +136,9 @@ UFM_short_extrap %>%
   slice_max(year_plot_extrap) %>%
   pull(year_plot_extrap)
 
+LFM_adm <- readRDS("output/LFM_adm.rds")
+predict(LFM_adm, depth = 25)$age
+
 View(select(UFM_short_extrap, c(depth_plot, year_plot_extrap, year_CE_plot)))
 View(select(LFM_short_extrap, c(depth_plot, year_plot_extrap, year_CE_plot)))
 View(select(TRK_short, c(depth_plot, year_plot_extrap, year_CE_plot, C.N)))
