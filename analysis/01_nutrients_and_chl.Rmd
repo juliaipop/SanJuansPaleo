@@ -153,6 +153,28 @@ chl %>%
 ggsave("figures/chlorophylla_all_lakes.png",
        width = 8, height = 4, units = "in", dpi = 300)
 
+
+#Average of surface and meta samples by lake
+chl %>%
+  filter(siteId %in% c("ufm","lfm","tuc")) %>%
+  mutate(dateSampled=ymd(dateSampled),
+         year=year(dateSampled),
+         month=month(dateSampled),
+         timing = case_when(month == "7" & year =="2024" ~ "July `24",
+                            month == "9" & year =="2024" ~ "Sept `24",
+                            month == "7" & year =="2025" ~ "July `25"),
+         timing = factor(timing, levels=c("July `24",
+                                  "Sept `24",
+                                  "July `25")),
+         sampleLocation = factor(sampleLocation,
+                                 levels = c("ls","lm","lh"),
+                                 labels = c("Surface", "Metalimnion", "Hypolimnion"))) %>%
+  filter(!sampleLocation=="lh") %>%
+  group_by(siteId) %>%
+  summarize(mean=median(chla_ugl, na.rm=TRUE),
+            min=min(chla_ugl, na.rm=TRUE),
+            max=max(chla_ugl,na.rm=TRUE),
+            chla_sd=sd(chla_ugl,na.rm=TRUE))
 ```
 
 # Nutrients
@@ -257,6 +279,23 @@ nuts %>%
   theme(legend.position="bottom")
 ggsave("figures/phosphate_without_TUCin6_all_lakes.png",
        width = 6, height = 4, units = "in", dpi = 300)
+```
+
+### Stats by lake
+```{r}
+#Average of surface and meta samples by lake
+nuts %>%
+  filter(siteId %in% c("ufm","lfm","tuc")) %>%
+  filter(sampleLocation %in% c("surface","hypolimnion")) %>%
+  mutate(value_mean = case_when(Test %in% c("NH3_N_mgL","NO3_N_mgL") ~ value_mean*1000,
+                                TRUE ~ value_mean)) %>%
+  group_by(siteId,sampleLocation,Test) %>%
+  summarize(mean=mean(value_mean, na.rm=TRUE),
+            sd=sd(value_mean,na.rm=TRUE),
+            min=min(value_mean, na.rm=TRUE),
+            max=max(value_mean,na.rm=TRUE),
+            ) %>%
+  arrange(siteId,Test,sampleLocation)
 ```
 
 # Plot YSI profiles
@@ -397,4 +436,18 @@ DO  + ORP + pH +
 
 ggsave("~/Library/CloudStorage/OneDrive-UCB-O365/Research/Data/R/EBIO4030/figures/TUC_DO_ORP_pH_profiles_Sept24.png",
        width = 8, height = 8, units = "in", dpi = 300)
+```
+
+###Summary stats for epi.
+```{r}
+all_profiles %>%
+  filter(parameter %in% c("pH","cond_spec_uScm")) %>%
+  filter(depth_m < 2) %>%
+  group_by(lake, parameter) %>%
+  summarize(mean=mean(value, na.rm=TRUE),
+            sd=sd(value,na.rm=TRUE),
+            min=min(value, na.rm=TRUE),
+            max=max(value,na.rm=TRUE)
+            ) 
+
 ```
