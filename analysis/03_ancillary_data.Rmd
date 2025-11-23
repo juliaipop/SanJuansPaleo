@@ -18,6 +18,7 @@ output: html_document
 knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_project))
 ```
 
+#Read in all data
 ```{r}
 source("scripts/libraries.R")
 
@@ -54,9 +55,23 @@ source("analysis/pull_gridmet_snotel.R")
 #final SNOTEL dfs: snotel_data_combined (does not have calculated values, just raw) and snow_phenology_df (has calculated values)
 #final dfs: gridmet_data (this one has no snow or calculated values); gridmet_data_snow (has snow estimated from precip and temp, and mean temp estimated from min/max); total_WY_snowfall (just estimated snowfall for each water year/site)
 
+nadp <- read.csv("data/NADP_NTN-co91-WolfCreekPass.csv") %>%
+  select(yr, totalN, NH4, NO3) %>%
+  rename(year=yr,
+         N_kgperha=totalN,
+         NH4_kgperha=NH4,
+         NO3_kgperha=NO3)
+
+nadp2 <- read.csv("data/NTN-co91-a-s-kg.csv") %>%
+  select(yr, totalN, NH4, NO3) %>%
+  rename(year=yr,
+         N_kgperha=totalN,
+         NH4_kgperha=NH4,
+         NO3_kgperha=NO3)
 
 ``` 
 
+# PLOTS
 ## Landcover
 
 ### Time series   
@@ -77,6 +92,202 @@ landcover %>%
     "Turkey Creek Lake" = "#D55E00"))
 ggsave("figures/landcover/forest_shrubs_all_lakes.png",
        width = 8, height = 6, units = "in", dpi = 300)
+
+
+plot_forest_change <- landcover %>%
+  filter(class_name %in% c("Evergreen Forest")) %>%
+    mutate(Lake = recode(Lake, "Lower Fourmile Lake"="LFM"),
+         Lake = recode(Lake, "Upper Fourmile Lake"="UFM"),
+         Lake = recode(Lake, "Turkey Creek Lake"="TRK")) %>%
+  group_by(Lake) %>%
+  mutate(scale_WS_forest = scale(percent_of_ws)) %>%
+  ggplot(aes(x=year, y=scale_WS_forest, color=Lake, fill=Lake)) +
+  geom_point(alpha=0.5)+
+  # facet_wrap(.~Lake, scales="free_y") +
+  theme(legend.position="bottom")+
+  labs(y="Relative change in forested \n watershed area (z-score)",
+       x="Year")+
+  geom_smooth(method="gam", se=TRUE)+
+  scale_color_manual(
+    values = c( 
+    "UFM" = "yellowgreen",  # 
+    "LFM" = "#0072B2",  # 
+    "TRK" = "#D55E00"),
+    name="Lake:") +
+    scale_fill_manual(
+    values = c( 
+    "UFM" = "yellowgreen",  # 
+    "LFM" = "#0072B2",  # 
+    "TRK" = "#D55E00"),
+    name="Lake:") +
+    theme(
+    legend.position = c(0.98, 0.98),
+    legend.justification = c("right", "top"),
+    legend.background = element_rect(fill = alpha("white", 0.7), color = NA),
+    legend.box.background = element_blank(),
+    legend.text = element_text(size=6),
+    legend.title = element_text(size=6)
+  )+
+  scale_y_continuous(limits=c(-2,3),
+                     breaks=c(-2,-1,0,1,2))
+  # theme(legend.position="none")
+plot_forest_change
+ggsave("figures/landcover/forest_all_lakes.png",
+       width = 3, height = 6, units = "in", dpi = 300)
+
+```
+
+#### GAM for forest cover change
+```{r}
+##BETTER PLOT FOR THESIS
+
+
+# helper to robustly extract derivative columns from gratia::derivatives output
+grab_deriv_df <- function(fd_raw, new_years) {
+  if (!is.data.frame(fd_raw)) {
+    # try to extract nested data-frame element if present
+    idx <- which(vapply(fd_raw, function(x) is.data.frame(x) || is.matrix(x), logical(1)))
+    if (length(idx)) fd_raw <- as.data.frame(fd_raw[[idx[1]]]) else fd_raw <- as.data.frame(fd_raw)
+  }
+  nm <- names(fd_raw)
+  deriv_col <- if (".derivative" %in% nm) ".derivative" else nm[grep("deriv|derivative|estimate|est|slope", nm, ignore.case = TRUE)][1]
+  low_col   <- if (".lower_ci"   %in% nm) ".lower_ci"   else nm[grep("lower|lwr|ci_l|ci.lower|conf.low", nm, ignore.case = TRUE)][1]
+  up_col    <- if (".upper_ci"   %in% nm) ".upper_ci"   else nm[grep("upper|upr|ci_u|ci.upper|conf.high", nm, ignore.case = TRUE)][1]
+  if (any(is.na(c(deriv_col, low_col, up_col)))) {
+    stop("Can't find derivative/CI columns in derivatives() output. Found: ", paste(nm, collapse = ", "))
+  }
+  fd <- fd_raw %>%
+    mutate(year = as.numeric(.data[["year"]])) %>%
+    transmute(year = year,
+              deriv = .data[[deriv_col]],
+              lower = .data[[low_col]],
+              upper = .data[[up_col]]) %>%
+    mutate(change_type = case_when(
+      lower > 0 & upper > 0 ~ "sig. inc.",
+      lower < 0 & upper < 0 ~ "sig. dec.",
+      TRUE ~ NA_character_
+    ))
+  return(fd)
+}
+
+# colors from your plot
+pal_fill  <- c("UFM" = "yellowgreen", "LFM" = "#0072B2", "TRK" = "#D55E00")
+pal_color <- pal_fill
+
+# prepare grouped data frame, keep the scaled z-score in the df for modelling
+df <- landcover %>%
+  filter(class_name == "Evergreen Forest") %>%
+  mutate(Lake = recode(Lake,
+                       "Lower Fourmile Lake" = "LFM",
+                       "Upper Fourmile Lake" = "UFM",
+                       "Turkey Creek Lake" = "TRK")) %>%
+  group_by(Lake) %>%
+  mutate(scale_WS_forest = as.numeric(scale(percent_of_ws))) %>%
+  ungroup()
+
+# per-lake model fit + significance test + preds + derivative analysis (only if significant)
+lake_info <- df %>%
+  group_by(Lake) %>%
+  group_map(.keep = TRUE, .f = function(df_l, key) {
+    lake_name <- key$Lake
+
+    # fit GAM
+    mod <- try(mgcv::gam(scale_WS_forest ~ s(year, k = 10),
+                         data = df_l, family = gaussian(), method = "REML"), silent = TRUE)
+    if (inherits(mod, "try-error")) {
+      return(tibble(Lake = lake_name, ok = FALSE))
+    }
+
+    # get smooth p-value from summary (s.table): many mgcv versions place p-value in s.table[,4]
+    s_tbl <- tryCatch(summary(mod)$s.table, error = function(e) NULL)
+    pval <- NA_real_
+    if (!is.null(s_tbl)) {
+      # s.table can be matrix/data.frame; last column usually p-value
+      pcol <- ncol(s_tbl)
+      pval <- as.numeric(s_tbl[1, pcol])
+    }
+
+    sig <- !is.na(pval) && pval < 0.05
+
+    # build prediction grid
+    new_years <- tibble(year = seq(min(df_l$year, na.rm = TRUE),
+                                   max(df_l$year, na.rm = TRUE),
+                                   length.out = 200))
+
+    preds <- NULL
+    fd    <- NULL
+    if (sig) {
+      p <- predict(mod, newdata = new_years, type = "response", se.fit = TRUE)
+      preds <- new_years %>%
+        mutate(fit = p$fit, se.fit = p$se.fit,
+               lower = fit - 2 * se.fit, upper = fit + 2 * se.fit,
+               Lake = lake_name)
+
+      # derivatives using gratia
+      fd_raw <- derivatives(mod, select = "s(year)", data = new_years, interval = "confidence", n = nrow(new_years))
+      fd <- grab_deriv_df(fd_raw, new_years$year) %>%
+        mutate(Lake = lake_name)
+
+      # add contiguous seg ids for significant runs
+      fd <- fd %>%
+        arrange(year) %>%
+        mutate(seg_id = with(rle(ifelse(is.na(change_type), "none", change_type)),
+                             rep(seq_along(values), lengths)))
+    }
+
+    tibble(Lake = lake_name, ok = TRUE, sig = sig, pval = pval,
+           preds = list(preds), fd = list(fd))
+  }) %>%
+  bind_rows()
+
+# combine preds and derivative info across lakes (only significant lakes have preds/fd)
+preds_all <- lake_info %>% filter(sig) %>% pull(preds) %>% bind_rows()
+fd_all    <- lake_info %>% filter(sig) %>% pull(fd) %>% bind_rows()
+
+# compute labels for segments (for significant lakes only)
+labels <- fd_all %>%
+  filter(!is.na(change_type)) %>%
+  group_by(Lake, seg_id, change_type) %>%
+  summarize(start = min(year), end = max(year), .groups = "drop") %>%
+  mutate(mid = (start + end) / 2) %>%
+  rowwise() %>%
+  mutate(y = {
+    seg_fit <- preds_all$fit[preds_all$Lake == Lake & preds_all$year >= start & preds_all$year <= end]
+    if (length(seg_fit) == 0) NA_real_ else max(seg_fit, na.rm = TRUE)
+  }) %>%
+  ungroup() %>%
+  mutate(y = y + 0.02 * (max(preds_all$fit, na.rm = TRUE) - min(preds_all$fit, na.rm = TRUE)),
+         label = paste0(change_type, "\n", round(start), "–", round(end)))
+
+# Build combined plot:
+plot_forest_change <- ggplot(df, aes(x = year, y = scale_WS_forest, color = Lake, fill = Lake)) +
+  geom_point(alpha = 0.5) +
+  # ribbons & fitted line for significant lakes only
+  { if (nrow(preds_all)) geom_ribbon(data = preds_all, aes(x = year, ymin = lower, ymax = upper, group = Lake, color=Lake, fill=Lake),
+                                     inherit.aes = FALSE, alpha = 0.2) } +
+  { if (nrow(preds_all)) geom_line(data = preds_all, aes(x = year, y = fit, group = Lake, color=Lake, fill=Lake),
+                                   inherit.aes = FALSE, linewidth = 1) } +
+  # colored trend segments for significant lakes
+  { if (nrow(fd_all)) geom_line(data = left_join(preds_all, fd_all %>% select(year, Lake, change_type, seg_id), by = c("year","Lake")) %>% filter(!is.na(change_type)),
+                                aes(x = year, y = fit, color = change_type, group = interaction(Lake, seg_id)), linewidth = 1) } +
+  # labels for segments
+  # { if (nrow(labels)) geom_label(data = labels, aes(x = mid, y = y, label = label, fill = Lake),
+  #                                color = "white", size = 3, fontface = "bold", inherit.aes = FALSE, alpha = 0.85) } +
+  scale_color_manual(values = pal_color, name = "Lake:") +
+  scale_fill_manual(values = pal_fill, name = "Lake:") +
+  labs(y = "Relative change in forested \n watershed area (z-score)", x = "Year") +
+  theme(legend.position = c(0.98, 0.98),
+        legend.justification = c("right", "top"),
+        legend.background = element_rect(fill = alpha("white", 0.8), color = NA),
+        legend.text = element_text(size = 8),
+        legend.title = element_text(size = 9)) +
+  # theme(legend.position="none")+
+  scale_y_continuous(limits = c(-2, 3), breaks = c(-2, -1, 0, 1, 2))
+
+# print
+plot_forest_change
+
+
 ```
 
 ###  Table of contemporary landcover
@@ -119,7 +330,7 @@ snow_phenology_df %>%
   scale_y_continuous(limits=c(0,1500))
 
 
-snow_phenology_df %>%
+plot_date_max_SWE <- snow_phenology_df %>%
   mutate(
     # recalculate max_swe_doy for 1996.... 
     # something went wrong in the function above
@@ -133,6 +344,7 @@ snow_phenology_df %>%
   ggplot(aes(x = year, y = max_swe_date_dummy)) +
   geom_point() +
   geom_line() +
+  geom_smooth() +
   scale_y_date(
     date_labels = "%b %d",   # show month/day (e.g., Mar 15)
     date_breaks = "1 month",
@@ -142,7 +354,7 @@ snow_phenology_df %>%
     y = "Date of Maximum SWE",
     x = "Year"
   ) 
-
+plot_date_max_SWE
 
 snotel_data_combined %>%
   mutate(water_year = dataRetrieval::calcWaterYear(date)) %>%
@@ -153,36 +365,153 @@ snotel_data_combined %>%
 
 ```
 
-#### changepoint analysis?
+#### SNOTEL GAM
 ```{r}
-    # Install and load the package
-    # install.packages("changepoint")
-    library(changepoint)
 
-    # Example: Detect change points in mean
-    set.seed(123)
-    data <- c(rnorm(50, 0, 1), rnorm(50, 5, 1))
-    cpt_result <- cpt.mean(data, method = "AMOC")
-    plot(cpt_result)
-    
-#max swe DOY
-data <-  pluck(snow_phenology_df$max_swe_doy)
-    
+snow_phenology_df <- snow_phenology_df %>%
+  mutate(
+    # recalculate max_swe_doy for 1996.... 
+    # something went wrong in the function above
+    max_swe_doy = case_when(
+      year == 1996 ~ yday(max_swe_date),
+      TRUE ~ max_swe_doy
+    ),
+    # Convert DOY to a dummy date (e.g., year 2000)
+    max_swe_date_dummy = as.Date(max_swe_doy - 1, origin = "2000-01-01")
+  ) 
+
+#Mean of first 5 years, last 5 years
+snow_phenology_df %>%
+  mutate(time_period = case_when(year <= 1992 ~ "early",
+                   year >= 2020 ~ "late",
+                   TRUE ~ NA)) %>%
+  group_by(time_period) %>%
+  summarize(mean = mean(max_swe_doy))
+
+# fit model
+mod_maxSWE<- gam(max_swe_doy ~ s(year, k = 10),
+                      family = gaussian(), data = snow_phenology_df, method = "REML")
+summary(mod_maxSWE)
+gam.check(mod_maxSWE)
+
+# quick residual check
+acf(residuals(mod_maxSWE, type = "response"))
+
+# prediction grid
+newdata <- tibble(year = seq(min(snow_phenology_df$year, na.rm = TRUE),
+                             max(snow_phenology_df$year, na.rm = TRUE),
+                             length.out = 200))
+
+# predictions (fit + se)
+p <- predict(mod_maxSWE, newdata = newdata, type = "response", se.fit = TRUE)
+preds <- newdata %>%
+  mutate(fit = p$fit,
+         se.fit = p$se.fit,
+         lower = fit - 2 * se.fit,
+         upper = fit + 2 * se.fit)
+
+# derivatives (gratia) — use `data =` and `select =`
+fd_raw <- derivatives(mod_maxSWE,
+                      select = "s(year)",
+                      data = newdata,
+                      interval = "confidence",
+                      n = nrow(newdata))
+
+# tidy derivatives with standardized names
+fd <- fd_raw %>%
+  mutate(year = as.numeric(.data[["year"]])) %>%
+  transmute(
+    year = year,
+    deriv = .data[[deriv_col]],
+    lower = .data[[low_col]],
+    upper = .data[[up_col]]
+  ) %>%
+  mutate(change_type = case_when(
+    lower > 0 & upper > 0 ~ "sig. inc.",
+    lower < 0 & upper < 0 ~ "sig. dec.",
+    TRUE ~ NA_character_
+  ))
+
+# add contiguous segment ids for plotting
+fd_sig <- fd %>%
+  filter(!is.na(change_type)) %>%
+  mutate(seg_id = with(rle(ifelse(is.na(change_type), "none", change_type)),
+                       rep(seq_along(values), lengths)))
+
+# join change_type onto preds for plotting colored segments
+pred <- left_join(preds, fd %>% select(year, change_type), by = "year")
+
+
+# build label table: start/end/mid year, y-position, and label text
+labels <- fd_sig %>%
+  group_by(seg_id, change_type) %>%
+  summarize(start = min(year), end = max(year), .groups = "drop") %>%
+  mutate(
+    mid = (start + end) / 2,
+    # y-position: max fitted value in that segment + small offset (2% of fit-range)
+    y = purrr::map2_dbl(start, end, ~ {
+      seg_fit <- preds$fit[preds$year >= .x & preds$year <= .y]
+      if (length(seg_fit) == 0) NA_real_ else max(seg_fit, na.rm = TRUE)
+    }),
+    y = y + 0.02 * (max(preds$fit, na.rm = TRUE) - min(preds$fit, na.rm = TRUE)),
+    label = paste0(change_type, "\n", round(start), "–", round(end))
+  ) %>%
+  filter(!is.na(y))  # drop any weird empty segments
+
+# final plot with labels
+plot_date_max_SWE <- ggplot(snow_phenology_df, aes(x = year, y = max_swe_doy)) +
+  geom_ribbon(data = preds, aes(x = year, ymin = lower, ymax = upper),
+              alpha = 0.2, inherit.aes = FALSE) +
+  geom_line(data = preds, aes(x = year, y = fit), linewidth = 1, color = "black") +
+  geom_line(data = pred %>% filter(!is.na(change_type)),
+            aes(x = year, y = fit, color = change_type), linewidth = 1) +
+  geom_point(size = 1) +
+  # segment labels
+  geom_label(data = labels, aes(x = mid, y = y, label = label, fill = change_type),
+             color = "white", size = 3, fontface = "bold", inherit.aes = FALSE, alpha = 0.85) +
+  scale_fill_manual(values = c("sig. inc." = "#CC9933", "sig. dec." = "#2f6cad")) +
+  scale_color_manual(values = c("sig. inc." = "#CC9933", "sig. dec." = "#2f6cad")) +
+  labs(x = "Year", y = "Date of max. SWE", color = NULL, fill = NULL) +
+  scale_y_continuous(limits = c(60, 130),
+                     breaks = c(60,80,100,120),
+                     labels = c("Mar 01","Mar 21","Apr 10","Apr 30")) +
+  theme(legend.position = "none")
+plot_date_max_SWE
+
 ```
-    
+
 ## GridMet
 ### Plot time series
 ```{r}
 
 # Graph the gridmet data --------------------------------------------------
-gridmet_data %>%
+plot_annual_PDSI <- gridmet_data %>%
   mutate(year=year(date))%>%
   group_by(year) %>%
   summarize(pdsi=median(pdsi, na.rm=TRUE)) %>%
   ggplot(aes(x=year, y=pdsi))+
   geom_point()+
-  geom_line()
+  geom_line()+
+  labs(x="Year",
+       y="Annual PDSI")
+plot_annual_PDSI
 
+gridmet_data %>%
+  mutate(year=year(date))%>%
+  group_by(year) %>%
+  summarize(tmmx=median(tmmx, na.rm=TRUE)) %>%
+  ggplot(aes(x=year, y=tmmx))+
+  geom_point()+
+  geom_line()+
+  labs(x="Year",
+       y="tmmx")
+
+```
+
+#### Monthly air temperature summary
+```{r}
+library(purrr)
+library(broom)
 gridmet_data %>%
   mutate(month=month(date),
          year=year(date))%>%
@@ -195,13 +524,100 @@ gridmet_data %>%
   labs(y="Mean monthly PDSI")+
   geom_smooth(method="gam")
 
-
-total_WY_snowfall %>%
-  ggplot(aes(x=water_year, y=total_snowfall))+
+gridmet_data %>%
+  mutate(month = month(date), year = year(date),
+         tmean = (tmmx+tmmn) / 2) %>%
+  group_by(month, year) %>%
+  summarize(tmean=median(tmean, na.rm=TRUE)) %>%
+  ggplot(aes(x=year, y=tmean))+
   geom_point()+
+  geom_line()+
+  facet_wrap(~month, scales="free_y")+
+  labs(y="Mean monthly air T")+
   geom_smooth(method="lm")
 
+monthly <- gridmet_data %>%
+  mutate(month = month(date), year = year(date),
+         tmean = (tmmx+tmmn) / 2) %>%
+  group_by(month, year) %>%
+  summarize(tmean=median(tmean, na.rm=TRUE))
 
+results <- monthly %>%
+  group_by(month) %>%
+  nest() %>%
+  mutate(
+    fit = map(data, ~ lm(tmean ~ year, data = .x)),
+    tidy = map(fit, ~ broom::tidy(.x, conf.int = TRUE)),
+    glance = map(fit, broom::glance),
+    # extract scalar summaries now (before unnesting tidy)
+    r.squared = map_dbl(glance, "r.squared"),
+    adj.r.squared = map_dbl(glance, "adj.r.squared"),
+    n = map_int(data, nrow)
+  ) %>%
+  unnest(tidy) %>%
+  filter(term == "year") %>%
+  select(
+    month,
+    slope = estimate,
+    conf.low,
+    conf.high,
+    p.value,
+    std.error,
+    r.squared,
+    adj.r.squared,
+    n
+  ) %>%
+  arrange(month)
+
+## Table of linear model results
+results
+
+
+plot_July_mean_airT <- gridmet_data %>%
+  mutate(
+    month = month(date),
+    year  = year(date),
+    tmean = (tmmx + tmmn) / 2
+  ) %>%
+  group_by(month, year) %>%
+  summarize(
+    mean_tmean = mean(tmean, na.rm = TRUE),
+    sd_tmean   = sd(tmean, na.rm = TRUE),
+    n          = sum(!is.na(tmean)),
+    se_tmean   = sd_tmean / sqrt(n),   # standard error if you prefer
+    .groups = "drop"
+  ) %>%
+  filter(month == 7) %>%
+  ggplot(aes(x = year, y = mean_tmean)) +
+  geom_line(color = "gray40") +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = mean_tmean - sd_tmean,
+                    ymax = mean_tmean + sd_tmean),
+                width = 0.2) +
+  # or use SE instead: ymin = mean_tmean - se_tmean, ymax = mean_tmean + se_tmean
+  geom_smooth(method = "lm", se = TRUE, color = "black") +
+  labs(
+    y = "July mean monthly\nair temperature (°C)",
+    x = "Year"
+  ) +
+  theme_bw(base_size = 14)
+
+plot_July_mean_airT
+```
+
+### Snowfall estimates
+```{r}
+plot_total_snow <- total_WY_snowfall %>%
+  ggplot(aes(x=water_year, y=total_snowfall))+
+  geom_point()+
+  geom_smooth(method="lm", color="black")+
+  labs(x="Year",
+       y="Total snowmall (cm)")
+plot_total_snow
+
+snowfall_lm <- lm(total_snowfall ~ water_year, data =total_WY_snowfall)
+summary(snowfall_lm)
+confint(snowfall_lm)
 ```
 
 ###Compare Gridmet snow with SNOTEL snow
@@ -238,3 +654,289 @@ full_join(total_WY_snowfall %>% rename(total_snowfall_gridmet=total_snowfall),
 
 ```
 ## NADP 
+```{r}
+head(nadp)
+
+nadp %>%
+  pivot_longer(-year) %>%
+  filter(year>1992) %>% #I think this was just a partial year
+  ggplot(aes(x=year, y=value, color=name))+
+  geom_point()+
+  geom_line()+
+  geom_smooth()+
+  facet_wrap(~name, scales="free_y")
+
+plot_N_dep <- nadp %>%
+  pivot_longer(-year) %>%
+  filter(year>1992) %>% #I think this was just a partial year
+  filter(name=="N_kgperha") %>%
+  ggplot(aes(x=year, y=value))+
+  geom_point()+
+  # geom_line()+
+  geom_smooth(method="lm",color="black")+
+  # facet_wrap(~name, scales="free_y")+
+  labs(y="N deposition (kg/ha)",
+       x="Year")+
+  theme(legend.position="none")
+plot_N_dep
+
+
+nadp <- nadp %>%
+  pivot_longer(-year) %>%
+  filter(year>1992)%>% #I think this was just a partial year
+  filter(name=="N_kgperha")
+
+nadp_lm <- lm(value~year, nadp)
+summary(nadp_lm)
+confint(nadp_lm)
+```
+
+## Global climate anomaly
+https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/global/time-series/nhem/land/tavg/12/7/1850-2025
+
+Full citations:
+
+NOAA National Centers for Environmental information, Climate at a Glance: County Time Series, published September 2025, retrieved on November 19, 2025 from https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/county/time-series
+
+NOAA National Centers for Environmental information, Climate at a Glance: Regional Time Series, published September 2025, retrieved on November 19, 2025 from https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/regional/time-series
+
+```{r}
+climate_temp_county <- read.csv("data/climate/NOAA_Archuleta_County_April-Aug_Mean_Temp_1895-2025.csv", skip=2) %>%
+  mutate(Date=ym(Date),
+         year=year(Date),
+         county_mean_temp_april_to_aug_deg_C=(Value-32) * 5/9)
+
+climate_temp_regional <- read.csv("data/climate/NOAA_SW_Region_April-Aug_Mean_Temp_1895-2025.csv", skip=2) %>%
+  mutate(Date=ym(Date),
+         year=year(Date),
+         region_mean_temp_april_to_aug_deg_C=(Value-32) * 5/9)
+
+climate_precip_regional <- read.csv("data/climate/NOAA_SW_Region_July-Sept_Precip_1895-2025.csv", skip=2) %>%
+  mutate(Date=ym(Date),
+         year=year(Date),
+         region_july_sept_precip_mm=Value*25.4)
+
+climate_precip_county <- read.csv("data/climate/NOAA_Archuleta_County_July-Sept_Precip_1895-2025.csv", skip=2) %>%
+  mutate(Date=ym(Date),
+         year=year(Date),
+         county_july_sept_precip_mm=Value*25.4)
+
+
+#Make into one dataframe
+climate_df <- climate_temp_county %>%
+  select(year, county_mean_temp_april_to_aug_deg_C) %>%
+  left_join(., climate_temp_regional %>% select(year,region_mean_temp_april_to_aug_deg_C)) %>%
+  left_join(., climate_precip_regional %>% select(year, region_july_sept_precip_mm)) %>%
+  left_join(., climate_precip_county %>% select(year, county_july_sept_precip_mm)) %>%
+    pivot_longer(-year) 
+```
+
+### Explore the data
+They are strongly correlated but let's use the more local data (county level)
+```{r}
+#Compare regional and county air temperatures
+climate_df %>%
+  filter(!name %in% c("region_july_sept_precip_mm",
+                      "county_july_sept_precip_mm")) %>%
+  ggplot(aes(x=year, y=value, color=name)) +
+  geom_point()
+
+climate_df %>%
+  pivot_wider(names_from = name,
+              values_from = value) %>%
+  ggplot(aes(x=county_mean_temp_april_to_aug_deg_C,
+             y=region_mean_temp_april_to_aug_deg_C))+
+  geom_point()+
+  geom_abline(slope=1,intercept=0)+
+  xlim(0,15)+ylim(0,20)
+
+#Compare regional and county precipitation
+climate_df %>%
+  filter(name %in% c("region_july_sept_precip_mm",
+                      "county_july_sept_precip_mm")) %>%
+  ggplot(aes(x=year, y=value, color=name)) +
+  geom_point()
+
+climate_df %>%
+  pivot_wider(names_from = name,
+              values_from = value) %>%
+  ggplot(aes(x=region_july_sept_precip_mm,
+             y=county_july_sept_precip_mm))+
+  geom_point()+
+  geom_abline(slope=1,intercept=0)
+```
+
+### County precip + temp (1895-2025)
+```{r}
+climate_temp_county %>%
+  ggplot(aes(x=year, y=county_mean_temp_april_to_aug_deg_C)) +
+  geom_point()+
+  geom_smooth(method="gam") +
+  labs(y="April-Aug Mean Air Temp (°C)",
+       x="Year")+
+  scale_x_continuous(limits=c(1895,2025),
+                     breaks=c(1890,1920,1950,1980,2010))
+# see GAMs chunk below this for the final annotated plot
+
+#Plot bottom and top 10th percentiles to make them stick out
+# compute thresholds
+p10 <- quantile(climate_precip_county$county_july_sept_precip_mm, 0.10, na.rm = TRUE)
+p90 <- quantile(climate_precip_county$county_july_sept_precip_mm, 0.90, na.rm = TRUE)
+
+
+plot_precip_county <- climate_precip_county %>%
+  mutate(flag = case_when(
+    county_july_sept_precip_mm <= p10 ~ "low",
+    county_july_sept_precip_mm >= p90 ~ "high",
+    TRUE ~ "normal"
+  )) %>%
+  ggplot(aes(x = year, y = county_july_sept_precip_mm, color = flag)) +
+  # geom_line(color="gray90") +
+  geom_point() +
+  scale_color_manual(values = c(
+    "low" = "red",
+    "normal" = "gray50",
+    "high" = "blue"
+  )) +
+  labs(color = "Percentile group")+
+  scale_x_continuous(limits=c(1895,2025),
+                     breaks=c(1890,1920,1950,1980,2010))+
+  scale_y_continuous(limits=c(0,450))+
+  labs(y="July-Sept precip. (mm)",
+       x="Year")+
+  theme(legend.position = "none")
+plot_precip_county
+
+#linear mode, for precip
+lm_precip <- lm(county_july_sept_precip_mm ~ year, data = climate_precip_county) 
+summary(lm_precip)
+
+# Look at the wettest years, when are they?
+climate_precip_county %>%
+  mutate(flag = case_when(
+    county_july_sept_precip_mm <= p10 ~ "low",
+    county_july_sept_precip_mm >= p90 ~ "high",
+    TRUE ~ "normal"
+  )) %>%
+  filter(flag=="high") %>%
+  arrange(year)
+```
+
+##### Air T GAM
+```{r}
+# fit model
+mod_regional_T <- gam(county_mean_temp_april_to_aug_deg_C ~ s(year, k = 10),
+                      family = gaussian(), data = climate_temp_county, method = "REML")
+
+summary(mod_regional_T)
+# quick residual check
+acf(residuals(mod_regional_T, type = "response"))
+
+# prediction grid
+newdata <- tibble(year = seq(min(climate_temp_county$year, na.rm = TRUE),
+                             max(climate_temp_county$year, na.rm = TRUE),
+                             length.out = 200))
+
+# predictions (fit + se)
+p <- predict(mod_regional_T, newdata = newdata, type = "response", se.fit = TRUE)
+preds <- newdata %>%
+  mutate(fit = p$fit,
+         se.fit = p$se.fit,
+         lower = fit - 2 * se.fit,
+         upper = fit + 2 * se.fit)
+
+# derivatives (gratia) — use `data =` and `select =`
+fd_raw <- derivatives(mod_regional_T,
+                      select = "s(year)",
+                      data = newdata,
+                      interval = "confidence",
+                      n = nrow(newdata))
+
+# tidy derivatives with standardized names
+fd <- fd_raw %>%
+  mutate(year = as.numeric(.data[["year"]])) %>%
+  transmute(
+    year = year,
+    deriv = .data[[deriv_col]],
+    lower = .data[[low_col]],
+    upper = .data[[up_col]]
+  ) %>%
+  mutate(change_type = case_when(
+    lower > 0 & upper > 0 ~ "sig. inc.",
+    lower < 0 & upper < 0 ~ "sig. dec.",
+    TRUE ~ NA_character_
+  ))
+
+# add contiguous segment ids for plotting
+fd_sig <- fd %>%
+  filter(!is.na(change_type)) %>%
+  mutate(seg_id = with(rle(ifelse(is.na(change_type), "none", change_type)),
+                       rep(seq_along(values), lengths)))
+
+# join change_type onto preds for plotting colored segments
+pred <- left_join(preds, fd %>% select(year, change_type), by = "year")
+
+
+# build label table: start/end/mid year, y-position, and label text
+labels <- fd_sig %>%
+  group_by(seg_id, change_type) %>%
+  summarize(start = min(year), end = max(year), .groups = "drop") %>%
+  mutate(
+    mid = (start + end) / 2,
+    # y-position: max fitted value in that segment + small offset (2% of fit-range)
+    y = purrr::map2_dbl(start, end, ~ {
+      seg_fit <- preds$fit[preds$year >= .x & preds$year <= .y]
+      if (length(seg_fit) == 0) NA_real_ else max(seg_fit, na.rm = TRUE)
+    }),
+    y = y + 0.02 * (max(preds$fit, na.rm = TRUE) - min(preds$fit, na.rm = TRUE)),
+    label = paste0(change_type, "\n", round(start), "–", round(end))
+  ) %>%
+  filter(!is.na(y))  # drop any weird empty segments
+
+# final plot with labels
+plot_county_temp <- ggplot(climate_temp_county, aes(x = year, y = county_mean_temp_april_to_aug_deg_C)) +
+  geom_ribbon(data = preds, aes(x = year, ymin = lower, ymax = upper),
+              alpha = 0.2, inherit.aes = FALSE) +
+  geom_line(data = preds, aes(x = year, y = fit), linewidth = 1, color = "black") +
+  geom_line(data = pred %>% filter(!is.na(change_type)),
+            aes(x = year, y = fit, color = change_type), linewidth = 1) +
+  geom_point(size = 1) +
+  # segment labels
+  geom_label(data = labels, aes(x = mid, y = y, label = label, fill = change_type),
+             color = "white", size = 3, fontface = "bold", inherit.aes = FALSE, alpha = 0.85) +
+  scale_fill_manual(values = c("sig. inc." = "#CC9933", "sig. dec." = "#2f6cad")) +
+  scale_color_manual(values = c("sig. inc." = "#CC9933", "sig. dec." = "#2f6cad")) +
+  labs(x = "Year", y = "April–Aug mean air temp (°C)", color = NULL, fill = NULL) +
+  scale_x_continuous(limits = c(1895, 2025), breaks = c(1890, 1920, 1950, 1980, 2010)) +
+  theme(legend.position = "none")
+plot_county_temp
+
+
+```
+
+# Collate environmental data
+```{r}
+plot_annual_PDSI +  plot_July_mean_airT +
+  plot_date_max_SWE +  plot_total_snow +
+  (plot_forest_change + theme(legend.position = "none")) +
+  plot_N_dep +
+  plot_annotation(tag_levels = 'a') +
+plot_layout(guides = 'collect') 
+
+
+ggsave("figures/figure5.environmental_data.pdf",
+       width = 8, height = 6, units = "in", dpi = 600)
+
+
+# New version with 1895-2025 climate data from NOAA
+
+plot_precip_county +  plot_county_temp +
+  plot_date_max_SWE +  plot_total_snow +
+  plot_forest_change +
+  plot_N_dep +
+  plot_annotation(tag_levels = 'a') 
+
+
+ggsave("figures/figure5.environmental_data_V2.pdf",
+       width = 8, height = 6, units = "in", dpi = 600)
+```
