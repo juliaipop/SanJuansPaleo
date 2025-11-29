@@ -271,7 +271,6 @@ LFM_short_extrap_view <- LFM_short_extrap %>%
               weight_extrap)
 
 View(LFM_short_extrap_view)
-
 rm(LFM_short_extrap_view)
 
 ```

@@ -139,9 +139,25 @@ UFM_short_extrap %>%
 LFM_adm <- readRDS("output/LFM_adm.rds")
 predict(LFM_adm, depth = 25)$age
 
-View(select(UFM_short_extrap, c(depth_plot, year_plot_extrap, year_CE_plot)))
-View(select(LFM_short_extrap, c(depth_plot, year_plot_extrap, year_CE_plot)))
-View(select(TRK_short, c(depth_plot, year_plot_extrap, year_CE_plot, C.N)))
+TRK_short <- read.csv("output/TRK_short.csv") %>%
+  select(-X) %>% 
+  mutate(C.Nmolar = C.N*1.167, .after = C.N)
+
+View(select(UFM_short_extrap, c(depth_plot, year_plot_extrap, year_CE_plot, d13C)))
+View(select(LFM_short_extrap, c(depth_plot, year_plot_extrap, year_CE_plot, d13C)))
+View(select(TRK_short, c(depth_plot, year_plot_extrap, year_CE_plot, d13C)))
+names(TRK_short)
+
+sum(!is.na(LFM_short_extrap$year_CE_plot))
+sum(!is.na(UFM_short_extrap$year_CE_plot))
+sum(!is.na(TRK_short$year_CE_plot))
+
+TRK_short %>%
+  slice_max(year_CE_plot)
+
+TRK_adm <- readRDS("output/TRK_adm.rds")
+predict(TRK_adm, depth = 10.5)$age
+
 ```
 
 
@@ -158,37 +174,42 @@ data <- UFM_short_extrap %>% filter(year_plot_extrap > 1860)
 
 # plot
 UFM_adm_plot <- ggplot(data, aes(x = year_plot_extrap, y = depth_plot)) +
-    geom_point(size = 0.2) +
+    geom_point(size = 1) +
    # dashed line where year < 1949
-  geom_line(
-    data = data %>% filter(year_plot_extrap < 1950),
-    linewidth = 0.4,
-    color = "black",
-    linetype = "dashed") +
+#  geom_line(
+#    data = data %>% filter(year_plot_extrap < 1950),
+#    linewidth = 0.4,
+#    color = "black",
+#    linetype = "dashed") +
   # solid line where year > 1949
   geom_line(
-    data = data %>% filter(year_plot_extrap > 1949),
-    linewidth = 0.4,
+    data = data, 
+    linewidth = 0.35,
     color = "black",
     linetype = "solid") +
   scale_y_reverse(limits = c(max(UFM_short_extrap$depth_plot), 0), expand = c(0, 0)) +
   scale_x_continuous(limits = c(1860, 2020),
                       breaks = seq(1860, 2020, by = 40),  # tick marks every 20 years
-                     # minor_breaks = seq(1860, 2020, by = 10),  # minor grid lines every 20 years
-                      position = "top") +  # move x-axis to the top
+    # minor_breaks = seq(1860, 2020, by = 10),  # minor grid lines every 20 years
+                      position = "bottom") +  # move x-axis to the bottom
   labs(
     x = "Year",               # name for x-axis
     y = "Depth (cm)",          # name for y-axis
   ) +
   ggtitle("UFM") + 
-  theme_bw(base_size = 8) +
+  theme_bw() +
   theme(
-    axis.title.x.top = element_text(vjust = 0),    # adjust title position
-    axis.text.x.top = element_text(vjust = 0),     # adjust tick labels
-    axis.ticks.x.top = element_line(),             # show ticks
-    axis.title.x.bottom = element_blank(),         # remove bottom axis
-    axis.text.x.bottom = element_blank(),
-    axis.ticks.x.bottom = element_blank(),
+     axis.title.x = element_text(size = 9, colour = "black"),
+     axis.title.y = element_text(size = 9, colour = "black"),
+     axis.text.x  = element_text(size = 7.5, colour = "black"),
+     axis.text.y  = element_text(size = 7.5, colour = "black"),
+     plot.title = element_text(size = 10, face = "bold", colour = "black"),
+  #  axis.title.x.top = element_text(vjust = 0),    # adjust title position
+   # axis.text.x.top = element_text(vjust = 0),     # adjust tick labels
+  #  axis.ticks.x.top = element_line(),             # show ticks
+ #   axis.title.x.bottom = element_blank(),         # remove bottom axis
+  #  axis.text.x.bottom = element_blank(),
+   # axis.ticks.x.bottom = element_blank(),
     aspect.ratio = 1.5)  # change aspect ratio
 
 UFM_adm_plot
@@ -218,49 +239,49 @@ ggsave("figures/UFM_adm_plot.png",
 
 # plot
 TRK_adm_plot <- ggplot(TRK_short, aes(x = year_plot_extrap, y = depth_plot)) +
-  # points: year <= 1982.209
+  # points: 
   geom_point(
-    data = TRK_short %>% filter(year_plot_extrap <= 1982.209),
+    data = TRK_short,
     aes(x = year_plot_extrap, y = depth_plot),
-    size = 0.1
-  ) +
-  # points: year > 1982.209
-  geom_point(
-    data = TRK_short %>% filter(year_plot_extrap > 1982.209),
-    aes(x = year_plot_extrap, y = depth_plot),
-    size = 0.4
+    size = 1
   ) +
    # dashed line where year < 1982.209
-  geom_line(
-    data = TRK_short %>% filter(year_plot_extrap < 1988),
-    linewidth = 0.4,
-    color = "black",
-    linetype = "dotted") +
+ # geom_line(
+#  data = TRK_short %>% filter(year_plot_extrap < 1988),
+ #   linewidth = 0.4,
+  #  color = "black",
+   # linetype = "dotted") +
   # solid line where year > 1982.209
   geom_line(
-    data = TRK_short %>% filter(year_plot_extrap > 1982),
-    linewidth = 0.6,
+    data = TRK_short, # %>% filter(year_plot_extrap > 1982),
+    linewidth = 0.35,
     color = "black",
     linetype = "solid") +
   scale_y_reverse(limits = c(42, 0), expand = c(0, 0)) +
   scale_x_continuous(limits = c(1860, 2020),
                       breaks = seq(1860, 2020, by = 40),  # tick marks every 20 years
-                   #   minor_breaks = seq(1860, 2020, by = 10),  # minor grid lines every 20 years
-                      position = "top") +  # move x-axis to the top
+                   #  minor_breaks = seq(1860, 2020, by = 10),  
+                   # minor grid lines every 20 years
+                      position = "bottom") +  # move x-axis to the top
   labs(
     x = "Year",               # name for x-axis
     y = "Depth (cm)",          # name for y-axis
   ) +
   ggtitle("TRK") + 
-  theme_bw(base_size = 8) +
   theme(
-    axis.title.x.top = element_text(vjust = 0),    # adjust title position
-    axis.text.x.top = element_text(vjust = 0),     # adjust tick labels
-    axis.ticks.x.top = element_line(),             # show ticks
-    axis.title.x.bottom = element_blank(),         # remove bottom axis
-    axis.text.x.bottom = element_blank(),
-    axis.ticks.x.bottom = element_blank(),
+     axis.title.x = element_text(size = 9, colour = "black"),
+     axis.title.y = element_text(size = 9, colour = "black"),
+     axis.text.x  = element_text(size = 7.5, colour = "black"),
+     axis.text.y  = element_text(size = 7.5, colour = "black"),
+     plot.title = element_text(size = 10, face = "bold", colour = "black"),
+  #  axis.title.x.top = element_text(vjust = 0),    # adjust title position
+   # axis.text.x.top = element_text(vjust = 0),     # adjust tick labels
+  #  axis.ticks.x.top = element_line(),             # show ticks
+ #   axis.title.x.bottom = element_blank(),         # remove bottom axis
+  #  axis.text.x.bottom = element_blank(),
+   # axis.ticks.x.bottom = element_blank(),
     aspect.ratio = 1.5)  # change aspect ratio
+   
 TRK_adm_plot
 
 # check against original 
@@ -291,36 +312,35 @@ data <- LFM_short_extrap %>% filter(year_plot_extrap > 1860)
 
 # plot
 LFM_adm_plot <- ggplot(data, aes(x = year_plot_extrap, y = depth_plot)) +
-    #Add a box to show the reader the time period for interpretation
-    geom_rect(
-      data = data.frame(xmin = 1925, xmax = 2023.557, ymin = 0, ymax = 42.75),
-      aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
-      fill = "blue",
-      alpha = 0.1,
-      inherit.aes = FALSE) + 
-  geom_point(size = 0.3) +
-  geom_line(linewidth = 0.5,
+  geom_point(size = 1) +
+  geom_line(linewidth = 0.35,
     color = "black",
     linetype = "solid") +
   scale_y_reverse(limits = c(max(LFM_short_extrap$depth_plot), 0), expand = c(0, 0)) +
   scale_x_continuous(limits = c(1860, 2025),
                       breaks = seq(1860, 2020, by = 40),  # tick marks every 20 years
-                     # minor_breaks = seq(1860, 2020, by = 10),  # minor grid lines every 20 years
-                      position = "top") +  # move x-axis to the top
+                     # minor_breaks = seq(1860, 2020, by = 10),  
+                     # minor grid lines every 20 years
+                      position = "bottom") +  # move x-axis to the top
   labs(
     x = "Year",               # name for x-axis
     y = "Depth (cm)",          # name for y-axis
   ) +
   ggtitle("LFM") + 
-  theme_bw(base_size = 8) +
-  theme(
-    axis.title.x.top = element_text(vjust = 0),    # adjust title position
-    axis.text.x.top = element_text(vjust = 0),     # adjust tick labels
-    axis.ticks.x.top = element_line(),             # show ticks
-    axis.title.x.bottom = element_blank(),         # remove bottom axis
-    axis.text.x.bottom = element_blank(),
-    axis.ticks.x.bottom = element_blank(),
+   theme(
+     axis.title.x = element_text(size = 9, colour = "black"),
+     axis.title.y = element_text(size = 9, colour = "black"),
+     axis.text.x  = element_text(size = 7.5, colour = "black"),
+     axis.text.y  = element_text(size = 7.5, colour = "black"),
+     plot.title = element_text(size = 10, face = "bold", colour = "black"),
+  #  axis.title.x.top = element_text(vjust = 0),    # adjust title position
+   # axis.text.x.top = element_text(vjust = 0),     # adjust tick labels
+  #  axis.ticks.x.top = element_line(),             # show ticks
+ #   axis.title.x.bottom = element_blank(),         # remove bottom axis
+  #  axis.text.x.bottom = element_blank(),
+   # axis.ticks.x.bottom = element_blank(),
     aspect.ratio = 1.5)  # change aspect ratio
+
 LFM_adm_plot
 
 # check against original 
