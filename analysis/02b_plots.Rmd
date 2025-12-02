@@ -143,8 +143,8 @@ TRK_short <- read.csv("output/TRK_short.csv") %>%
   select(-X) %>% 
   mutate(C.Nmolar = C.N*1.167, .after = C.N)
 
-View(select(UFM_short_extrap, c(depth_plot, year_plot_extrap, year_CE_plot, d13C)))
-View(select(LFM_short_extrap, c(depth_plot, year_plot_extrap, year_CE_plot, d13C)))
+View(select(UFM_short_extrap, c(depth_plot, year_plot_extrap, year_CE_plot, percent.N)))
+View(select(LFM_short_extrap, c(depth_plot, year_plot_extrap, year_CE_plot, percent.N)))
 View(select(TRK_short, c(depth_plot, year_plot_extrap, year_CE_plot, d13C)))
 names(TRK_short)
 

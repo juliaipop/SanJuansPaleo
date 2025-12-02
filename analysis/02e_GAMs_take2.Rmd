@@ -1089,9 +1089,10 @@ mod_C.Nmolar_TRK <- gam(C.Nmolar ~ s(year_plot_extrap, k = 20),
                      data = TRK_short,
                      method = "REML")
 
-summary(mod_C.Nmolar_TRK)$dev.expl  # deviance explained
+summary(mod_C.Nmolar_TRK) #$dev.expl  # deviance explained
+gam.check(mod_C.Nmolar_TRK)
 
-AIC(mod_C.Nmolar_TRK)
+AIC(mod_C.Nmolar_TRK, mod_C.Nmolar_TRK_ID)
 summary(mod_C.Nmolar_TRK)
 
 ### Check diagnostics. You might need to adjust model
@@ -1438,7 +1439,9 @@ ggsave("figures/TRK_pheo_a.png",
                      data = TRK_short,
                      method = "REML")
 
-
+summary(mod_chla_pheoa_TRK)
+gam.check(mod_chla_pheoa_TRK)
+ 
 summary(mod_chla_pheoa_TRK) 
 
 resid_values_chla_pheoa_TRK <- residuals(mod_chla_pheoa_TRK, type = "response")
@@ -6289,8 +6292,13 @@ mod_C.Nmolar_UFM <- gam(C.Nmolar ~ s(year_plot_extrap, k = 5),
                      data = UFM_short_extrap,
                    #  correlation = corCAR1(form = ~ year_plot_extrap),
                      method = "REML")
+mod_C.Nmolar_UFM_gamma <- gam(C.Nmolar ~ s(year_plot_extrap, k = 5), 
+                     family = Gamma(link = "log"), 
+                     data = UFM_short_extrap,
+                   #  correlation = corCAR1(form = ~ year_plot_extrap),
+                     method = "REML")
 
-AIC(mod_C.Nmolar_UFM) 
+AIC(mod_C.Nmolar_UFM, mod_C.Nmolar_UFM_gamma) # gaussian better
 summary(mod_C.Nmolar_UFM)
 
 ### Check diagnostics. You might need to adjust model

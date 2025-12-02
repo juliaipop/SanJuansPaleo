@@ -16,6 +16,8 @@ output: html_document
 # it."
 
 knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_project))
+
+library(tidyverse)
 ```
 
 # Read in data
@@ -117,9 +119,47 @@ all_profiles <- files %>%
          lake = recode(lake, "TurkeyCreek" = "Turkey Creek Lake"))
 ```
 
+# JIP - thesis Chl a table
+```{r}
+chl_table <- chl %>%
+  mutate(dateSampled=ymd(dateSampled),
+         year=year(dateSampled),
+         month=month(dateSampled),
+         timing = case_when(month == "7" & year =="2024" ~ "July `24",
+                            month == "9" & year =="2024" ~ "Sept `24",
+                            month == "7" & year =="2025" ~ "July `25"),
+         timing = factor(timing, levels=c("July `24",
+                                  "Sept `24",
+                                  "July `25")),
+         sampleLocation = factor(sampleLocation,
+                                 levels = c("ls","lm","lh"),
+                                 labels = c("Surface", "Metalimnion", "Hypolimnion"))) %>%
+  group_by(lake, sampleLocation, siteId, timing) %>%
+  summarize(chla_ugl = mean(chla_ugl, na.rm=TRUE)) #avg. of replicates
+ 
+chl_table_summary <- chl_table %>%
+  group_by(lake, sampleLocation, siteId) %>%
+  summarize(
+    n         = sum(!is.na(chla_ugl)),
+    min_chla  = min(chla_ugl, na.rm = TRUE),
+    max_chla  = max(chla_ugl, na.rm = TRUE),
+    mean_chla = mean(chla_ugl, na.rm = TRUE),
+    .groups = "drop")
+
+chl_table_avg <- chl_table %>%
+  group_by(lake, siteId) %>%
+  summarize(
+    n         = sum(!is.na(chla_ugl)),
+    min_chla  = min(chla_ugl, na.rm = TRUE),
+    max_chla  = max(chla_ugl, na.rm = TRUE),
+    mean_chla = mean(chla_ugl, na.rm = TRUE),
+    .groups = "drop")
+
+```
+
+
 # Chlorophyll calculations
 ```{r}
-
 
 chl %>%
   filter(siteId %in% c("ufm","lfm","tuc")) %>%
@@ -440,7 +480,7 @@ ggsave("~/Library/CloudStorage/OneDrive-UCB-O365/Research/Data/R/EBIO4030/figure
 
 ###Summary stats for epi.
 ```{r}
-all_profiles %>%
+View(all_profiles %>%
   filter(parameter %in% c("pH","cond_spec_uScm")) %>%
   filter(depth_m < 2) %>%
   group_by(lake, parameter) %>%
@@ -448,6 +488,6 @@ all_profiles %>%
             sd=sd(value,na.rm=TRUE),
             min=min(value, na.rm=TRUE),
             max=max(value,na.rm=TRUE)
-            ) 
+            ) )
 
 ```
