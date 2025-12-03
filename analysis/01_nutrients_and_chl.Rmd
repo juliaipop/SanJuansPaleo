@@ -26,9 +26,8 @@ library(tidyverse)
 chl <- read.csv("data/chemistry/chlorophylla_20250923.csv") %>%
   mutate(lake = case_when(siteId == "ufm" ~ "Upper Fourmile Lake",
                           siteId == "lfm" ~ "Lower Fourmile Lake",
-                          siteId == "tuc" ~ "Turkey Creek Lake")) %>%
-  mutate(sampleLocation = case_when(siteId == "tuc" & dateSampled == "2024-07-17" ~ "lm",
-                                    TRUE ~ sampleLocation)) 
+                          siteId == "tuc" ~ "Turkey Creek Lake"))
+
 #Note this sample was collected in the metalimnion -- add exact depths at some point
 head(chl)
 
@@ -121,19 +120,29 @@ all_profiles <- files %>%
 
 # JIP - thesis Chl a table
 ```{r}
-chl_table <- chl %>%
-  mutate(dateSampled=ymd(dateSampled),
-         year=year(dateSampled),
-         month=month(dateSampled),
-         timing = case_when(month == "7" & year =="2024" ~ "July `24",
-                            month == "9" & year =="2024" ~ "Sept `24",
-                            month == "7" & year =="2025" ~ "July `25"),
+
+chl <- chl %>%
+  filter(siteId %in% c("ufm","lfm","tuc")) %>% 
+    mutate(
+    dateSampled = mdy(dateSampled),
+    year        = year(dateSampled),
+    month       = month(dateSampled),
+    timing      = case_when(
+      month == 7 & year == 2024 ~ "July `24",
+      month == 9 & year == 2024 ~ "Sept `24",
+      month == 7 & year == 2025 ~ "July `25",
+      TRUE ~ NA_character_
+    ),
          timing = factor(timing, levels=c("July `24",
                                   "Sept `24",
                                   "July `25")),
          sampleLocation = factor(sampleLocation,
                                  levels = c("ls","lm","lh"),
                                  labels = c("Surface", "Metalimnion", "Hypolimnion"))) %>%
+  group_by(lake, sampleLocation, siteId, timing) %>%
+  summarize(chla_ugl = mean(chla_ugl, na.rm=TRUE)) #avg. of replicates
+  
+chl_table <- chl %>%
   group_by(lake, sampleLocation, siteId, timing) %>%
   summarize(chla_ugl = mean(chla_ugl, na.rm=TRUE)) #avg. of replicates
  
@@ -162,7 +171,7 @@ chl_table_avg <- chl_table %>%
 ```{r}
 
 chl %>%
-  filter(siteId %in% c("ufm","lfm","tuc")) %>%
+  filter(siteId %in% c("ufm","lfm","tuc")) %>% 
   mutate(dateSampled=ymd(dateSampled),
          year=year(dateSampled),
          month=month(dateSampled),
