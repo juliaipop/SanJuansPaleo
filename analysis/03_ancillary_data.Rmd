@@ -940,3 +940,19 @@ plot_precip_county +  plot_county_temp +
 ggsave("figures/figure5.environmental_data_V2.pdf",
        width = 8, height = 6, units = "in", dpi = 600)
 ```
+
+# Code for getting citations
+```{r}
+# Citations
+RStudio.Version()
+library(rbacon)
+# Get BibTeX for tidyverse
+bib <- toBibtex(citation("ggplot2"))
+
+# Print it to console
+cat(bib)
+
+rstudio.version
+rstudioapi::versionInfo()
+
+```
