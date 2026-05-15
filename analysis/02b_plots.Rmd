@@ -5,6 +5,8 @@ date: "2025-09-22"
 output: html_document
 ---
 
+Note: code for GREEBS plots, plus some exploratory plots. Thesis plots for the ADMs ultimately made in Excel, gam plots in 02e_GAMS_take2.Rmd.
+
 ```{r setup, include=FALSE}
 # code to troublesheet file path issues. 
 # By default, knitr uses the folder containing the .Rmd file as
@@ -22,8 +24,8 @@ knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_proje
 ```{r, Echo = FALSE}
 source("scripts/libraries.R")
 
-#Customize theme 
-#http://joeystanley.com/blog/custom-themes-in-ggplot2 
+# Customize theme 
+# http://joeystanley.com/blog/custom-themes-in-ggplot2 
 # theme_SJ <- function () { 
 #  theme_base(base_size=8, base_family="PT Sans") %+replace% # base size scales everything
  #   theme(
