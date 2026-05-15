@@ -2,7 +2,6 @@
 # rather than loading repeatedly for each .Rmd. 
 # can run this code in an .Rmd chunk by typing > source("scripts/libraries.R")
 
-
 if (!require('pacman')) install.packages('pacman'); library('pacman')
 # remotes::install_github("MilesMcBain/breakerofchains")
 
@@ -28,6 +27,7 @@ pacman::p_load("tidyverse",#incldues dplyr, tidyr, tibble, ggplot2, stringr, etc
                "sf", #for gridMET
                "AOI",#for gridMET
                "climateR",#for gridMET
+               
                #Packages for GAMS
                "mgcv",
                "gratia",

@@ -18,29 +18,31 @@ output: html_document
 knitr::opts_knit$set(root.dir = rprojroot::find_root(rprojroot::is_rstudio_project))
 ```
 
-# Notes to self:
-
-1) SIA_run_1_TRK_UFM needs to be rounded to an accurate number of decimal points (after calculations?); same for SIA_run_2_TRK_LFM
-
 ## Load packages 
 ```{r message = false}
-source("scripts/libraries.R") # manipulate this file in the scripts folder to add more packages.
+# load packages from the "libraries" script in the scripts folder
+source("scripts/libraries.R") 
 ```
 
 ## Pull in core metadata
 ```{r, echo = FALSE}
-# echo = FALSE shows output but not code. 
+# echo = FALSE shows chunk output but not code. 
 
 # read in bulk density data
 bulk_density <- read_excel("data/bulk_density_export_from_sent_to_flett_20250602_saved_20250909.xlsx") %>%
   rename(bd = `bulk_density_g/cm3`)
 
-# read in metadata, join with bd values
-TRK_metadata <- read_excel("data/0_TRK2_core_metadata_20250726.xlsx")  %>%
-  select(lake_name:depth_bottom) %>%
-  left_join(bulk_density %>% 
-              select(sample_ID, bd),
-            by = "sample_ID")
+# read in the metadata for each lake's sed core and add the bd values to each metadata df
+TRK_metadata <- read_excel("data/0_TRK2_core_metadata_20250726.xlsx")  %>%  # read excel file
+  select(lake_name:depth_bottom) %>%  # keep only the first few columns
+  left_join(bulk_density %>%  # make a new df combining the metadata with bulk_density
+              select(sample_ID, bd),  # select only these columns from bulk_density
+            by = "sample_ID") # merge the two by sample_ID
+
+  # left join: combines columns from TRK_metadata with the selected columns from bulk_density
+  # and merges by "sample_ID". "left" means all rows in TRK_metadata are kept and data from 
+  # bulk_density is added if a given row has a "sample_ID" in TRK_metadata. If the sample_ID 
+  # doesn't match it gets dropped; if a sample_ID is not in bulk_density, it gets bd = NA. 
   
 UFM_metadata <- read_excel("data/0_UFM1_core_metadata_20250726.xlsx") %>% 
   select(lake_name:depth_bottom) %>%
@@ -57,46 +59,46 @@ LFM_metadata <- read_excel("data/0_LFM2_core_metadata_20250726.xlsx") %>%
 
 #Stable isotopes
 
-**Note: return later to** 
-- round SIA_run1_TRK_UFM to the appropriate number of sig figs
-- pull in run 2 and collapse any triplicates, stitch to new file named LFM_SIA!
-- add TRK2_002 to TRK_SIA
-- consolidate / choose perC.drft or percent.C and the corresponding C:N
-
 ```{r, echo = FALSE}
     
-# Step One: pull in and clean up IRMS run info
+# Step One: pull in and clean up the IRMS run info. 
+
 # NOTE: these files (SIA_run1_...SIA_run2_) still contains triplicates!
 SIA_run1_TRK_UFM <- read_excel("data/TRK_UFM_SIA_data_clean_20250726.xlsx") %>%
-  rename(sample_ID = Identifier1) %>%
-  select(sample_ID, d13C.scale, percent.C, perC.drift, d15N.scale, percent.N) %>% # pull in percent.C and perC.drift.
-  mutate("C.drift:N" = perC.drift/percent.N,
+  rename(sample_ID = Identifier1) %>% # rename column Identifier1 to sample_ID
+  select(sample_ID, d13C.scale, percent.C, perC.drift, d15N.scale, percent.N) %>% 
+  # pull in the %C, %N, d15N, and d13C columns recommended by the SIA lab based on the 
+  # instrument diagnostics. percent.C and perC.drift were similar so we'll look at both. 
+  mutate("C.drift:N" = perC.drift/percent.N, # make new columns calculating C:N both ways
          "C:N" = percent.C/percent.N) %>%
   rename(d13C = d13C.scale,
          d15N = d15N.scale)
 
-# For now, chose to inlcude both “perC.drift” AND "percent.C" for %C since a very small drift was detected in the HOS lin.std (but either way within the error of 0.3% - where std.dev. is of multiple HOS standard replicates) For now, calculate C:N using both and see how errors propogate. In thesis use percent.C until have a reason not to.
+# For now, inlcude both “perC.drift” AND "percent.C" for %C since a very small drift was detected in the HOS lin.std (this was within the error of 0.3% - where std.dev. was of multiple HOS standard replicates). 
 
+# For manuscript: calculate C:N using both versions and see how errors propogate. 
+# In thesis: use percent.C until have a reason not to.
+
+# read in Run 2 with the corrected columns preferred for that run. 
 SIA_run2_TRK_LFM <- 
   read_excel("data/TRK_LFM_SIA_data_clean_20250921.xlsx") %>%
     rename(sample_ID = Identifier1) %>%
     select(sample_ID, d13C.scale, linKpercent.C, d15N.scale, perN.drift) %>%
-# standardize SIA column names across runs, 
-# regardless of corrections used...
+# standardize SIA column names across runs regardless of corrections used...
     rename(d13C = d13C.scale,
            percent.C = linKpercent.C, 
            d15N = d15N.scale,
            percent.N = perN.drift) %>%
     mutate("C:N" = percent.C/percent.N)
 
-# Step Two: collapse triplicate values, and create a separate SIA spreadsheet for each core (in format: metadata, SIA)
+# Step Two: collapse triplicate values, and create a separate SI spreadsheet for each core (in format: metadata, SIA)
 
-# two a) join dataframes and keep all the observations in TRK_metadata (left, while throwing out any observations from SIA_run1_TRK_UFM, right, that don't have a sample_ID matching those in TRK_metadata). Right now that throws out UFM SIA, but keeps all the extra observations in the left database (e.g. TRK2_001, TRK2_002, TRK2_003...5, 7, 9)
+# Two a) join dataframes and keep all the observations in TRK_metadata (left, while throwing out any observations from SIA_run1_TRK_UFM, right, that don't have a sample_ID matching those in TRK_metadata). Right now that throws out UFM SIA, but keeps all the extra observations in the left database (e.g. TRK2_001, TRK2_002, TRK2_003...5, 7, 9)
 
 TRK_SIA <- left_join(TRK_metadata, SIA_run1_TRK_UFM, by = "sample_ID") %>%
-  select(-perC.drift, -"C.drift:N")
+  select(-perC.drift, -"C.drift:N") # drop the C.drift columns for thesis
 
-# two b) pull row TRK2_002 to add to the data from run 1 later
+# Two b) create an object with row TRK2_002 from SIA_run2 to add to the data from run 1 later
 row_TRK2_002_SIA <- SIA_run2_TRK_LFM %>%
   filter(sample_ID == "TRK2_002") %>%
   left_join(TRK_metadata, by = "sample_ID") %>%
@@ -114,16 +116,16 @@ row_TRK2_002_SIA <- SIA_run2_TRK_LFM %>%
     "C:N"
   ))) # keep columns in the same order.
 
-# two c) do regular cleaning
+# Two c) do regular cleaning (drop NA values and collapse triplicates)
 TRK_SIA <- TRK_SIA %>%
     drop_na() %>% # drop all TRK samples for which we did not run SIA
     group_by(lake_name, core_number, sample_ID, sample_range, depth_top, depth_bottom, bd) %>% # add a step to run the summarize fn on groups of rows (each row could be grouped just by sample_ID, but output would then not include the other metadata; bc metadata should stay the same for duplicate samples, we can use this shortcut). 
     summarize(across(d13C:"C:N", ~mean(.x, na.rm=TRUE)), .groups = "keep") # summarize collapses rows--this fn will take the average of all the triplicates for every row (grouped by the columns above). ".x" is tidyverse's way of saying insert the line before right here when you choose what to take the mean of.
 
-# two d) add row TRK2_002 back in
+# Two d) add row TRK2_002 back in
 TRK_SIA <- bind_rows(TRK_SIA, row_TRK2_002_SIA)
 
-# create a UFM stable isotope file. 
+# Repeat step 2, but now create a UFM stable isotope file. 
 UFM_SIA <- left_join(UFM_metadata, SIA_run1_TRK_UFM, by = "sample_ID") %>%
     select(-perC.drift, -"C.drift:N")
 
@@ -139,10 +141,6 @@ LFM_SIA <- left_join(LFM_metadata, SIA_run2_TRK_LFM, by = "sample_ID") %>%
   group_by(lake_name, core_number, sample_ID, sample_range, depth_top, depth_bottom, bd) %>%
   summarize(across(d13C:"C:N", ~mean(.x, na.rm=TRUE)), .groups = "keep")
 
-# export data for Peter
-# write_xlsx(TRK_SIA, path = "output/TRK_SIA_for_leavitt.xlsx")
-# write_xlsx(UFM_SIA, path = "output/UFM_SIA_for_leavitt.xlsx")
-
 # clean up Environment: 
 rm(row_TRK2_002_SIA)
 ```
@@ -151,7 +149,7 @@ rm(row_TRK2_002_SIA)
 ### Pull in pigment data
 ```{r}
 
-# all raw pigment data is in the units nmol pigment / g total dry mass (code below adds the suffix "_nmol_gDM"). 
+# all raw pigment data is in the units nmol pigment / g total dry mass, so code below adds the suffix "_nmol_gDM". 
 
 UFM_pigments_raw <- read_excel("data/UFM_final_HPLC_20250910.xlsx") %>% 
   select(depth_top, chlide_a:diadino, myxo:car_z) %>%
@@ -174,7 +172,9 @@ TRK_pigments_raw <- read_excel("data/TRK_final_HPLC_20250910.xlsx") %>%
 
 ### Join pigment and SIA dfs
 ```{r}
-# join pigment and sia dfs for each core and add a depth_plot column
+# join pigment and sia dfs for each core and add a depth_plot column 
+# (= middle depth of each slice)
+
 UFM_wide <- left_join(UFM_SIA, UFM_pigments_raw, by = "depth_top") %>%
   mutate(depth_plot = depth_top + 0.25) %>%
   relocate(depth_plot, .after = depth_bottom)
@@ -183,7 +183,7 @@ TRK_wide <- left_join(TRK_SIA, TRK_pigments_raw, by = "depth_top") %>%
   mutate(depth_plot = depth_top + 0.25) %>%
   relocate(depth_plot, .after = depth_bottom)
 
-TRK_wide <- TRK_wide %>%
+TRK_wide <- TRK_wide %>% # move row TRK2_002 to the top of the df
   arrange(desc(sample_ID == "TRK2_002"))
 
 LFM_wide <- left_join(LFM_SIA, LFM_pigments_raw, by = "depth_top") %>%
@@ -193,20 +193,17 @@ LFM_wide <- left_join(LFM_SIA, LFM_pigments_raw, by = "depth_top") %>%
 # glimpse(UFM_wide)
 ```
 
-### Recalculate pigment data to compare total DM to TC
+### Normalize pigment data in terms of total carbon / sample 
 ```{r}
-# to get nmoles / g TC, multiply by 100/percent.C, and add label _nmol_gTC
+# to go from nmoles pigment / g total dry mass to nmoles pigment / g TC (total carbon):  
+# multiply by 100/percent.C, and add label _nmol_gTC
 
 UFM_wide <- UFM_wide %>%
-  # for all the columns that end in _nmol_gDM
-  mutate(across(ends_with("_nmol_gDM"), 
-  # multiply by (100/percent.C)
-  ~ .x * (100/percent.C), 
-  # name the new column pigment_scaled
-  .names = "{.col}_scaled")) %>%
-  
-  # rename all scaled columns (and not the original columns) with new unit
+  mutate(across(ends_with("_nmol_gDM"), # for all the columns that end in _nmol_gDM
+  ~ .x * (100/percent.C),   # multiply by (100/percent.C)
+  .names = "{.col}_scaled")) %>%   # name the new column pigment_scaled
   rename_with(~ sub("_nmol_gDM_scaled$", "_nmol_gTC", .x), ends_with("_scaled"))
+  # rename all scaled columns (and not the original columns) with new unit
 
 TRK_wide <- TRK_wide %>%
   mutate(across(ends_with("_nmol_gDM"), 
@@ -222,119 +219,7 @@ LFM_wide <- LFM_wide %>%
 
 ```
 
-### Visualize pigment unit differences
-```{r}
-
-ggplot(UFM_wide, aes(x = depth_top, y = chl_a_nmol_gDM)) +
-  geom_point(size = 2, color = "darkgreen", na.rm = TRUE) +
-  geom_line(color = "darkgreen", na.rm = TRUE) +
-  labs(
-    title = "Upper Fourmile",
-    x = "Depth top (cm)",
-    y = "Chl-a (nmol/gDM)") +
-  theme_minimal()
-
-ggplot(UFM_wide, aes(x = depth_top, y = chl_a_nmol_gTC)) +
-  geom_point(size = 2, color = "darkgreen", na.rm = TRUE) +
-  geom_line(color = "darkgreen", na.rm = TRUE) +
-  labs(
-    title = "Upper Fourmile",
-    x = "Depth top (cm)",
-    y = "Chl-a (nmol/gTC)") +
-  theme_minimal()
-
-ggplot(UFM_wide, aes(x = depth_top, y = echine_nmol_gDM)) +
-  geom_point(size = 2, color = "green3", na.rm = TRUE) +
-  geom_line(color = "green3", na.rm = TRUE) +
-  labs(
-    title = "Upper Fourmile",
-    x = "Depth top (cm)",
-    y = "Echinenone (nmol/gDM)") +
-  theme_minimal()
-
-ggplot(UFM_wide, aes(x = depth_top, y = echine_nmol_gTC)) +
-  geom_point(size = 2, color = "green3", na.rm = TRUE) +
-  geom_line(color = "green3", na.rm = TRUE) +
-  labs(
-    title = "Upper Fourmile",
-    x = "Depth top (cm)",
-    y = "Echinenone (nmol/gTC)") +
-  theme_minimal()
-
-ggplot(UFM_wide, aes(x = depth_top, y = diato_nmol_gDM)) +
-  geom_point(size = 2, color = "yellowgreen", na.rm = TRUE) +
-  geom_line(color = "yellowgreen", na.rm = TRUE) +
-  labs(
-    title = "Upper Fourmile",
-    x = "Depth top (cm)",
-    y = "Diatoxanthin (nmol/gDM)") +
-  theme_minimal()
-
-ggplot(UFM_wide, aes(x = depth_top, y = diato_nmol_gTC)) +
-  geom_point(size = 2, color = "yellowgreen", na.rm = TRUE) +
-  geom_line(color = "yellowgreen", na.rm = TRUE) +
-  labs(
-    title = "Upper Fourmile",
-    x = "Depth top (cm)",
-    y = "Diatoxanthin (nmol/gTC)") +
-  theme_minimal()
-
-ggplot(TRK_wide, aes(x = depth_top, y = chl_a_nmol_gDM)) +
-  geom_point(size = 2, color = "steelblue", na.rm = TRUE) +
-  geom_line(color = "steelblue", na.rm = TRUE) +
-  labs(
-    title = "Turkey Creek",
-    x = "Depth top (cm)",
-    y = "Chl-a (nmol/gDM)") +
-  theme_minimal()
-
-ggplot(TRK_wide, aes(x = depth_top, y = chl_a_nmol_gTC)) +
-  geom_point(size = 2, color = "steelblue", na.rm = TRUE) +
-  geom_line(color = "steelblue", na.rm = TRUE) +
-  labs(
-    title = "Turkey Creek",
-    x = "Depth top (cm)",
-    y = "Chl-a (nmol/gTC)") +
-  theme_minimal()
-
-
-ggplot(TRK_wide, aes(x = depth_top, y = echine_nmol_gDM)) +
-  geom_point(size = 2, color = "blue4", na.rm = TRUE) +
-  geom_line(color = "blue4", na.rm = TRUE) +
-  labs(
-    title = "Turkey Creek",
-    x = "Depth top (cm)",
-    y = "Echinenone (nmol/gDM)") +
-  theme_minimal()
-
-ggplot(TRK_wide, aes(x = depth_top, y = echine_nmol_gTC)) +
-  geom_point(size = 2, color = "blue4", na.rm = TRUE) +
-  geom_line(color = "blue4", na.rm = TRUE) +
-  labs(
-    title = "Turkey Creek",
-    x = "Depth top (cm)",
-    y = "Echinenone (nmol/gTC)") +
-  theme_minimal()
-
-ggplot(TRK_wide, aes(x = depth_top, y = diato_nmol_gDM)) +
-  geom_point(size = 2, color = "royalblue", na.rm = TRUE) +
-  geom_line(color = "royalblue", na.rm = TRUE) +
-  labs(
-    title = "Turkey Creek",
-    x = "Depth top (cm)",
-    y = "Diatoxanthin (nmol/gDM)") +
-  theme_minimal()
-
-ggplot(TRK_wide, aes(x = depth_top, y = diato_nmol_gTC)) +
-  geom_point(size = 2, color = "royalblue", na.rm = TRUE) +
-  geom_line(color = "royalblue", na.rm = TRUE) +
-  labs(
-    title = "Turkey Creek",
-    x = "Depth top (cm)",
-    y = "Diatoxanthin (nmol/gTC)") +
-  theme_minimal()
-
-```
+Decide which of the pigments to analyze and which to set aside: 
 
 **Pigments missing from every core:** chlide_a, chl_c1, chl_c2, peridinin, sed_a, sed_b, sed_c, oscil, aphan, viola, diadino, myxo, zea, okenone, isoren, a_car, car_x, car_y, car_z
 
@@ -347,14 +232,14 @@ allo, diato, lutein, *cantha*, *myxo*, *zea*, echine, phaeo_b, pheo_a, b_car
 
 **Consider later:** 
 - why is there no diadino? what does that say about diatoms given [diato]...?
-- these cores were ~9 months old when analyzed (and experienced more freeze-thaw cycles than is ideal): what do the preservation indices tell us about the reliability of the values we obtained, and or the many zeroes. 
+- these cores were ~9 months old when analyzed (and experienced more freeze-thaw cycles than is ideal): what do the preservation indices tell us about the reliability of the values we obtained, and/or the many zeroes. 
 - how can you assess the extent of post-depositional degradation of a given pigment? 
 - interpret AD ratio? perc_chlb, etc.
 - compare pigments in cyanos with those in vascular plants? no. Per Peter most chl degrades by the time it reaches the water column. 
 
 **Remove from short dfs:** chlide_a, chl_c1, chl_c2, peridinin, sed_a, sed_b, sed_c, oscil, aphan, viola, diadino, myxo, zea, okenone, isoren, a_car, car_x, car_y, car_z
 
-### Clean up dfs, add pigment metrics
+### Clean up each df, add summary pigment metrics
 ```{r}
 TRK_short <- TRK_wide %>% # make a new subset df with variables of interest
   select(-ends_with("_gDM"), # remove pigments with g / dry mass unit
@@ -377,24 +262,26 @@ TRK_short <- TRK_wide %>% # make a new subset df with variables of interest
          -car_x_nmol_gTC,
          -car_y_nmol_gTC, 
          -car_z_nmol_gTC) %>%
-  mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, # add new columns
-         chls = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC,
+  mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, # add new columns with summary metrics
+         chls = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, 
          chlb_pheob = chl_b_nmol_gTC + phaeo_b_nmol_gTC,
-         all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, # no chlide, chl_c1 or chl_c2 in any core
-         # all_diat = diato_nmol_gTC + diadino_nmol_gTC, NO DIADINO
+         all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, 
+         # no chlide, chl_c1 or chl_c2 in any core
+         # all_diat = diato_nmol_gTC + diadino_nmol_gTC; not calculated - NO DIADINO
          PI = chl_a_nmol_gTC/pheo_a_nmol_gTC, # preservation index
          # UVR_index = sed_c_nmol_gTC / (allo_nmol_gTC + diato_nmol_gTC+lutein_nmol_gTC)
-         # no sed C in any core
+         # UVR not calculated, no sed C in any core
          AD_ratio = allo_nmol_gTC / diato_nmol_gTC, 
          master_chl = (chl_a_nmol_gTC + chl_b_nmol_gTC) / (chl_ap_nmol_gTC + pheo_a_nmol_gTC + phaeo_b_nmol_gTC),
          perc_chlb = (phaeo_b_nmol_gTC / pheo_a_nmol_gTC), 
          greens = phaeo_b_nmol_gTC + lutein_nmol_gTC,
          cyanos = cantha_nmol_gTC + echine_nmol_gTC,
          perc_diatox = (diato_nmol_gTC/chla_pheoa))
-    
-UFM_short <- UFM_wide %>% # make a new subset df with variables of interest
-  select(-ends_with("_gDM"), # remove pigments with g / dry mass unit
-         -chlide_a_nmol_gTC, # remove pigments with 0 values 
+
+# repeat for UFM
+UFM_short <- UFM_wide %>% 
+  select(-ends_with("_gDM"), 
+         -chlide_a_nmol_gTC, 
          -chl_c1_nmol_gTC,
          -chl_c2_nmol_gTC, 
          -perid_nmol_gTC, 
@@ -413,14 +300,11 @@ UFM_short <- UFM_wide %>% # make a new subset df with variables of interest
          -car_x_nmol_gTC,
          -car_y_nmol_gTC, 
          -car_z_nmol_gTC) %>%
-  mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, # add new columns
+  mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, 
          chlb_pheob = chl_b_nmol_gTC + phaeo_b_nmol_gTC,
          chls = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC,
-         all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, # no chlide, chl_c1 or chl_c2 in any core
-         # all_diat = diato_nmol_gTC + diadino_nmol_gTC, NO DIADINO
-         PI = chl_a_nmol_gTC/pheo_a_nmol_gTC, # preservation index
-         # UVR_index = sed_c_nmol_gTC / (allo_nmol_gTC + diato_nmol_gTC+lutein_nmol_gTC)
-         # no sed C in any core
+         all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, 
+         PI = chl_a_nmol_gTC/pheo_a_nmol_gTC, 
          AD_ratio = allo_nmol_gTC / diato_nmol_gTC, 
          master_chl = (chl_a_nmol_gTC + chl_b_nmol_gTC) / (chl_ap_nmol_gTC + pheo_a_nmol_gTC + phaeo_b_nmol_gTC),
          perc_chlb = (phaeo_b_nmol_gTC / pheo_a_nmol_gTC), 
@@ -428,11 +312,10 @@ UFM_short <- UFM_wide %>% # make a new subset df with variables of interest
          cyanos = cantha_nmol_gTC + echine_nmol_gTC,
          perc_diatox = (diato_nmol_gTC/chla_pheoa))
 
-
-# LFM_short
-LFM_short <- LFM_wide %>% # make a new subset df with variables of interest
-  select(-ends_with("_gDM"), # remove pigments with g / dry mass unit
-         -chlide_a_nmol_gTC, # remove pigments with 0 values 
+# Repeat for LFM
+LFM_short <- LFM_wide %>% 
+  select(-ends_with("_gDM"), 
+         -chlide_a_nmol_gTC, 
          -chl_c1_nmol_gTC,
          -chl_c2_nmol_gTC, 
          -perid_nmol_gTC, 
@@ -451,14 +334,11 @@ LFM_short <- LFM_wide %>% # make a new subset df with variables of interest
          -car_x_nmol_gTC,
          -car_y_nmol_gTC, 
          -car_z_nmol_gTC) %>%
-  mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, # add new columns
+  mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC, 
          chlb_pheob = chl_b_nmol_gTC + phaeo_b_nmol_gTC,
          chls = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC,
-         all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, # no chlide, chl_c1 or chl_c2 in any core
-         # all_diat = diato_nmol_gTC + diadino_nmol_gTC, NO DIADINO
-         PI = chl_a_nmol_gTC/pheo_a_nmol_gTC, # preservation index
-         # UVR_index = sed_c_nmol_gTC / (allo_nmol_gTC + diato_nmol_gTC+lutein_nmol_gTC)
-         # no sed C in any core
+         all_chl = chl_a_nmol_gTC + pheo_a_nmol_gTC + chl_ap_nmol_gTC, 
+         PI = chl_a_nmol_gTC/pheo_a_nmol_gTC, 
          AD_ratio = allo_nmol_gTC / diato_nmol_gTC, 
          master_chl = (chl_a_nmol_gTC + chl_b_nmol_gTC) / (chl_ap_nmol_gTC + pheo_a_nmol_gTC + phaeo_b_nmol_gTC),
          perc_chlb = (phaeo_b_nmol_gTC / pheo_a_nmol_gTC), 
@@ -468,9 +348,9 @@ LFM_short <- LFM_wide %>% # make a new subset df with variables of interest
 
 ```
 
-## Add pigment metrics to wide dfs too
+### Add the pigment metrics to the wide dfs too
 ```{r}
-# Adding summary pigment metrics to wide df. NOTE, only calculating for gTC, & all units are in gTC
+# NOTE, only calculating for gTC, not nmol pigment / g DM, & all units are in gTC
 
 TRK_wide <- TRK_wide %>%
    mutate(chla_pheoa = chl_a_nmol_gTC + pheo_a_nmol_gTC,
@@ -517,9 +397,9 @@ LFM_wide <- LFM_wide %>%
 ```
 
 
-### Evaluate PI
+### Evaluate preservation index
 ```{r}
-# visualize chl_a and PI, (doublecheck?) if PI spikes (past 1) near the surface, increase in Chl_a near depth 0 may be suspect / preservation effects may be significant. 
+# quickly visualize chl_a and PI, if PI spikes (past 1) near the surface (depth = 0 cm), increases in Chl_a near depth 0 may be suspect / preservation effects may be significant. 
 
 ggplot(UFM_short, aes(x = depth_top, y = chl_a_nmol_gTC)) +
   geom_point(size = 2, color = "darkgreen", na.rm = TRUE) +
@@ -548,24 +428,6 @@ ggplot(TRK_short, aes(x = depth_top, y = chl_a_nmol_gTC)) +
     y = "Chl-a (nmol/gTC)") +
   theme_minimal()
 
-ggplot(TRK_short, aes(x = depth_top, y = chla_pheoa)) +
-  geom_point(size = 2, color = "steelblue", na.rm = TRUE) +
-  geom_line(color = "steelblue", na.rm = TRUE) +
-  labs(
-    title = "Turkey Creek",
-    x = "Depth top (cm)",
-    y = "Total Chl-a's (nmol/gTC)") +
-  theme_minimal()
-
-ggplot(TRK_short, aes(x = depth_top, y = pheo_a_nmol_gTC)) +
-  geom_point(size = 2, color = "steelblue", na.rm = TRUE) +
-  geom_line(color = "steelblue", na.rm = TRUE) +
-  labs(
-    title = "Turkey Creek",
-    x = "Depth top (cm)",
-    y = "Pheo-a (nmol/gTC)") +
-  theme_minimal()
-
 ggplot(TRK_short, aes(x = depth_top, y = PI)) +
   geom_point(size = 2, color = "steelblue", na.rm = TRUE) +
   geom_line(color = "steelblue", na.rm = TRUE) +
@@ -577,35 +439,44 @@ ggplot(TRK_short, aes(x = depth_top, y = PI)) +
 
 ```
 
-# Date Interpolation
+# Date Interpolation (Pb-210 data)
 
-## Pull in dates
+### Pull in dates (UFM and LFM)
 ```{r}
+### ADM (age-depth model) method adapted from Cale Gushulak's scripts (see cales_code)
 
-### read in chronology data from Flett to pull into the adms
+### read in the chronology data from Flett to pull into the adms
 all_dates <- read_excel("data/Flett_dates_simplified_20250917.xlsx")
+# (this spreadsheet was compiled using the three final Pb-210 reports sent by Flett). 
 
-# Next, organize the date data in R. This will only be used for the adms, to assign an age (year_CE) to a depth in each core (corresponding to extrap_bottom of each sample that got lead dated). The other metadata is just for checking that the code works and keeping track of things.
+    # (depth top and bottom correspond to the depth of each sample in the core. 
+    # sed accumulation rates were extrapolated (by Flett) for sections of the core 
+    # (between the samples tested) using the Pb-210 activities and bulk density values 
+    # of the samples analyzed. Ages were then calculated for the bottom of each extrapolated 
+    # section.using the linear, CRS, or combined method. 
+
+# Split the chronology data by lake:
 
 UFM_dates <- all_dates %>%
-    filter(str_starts(sample_ID, "UFM")) %>% # select only UFM rows
-    # join, removing depth top and bottom before pulling in UFM_metadata
+    filter(str_starts(sample_ID, "UFM")) %>% # select only the UFM rows
+    #join, removing columns depth top and bottom before pulling in UFM_metadata
     left_join(UFM_metadata %>% select(-depth_top, -depth_bottom), 
-              by = "sample_ID") %>% 
+              by = "sample_ID") %>% # join by sample_ID
     relocate(all_of(c(names(UFM_metadata)))) %>%
     # keep columns in the same order as in the metadata doc.
     mutate(year_CE = 2025 - extrap_bottom_age_lin)
+       # calculate year by substracting the sample age from the year of analysis. 
        # NOTE !!!
        # AGES CORRESPOND TO EXTRAP BOTTOM!!
-       # UFM ages derived from linear model!
+       # UFM ages derived from the linear model!
 
-  # repeat for LFM
-  LFM_dates <- all_dates %>%
-        filter(str_starts(sample_ID, "LFM")) %>%
-        left_join(LFM_metadata %>% select(-depth_top, -depth_bottom),
-                  by = "sample_ID") %>%
-        relocate(all_of(c(names(LFM_metadata)))) %>%
-        mutate(year_CE = 2025 - extrap_bottom_age_CRS)
+# repeat for LFM
+LFM_dates <- all_dates %>%
+      filter(str_starts(sample_ID, "LFM")) %>%
+      left_join(LFM_metadata %>% select(-depth_top, -depth_bottom),
+                by = "sample_ID") %>%
+      relocate(all_of(c(names(LFM_metadata)))) %>%
+      mutate(year_CE = 2025 - extrap_bottom_age_CRS)
          # NOTE !!!
          # AGES CORRESPOND TO EXTRAP BOTTOM!
          # LFM ages derived from CRS (simple)
@@ -613,21 +484,36 @@ UFM_dates <- all_dates %>%
 ```
 
 
-## TRK Interpolation 10/28
+### TRK (raw data -> adm)
 ```{r}
+# TRK disaster summary (see Flett's report for more detail):
 
-# Dates for the samples between TRK2_058 and TRK2_082 cannot be reliably determined based on the dating model Flett created (see questions for flett doc). So, in order to estimate SOME age for plotting, assume a constant sedimentation rate between the last dated segment of the original core and the bottom of the new/original core, such that the age at 41 cm is = 114 years old. This is a somewhat reasonable extrapolation for plotting purposes based on Flett's estimation that that slice in the original core is between 89 and 160 years old. 
+# the bd and Pb-210 values of sections 10 - 27 cm of core TRK2 suggest potential import of 
+# foreign sediments to the coring site. This would violate the assumptions of the CRS model. 
+# To compensate, Flett computationally removed these sections and reassigned depths for 
+# samples TRK2_058 and TRK2_082 (from lower depths 29 to 12 and 40.5 to 24, respectively).
+# Flett then estimated depths for the reconstructed cores using a linear regression.
 
- TRK_dates <- all_dates %>%
-        filter(str_starts(sample_ID, "TRK")) %>%
-        left_join(TRK_metadata %>% select(-depth_top, -depth_bottom),
+# Regardless of the values provided through the linear regression for the reconstructed core, 
+# Xiaoxi wrote us that "sections in between 058 and 082 cannot be reliably dated. 
+
+# In order to estimate SOME age for plotting purposes ONLY, we assumed a constant sedimentation
+# rate between the lowest unchanged sample of the original core (TRK2_020) and the bottom 
+# sample of the core (reconstructed lower depth = 24, original = 41 cm). In the code below, 
+# this means an adm is constructed for TRK using an adjusted TRK_dates df, where row TRK2_058 
+# is removed, and the extrapolated bottom depth of sample TRK2_082 is readjusted to its 
+# original, rather than reconstructed value (= 41cm).
+
+TRK_dates <- all_dates %>% 
+        filter(str_starts(sample_ID, "TRK")) %>% # filter for TRK rows 
+        left_join(TRK_metadata %>% select(-depth_top, -depth_bottom), # combine w the metadata
                   by = "sample_ID") %>%
         relocate(all_of(c(names(TRK_metadata)))) %>%
-        mutate(year_CE = 2025 - extrap_bottom_age_CRS) %>%
-        # remove TRK2_058
-        filter(!sample_ID %in% c("TRK2_058")) %>%
-        # replace extrap bottom from value in reconstructed core 
-        # to value in the original core.
+        mutate(year_CE = 2025 - extrap_bottom_age_CRS) %>% # calculate sample deposition years
+        # remove row TRK2_058 from the df (so it doesn't go into the adm)
+        filter(!sample_ID %in% c("TRK2_058")) %>%  
+        # replace extrap bottom depth from the value in the reconstructed core 
+        # to the value in the original core.
         mutate(extrap_top = if_else(sample_ID == "TRK2_082", NA, extrap_top),
                extrap_bottom = if_else(sample_ID == "TRK2_082", 41, extrap_bottom))
     
@@ -640,9 +526,12 @@ TRK_adm <- age_depth_model(TRK_dates,
                            age = year_CE)
 
 plot(TRK_adm)
+# CHECK: looks good The adm  assumes a constant rate of sedimentation between 10 and 41 cm 
+# in the core, based on the age estimate provided for the bottom of sample TRK2_082. 
+# ages beyond 10 cm are for plotting purposes only, and above are "GROSS APPROXIMATIONS ONLY". 
 ```
 
-## Create age-depth models
+### Age-depth models (UFM and LFM)
 ```{r}
 
 ### turn each date df into an age-depth model (adm) that tidypaleo recognizes
@@ -650,62 +539,63 @@ plot(TRK_adm)
 UFM_dates_clean <- UFM_dates %>% # filter to remove nas
   filter(!is.na(extrap_bottom) & !is.na(year_CE)) 
 
-# calculate adm
+# create adm, using the date that corresponds to depth EXTRAP_bottom
 UFM_adm <- age_depth_model(UFM_dates_clean,
                            depth = extrap_bottom,
                            age = year_CE)
 
+# visualize adm
 plot(UFM_adm,
      xlab="Depth (cm)",
-     ylab="Age (year AD)",
-     main="Upper Fourmile Lake") # You'll want to include these in your thesis- IAO
+     ylab="Age (year AD)") # You'll want to include these in your thesis- IAO
 
 # Repeat for LFM
 LFM_dates_clean <- LFM_dates %>% # filter to remove nas
   filter(!is.na(extrap_bottom) & !is.na(year_CE)) 
+
 LFM_adm <- age_depth_model(LFM_dates_clean,
                              depth = extrap_bottom,
                              age = year_CE)
 
 plot(LFM_adm,
      xlab="Depth (cm)",
-     ylab="Age (year AD)",
-     main="Lower Fourmile Lake") # You'll want to include these in your thesis- IAO
+     ylab="Age (year AD)") # You'll want to include these in your thesis- IAO
 
 ```
 
-## Interpolate dates & join to dfs - TRK
+### Interpolate dates & join to dfs
+
+#### TRK
 ```{r}
-### Interpolate dates (assign dates to nondated sections of each core)
-  # first assign year_CE (for each slice)
-  # calculate for every section in a .25 cm interval 
-  
-  # if the number ends in .0, rename the column depth "depth
+### Calculate year deposited for the top, bottom, and center of each sample based on 
+  # the age-depth relationships defined for sections of the core in the adm. 
 
-# JP: Pb-210 samples are on odd samples 1-20 and even after that. 
-# For pigments we want dates from even 1 - end. i.e. 0.75, 1.75, 2.75 etc.
+  # btwn the dated samples is interpolation, beyond (above and below!) is extrapolation. 
 
-# dates_clean length (lowest extrap_bottom)
-  # UFM: 5 cm
-  # LFM: 18 cm
-  # TRK: 11 cm (10.75)
+   # (rounded) lowest extrap_bottom value for each core: 
+      # UFM: 5 cm
+      # LFM: 18 cm
+      # TRK: 11 cm (10.75)
 
-# NOTE: SWITCHING HERE FROM EXTRAP BOTTOM TO REGULAR depth_bottom
+# make a df to hold interpolated / extrapolated ages
+TRK_interp <- predict(TRK_adm, depth = seq(0.25, 41, 0.25)) %>% # 0.25 cm increments = top, 
+  # bottom, and center
+  mutate(year_CE = age) %>% # adm calls this age but its really a year
+  select(depth, year_CE) # the adm program labels interpolated vs. extrapolated but we don't 
+  # need that here. 
 
-# extrapolate whole core
-TRK_interp <- predict(TRK_adm, depth = seq(0.25, 41, 0.25)) %>%
-  mutate(year_CE = age) %>%
-  select(depth, year_CE)
+# NOTE: SWITCHING HERE FROM EXTRAP_BOTTOM TO REGULAR depth_bottom
 
-## create new columns in the interp df based on the ending digits of depth
-## to easily join the interpolated ages later
+## Rearrange the interp df so depths ending in _.5, _.75, and _.0 can be categorized as sample
+# depth_top, depth_plot, and depth_bottom. (we don't care about 0.25 bc of the arrangement of 
+# samples we happened to analyze for SIA & pigments). 
 
-  # functions to categorize depths by ending digits
+  # define functions to categorize depths by ending digits
   is_whole  <- function(x, tol = 1e-8) abs(x %% 1) < tol
   is_half   <- function(x, tol = 1e-8) abs(x %% 1 - 0.5) < tol
   is_three_quarters <- function(x, tol = 1e-8) abs(x %% 1 - 0.75) < tol
   
-  # making new columns
+  # make new columns copying depth into the correct category (top, plot, or bottom)
   TRK_interp <- TRK_interp %>%
     mutate(
       depth_top    = ifelse(is_half(depth), depth, NA_real_),
@@ -714,7 +604,7 @@ TRK_interp <- predict(TRK_adm, depth = seq(0.25, 41, 0.25)) %>%
     ) %>%
     select(depth, year_CE, depth_top, depth_plot, depth_bottom)
 
-# Join new columns to TRK_wide: top, plot, then bottom
+# Join the new columns to TRK_wide by depth: top, plot, then bottom
 TRK_wide <- TRK_wide %>%
   left_join(
     TRK_interp %>% 
@@ -737,8 +627,11 @@ TRK_wide <- TRK_wide %>%
     by = "depth_bottom") 
 
 # this is a little circular but I actually want the TRK dfs in the same format as UFM and LFM
-# copy year_CE_plot over (the long one) and name it year_plot_extrap
-# trim year_CE_plot so it is empty past the end of the dated core 
+# the more detailed ages are for calculating mass accumulation rates, and we only care about
+# these where the ages are somewhat accurate. So, copy year_CE_plot over and name it 
+# year_plot_extrap (this provides year_CE_plot for every sample). then trim year_CE_plot, top, 
+# and bottom so they are NA past the end of the more reliably dated region. Also create a 
+# column called duration (years represented by that 0.5 cm sample). 
 
 TRK_wide <- TRK_wide %>%
   mutate(
@@ -746,13 +639,13 @@ TRK_wide <- TRK_wide %>%
     year_plot_extrap = year_CE_plot,
     across(
       c(year_CE_plot, year_CE_top, year_CE_bottom),
-      ~ if_else(is.na(duration), NA_real_, .)
-    )
-  )
-         
-# add weight term to TRK_wide (need to do this separately because of how mutate groups)
-# see gavin simpson 2018 - normalize weight against the mean(weight) to avoid changing 
-# the model likelihood.
+      ~ if_else(is.na(duration), NA_real_, .)))
+      
+# Also add a weight term to TRK_wide (need to do this separately because of how mutate groups)
+# weights can be used to differentially weight samples in the GAM so samples that encompass 
+# more time matter more to the model. But, see gavin simpson 2018 - you need to normalize 
+# weight against the mean(weight) to avoid changing the model likelihood so the weights don't 
+# affect the model likelihood (and you can compare across methods). 
 
 duration_mean_TRK <- mean(TRK_wide$duration, na.rm = TRUE)
 TRK_wide <- mutate(TRK_wide, weight = duration / duration_mean_TRK)
@@ -761,22 +654,19 @@ TRK_wide <- mutate(TRK_wide, weight = duration / duration_mean_TRK)
 TRK_short <- TRK_short %>%
   left_join(
     TRK_wide %>%
-      ungroup() %>% # keep r from adding these variables twice
+      ungroup() %>% # keep R from adding these variables twice
       select(sample_ID, year_CE_top:weight), 
-    by = "sample_ID"
-  )
+    by = "sample_ID")
 
-# View(TRK_wide %>% select(lake_name:bd, year_CE_top:duration))
+# names(TRK_short)
+# View(TRK_wide %>% select(lake_name:bd, year_CE_top:weight))
+
+### NOTE! extrapolated ages for the nondated cores are calculated for UFM and LFM in the file
+# 02a_date_extrapolation. Here dates are only interpolated for those cores. 
 ```
 
-## Interpolate dates & join to dfs - UFM
+#### UFM
 ```{r}
-# dates_clean length (lowest depth_bottom)
-  # UFM: 5 cm
-  # LFM: 18 cm
-  # TRK: 11 cm
-
-# NOTE: SWITCHING HERE FROM EXTRAP BOTTOM TO REGULAR depth_bottom
 
 # interpolate adm to all UFM segments in the dated range with SIA or pigment measurements
 UFM_interp <- predict(UFM_adm, depth = seq(0.25, 5, 0.25)) %>%
@@ -819,8 +709,6 @@ UFM_wide <- UFM_wide %>%
   mutate(duration = year_CE_top - year_CE_bottom) # calculate duration 
 
 # add weight term to UFM_wide 
-# see gavin simpson 2018 - normalize weight against the mean(weight) to avoid changing 
-# the model likelihood.
 duration_mean_UFM <- mean(UFM_wide$duration, na.rm = TRUE)
 UFM_wide <- mutate(UFM_wide, weight = duration / duration_mean_UFM)
 
@@ -830,18 +718,12 @@ UFM_short <- UFM_short %>%
     UFM_wide %>%
       ungroup() %>% # keep r from adding these variables twice
       select(sample_ID, year_CE_top:weight), 
-    by = "sample_ID"
-  )
+    by = "sample_ID")
+
 ```
 
-## Interpolate dates & join to dfs - LFM
+#### LFM
 ```{r}
-# dates_clean length (lowest depth_bottom)
-  # UFM: 5 cm
-  # LFM: 18 cm
-  # TRK: 11 cm
-
-# NOTE: SWITCHING HERE FROM EXTRAP BOTTOM TO REGULAR depth_bottom
 
 # interpolate adm to all UFM segments in the dated range with SIA or pigment measurements
 LFM_interp <- predict(LFM_adm, depth = seq(0.25, 18, 0.25)) %>%
@@ -884,8 +766,6 @@ LFM_wide <- LFM_wide %>%
   mutate(duration = year_CE_top - year_CE_bottom) # calculate duration 
 
 # add weight term to LFM_wide 
-# see gavin simpson 2018 - normalize weight against the mean(weight) to avoid changing 
-# the model likelihood.
 duration_mean_LFM <- mean(LFM_wide$duration, na.rm = TRUE)
 LFM_wide <- mutate(LFM_wide, weight = duration / duration_mean_LFM)
 
@@ -895,18 +775,22 @@ LFM_short <- LFM_short %>%
     LFM_wide %>%
       ungroup() %>% # keep r from adding these variables twice
       select(sample_ID, year_CE_top:weight), 
-    by = "sample_ID"
-  )
+    by = "sample_ID")
 ```
 
 ##Interpolating sedimentation rates
 ```{r}
+# NB: this was just an exercise in interpolating instantaneous sediment accumulation rates, 
+# not ultimately used for thesis but basis for calculating mass flux.  
+
 # sit down with a pen for this part... 
 TRK_short <- TRK_short %>%
   mutate(s = (bd*0.5)/duration)
 
-# check that I can get the same answer as Flett (once from a core with CRS dating and once from a core with the lin regression)
-# I think the mismatch is coming from the fact that accumulation rate is calculated for the extrapolated section. let's check on TRK2_004: 
+# check that I can get the same answer as Flett (once from a core with CRS dating and once 
+# from a core with the lin regression)
+# I think the mismatch is coming from the fact that accumulation rate is calculated for the 
+# extrapolated section. let's check on TRK2_004: 
 
 # sed accumulation rate (CRS) = 0.0291
 # my est improved: 0.02792188 (~4% diff)
@@ -925,7 +809,7 @@ TRK_short <- TRK_short %>%
     # this is what they did instead (assign bd of given depth to whole extrapolated section...)
     (0.127*(2.25-0.75))/(2022.359 - 2015.805) # = 0.02906622
 
-# repeat for TRK_wide
+# add s column to TRK_wide as well
 TRK_wide <- TRK_wide %>%
   mutate(s = (bd*0.5)/duration)
 
@@ -941,40 +825,41 @@ LFM_wide <- LFM_wide %>%
   mutate(s = (bd*0.5)/duration)
 
 # plot TRK sedimentation rate / t
-TRK_sedimentation <- ggplot(TRK_short %>% filter(!is.na(year_CE_plot), !is.na(s)), # remove na values 
-  aes(x = year_CE_plot, y = s)) +
-  geom_line(color = "green4", size = 1) +    # connects the dots
-  geom_point(color = "green4", size = 2) +   # adds the dots
-  labs(
-    title = "TRK inst. sedimentation rate vs. time",
-    x = "Year",
-    y = expression(s~(g/cm^2/yr))            # renders s (g/cm²/yr) nicely
-  ) +
-  ylim(0, 0.06) + 
-  theme_bw(base_size = 14)
+TRK_sedimentation <- ggplot(TRK_short %>% filter(!is.na(year_CE_plot), !is.na(s)), # remove nas
+                              aes(x = year_CE_plot, y = s)) +
+                              geom_line(color = "green4", size = 1) +    # connects dots
+                              geom_point(color = "green4", size = 2) +   # adds dots
+                              labs(
+                                title = "TRK inst. sedimentation rate vs. time",
+                                x = "Year",
+                                y = expression(s~(g/cm^2/yr))) +  # renders s (g/cm²/yr) nicely
+                              ylim(0, 0.06) + 
+                              theme_bw(base_size = 14)
+TRK_sedimentation
 
 ggsave("figures/TRK_sedimentation.png", TRK_sedimentation, width = 10, height = 5, units = "in", dpi = 300) 
 
 # plot UFM sedimentation rate / t
-UFM_sedimentation <- ggplot(UFM_short %>% filter(!is.na(year_CE_plot), !is.na(s)), # remove na values 
-  aes(x = year_CE_plot, y = s)) +
-  geom_line(color = "green4", size = 1) +    # connects the dots
-  geom_point(color = "green4", size = 2) +   # adds the dots
-  labs(
-    title = "UFM inst. sedimentation rate vs. time",
-    x = "Year",
-    y = expression(s~(g/cm^2/yr))            # renders s (g/cm²/yr) nicely
-  ) +
-  ylim(0, 0.011) + 
-  theme_bw(base_size = 14)
+UFM_sedimentation <- ggplot(UFM_short %>% filter(!is.na(year_CE_plot), !is.na(s)), # remove nas 
+                              aes(x = year_CE_plot, y = s)) +
+                              geom_line(color = "green4", size = 1) +    # connects dots
+                              geom_point(color = "green4", size = 2) +   # adds dots
+                              labs(
+                                title = "UFM inst. sedimentation rate vs. time",
+                                x = "Year",
+                                y = expression(s~(g/cm^2/yr))     # renders s (g/cm²/yr) nicely
+                              ) +
+                              ylim(0, 0.011) + 
+                              theme_bw(base_size = 14)
+UFM_sedimentation
 
 ggsave("figures/UFM_sedimentation.png", UFM_sedimentation, width = 10, height = 5, units = "in", dpi = 300) 
 
 # plot LFM sedimentation rate / t
-LFM_sedimentation <- ggplot(LFM_short %>% filter(!is.na(year_CE_plot), !is.na(s)), # remove na values 
+LFM_sedimentation <- ggplot(LFM_short %>% filter(!is.na(year_CE_plot), !is.na(s)), # remove nas  
   aes(x = year_CE_plot, y = s)) +
-  geom_line(color = "green4", size = 1) +    # connects the dots
-  geom_point(color = "green4", size = 2) +   # adds the dots
+  geom_line(color = "green4", size = 1) +    # connects dots
+  geom_point(color = "green4", size = 2) +   # adds dots
   labs(
     title = "LFM inst. sedimentation rate vs. time",
     x = "Year",
@@ -988,9 +873,13 @@ ggsave("figures/LFM_sedimentation.png", LFM_sedimentation, width = 10, height = 
 
 ```
 
-#Mass flux calculations (%C, %N)
+#Mass flux 
+### %C and %N calculations
 ```{r}
-# add a column to TRK_short and TRK_wide with nutrient flux. C.mar after percent.C and N.mar after percent.N. 
+# calculate mass flux (mass accumulation rates, mar) for C and N
+
+# add a column to TRK_short and TRK_wide with nutrient flux. C.mar after percent.C and N.mar 
+# after percent.N. 
 
 TRK_short <- TRK_short %>%
   mutate(
@@ -1037,9 +926,8 @@ LFM_wide <- LFM_wide %>%
   relocate(N.mar, .after = percent.N)
 ```
 
-## Visualize ways of showing ∆C / t
+#### Compare ∆C / t metrics
 ```{r}
-
 # visualize Cmar, s, and %C in TRK. 
 ggplot(TRK_short %>% filter(!is.na(year_CE_plot), !is.na(s)), # remove na values 
   aes(x = year_CE_plot, y = s)) +
@@ -1078,10 +966,8 @@ ggplot(TRK_short %>% filter(!is.na(year_CE_plot), !is.na(s)), # remove na values
 
 ```
 
-#Mass flux calculations (pigments)
+### Pigment calculations
 ```{r}
-View(LFM_short_extrap)
-
 # start with TRK
 TRK_wide <- TRK_wide %>%
   mutate(
@@ -1166,7 +1052,6 @@ LFM_short <- LFM_short %>%
 ```{r}
 
 # At a glance look at all parameters in an individual core
-
 # Start with TRK
 
 TRK_short %>%
