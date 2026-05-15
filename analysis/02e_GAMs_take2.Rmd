@@ -5,6 +5,8 @@ date: "2025-10-27"
 output: html_document
 ---
 
+Note: adapted from IAO's LochValePaleo and Cale's shared code. 
+
 ```{r setup, include=FALSE}
 # code to troublesheet file path issues. 
 # By default, knitr uses the folder containing the .Rmd file as

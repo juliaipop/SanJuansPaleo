@@ -5,6 +5,7 @@ date: "2025-09-22"
 output: html_document
 ---
 
+Note: this script was abandoned after a change of strategy. 02e_GAMS_take2.Rmd is the working copy and this was saved as an archive. 
 
 ```{r setup, include=FALSE}
 # code to troublesheet file path issues. 
